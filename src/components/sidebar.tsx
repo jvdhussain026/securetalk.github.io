@@ -1,6 +1,7 @@
 
 'use client'
 
+import { useState } from 'react';
 import Link from 'next/link'
 import {
   Sheet,
@@ -19,6 +20,7 @@ import {
   Users,
 } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
+import { ComingSoonDialog } from './coming-soon-dialog';
 
 type SidebarProps = {
   open: boolean
@@ -26,17 +28,25 @@ type SidebarProps = {
 }
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleNonPageClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setIsModalOpen(true);
+  }
+
   const menuItems = [
     { icon: User, label: 'My Profile', href: '/profile' },
     { icon: Users, label: 'Connections', href: '/connections' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: Info, label: 'About Us', href: '/about' },
-    { icon: Heart, label: 'Support Us', href: '#' },
-    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '#' },
+    { icon: Heart, label: 'Support Us', href: '#', onClick: handleNonPageClick },
+    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '#', onClick: handleNonPageClick },
     { icon: Code, label: 'Developer', href: '/readme' },
   ]
 
   return (
+    <>
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="p-0 flex flex-col">
         <SheetHeader>
@@ -53,7 +63,12 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         <div className="flex-1 space-y-1 px-4">
           {menuItems.map((item, index) => (
             <div key={index}>
-              <Link href={item.href} className="flex items-center p-3 -m-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={() => onOpenChange(false)}>
+              <Link href={item.href} className="flex items-center p-3 -m-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={(e) => {
+                if (item.onClick) {
+                  item.onClick(e);
+                }
+                onOpenChange(false);
+              }}>
                 <item.icon className="h-6 w-6 mr-4" />
                 <span className="flex-1 font-medium">{item.label}</span>
               </Link>
@@ -62,5 +77,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         </div>
       </SheetContent>
     </Sheet>
+    <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
+    </>
   )
 }
