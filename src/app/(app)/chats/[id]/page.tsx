@@ -195,15 +195,29 @@ export default function ChatPage() {
   };
 
   const renderMessageContent = (message: Message) => {
-    const hasSingleImage = message.imageUrl && (!message.imageUrls || message.imageUrls.length === 0);
-    const hasMultipleImages = message.imageUrls && message.imageUrls.length > 0;
     const imageUrls = message.imageUrls || (message.imageUrl ? [message.imageUrl] : []);
+    const hasImages = imageUrls.length > 0;
 
-    if (hasMultipleImages) {
-        const imagesToShow = imageUrls.slice(0, 4);
-        const remainingImages = imageUrls.length - 4;
+    if (!hasImages) {
+        return message.text ? <p className="text-sm break-words px-2">{message.text}</p> : null;
+    }
 
+    if (imageUrls.length === 1) {
         return (
+            <div className="space-y-2">
+                 <button onClick={() => handleImageClick(message, 0)} className="w-full">
+                    <Image src={imageUrls[0]} alt="Sent image" width={250} height={250} className="rounded-xl object-cover w-full max-w-xs" />
+                </button>
+                {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
+            </div>
+        );
+    }
+    
+    const imagesToShow = imageUrls.slice(0, 4);
+    const remainingImages = imageUrls.length - 4;
+
+    return (
+        <div className="space-y-2">
             <div className="grid grid-cols-2 gap-1">
                 {imagesToShow.map((url, index) => (
                     <button key={index} onClick={() => handleImageClick(message, index)} className="relative">
@@ -216,18 +230,9 @@ export default function ChatPage() {
                     </button>
                 ))}
             </div>
-        );
-    }
-
-    if (hasSingleImage) {
-        return (
-            <button onClick={() => handleImageClick(message, 0)} className="w-full">
-                <Image src={message.imageUrl!} alt="Sent image" width={200} height={200} className="rounded-xl object-cover w-full aspect-square" />
-            </button>
-        );
-    }
-
-    return null;
+             {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
+        </div>
+    );
   };
 
 
@@ -312,12 +317,11 @@ export default function ChatPage() {
                   <div className={cn(
                     "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2", 
                     message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                    (message.imageUrl || (message.imageUrls && message.imageUrls.length > 0)) && !message.text ? "p-1 bg-transparent border-none" : ""
+                     (!message.text || (message.imageUrls && message.imageUrls.length > 0)) ? "p-1" : ""
                   )}>
                       {renderMessageContent(message)}
-                      {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
                       <ClientOnly>
-                        <p className={cn("text-xs text-right", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                        <p className={cn("text-xs text-right mt-1 px-2", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
                           {format(new Date(message.timestamp), 'p')}
                         </p>
                       </ClientOnly>
@@ -411,3 +415,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
