@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
@@ -5,10 +6,12 @@ import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
 
 import { contacts as allContacts } from '@/lib/dummy-data'
 import type { Message } from '@/lib/types'
 import { cn } from '@/lib/utils'
+import { db } from '@/lib/firebase'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -25,7 +28,7 @@ export default function ChatPage() {
   const params = useParams()
   const contact = allContacts.find((c) => c.id === params.id)
   
-  const [messages, setMessages] = useState<Message[]>(contact?.messages || [])
+  const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
@@ -33,6 +36,31 @@ export default function ChatPage() {
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const chatId = params.id as string;
+
+  useEffect(() => {
+    if (!chatId) return;
+
+    const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
+    
+    const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      const newMessages: Message[] = [];
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        newMessages.push({
+          id: doc.id,
+          text: data.text,
+          timestamp: data.timestamp?.toDate() || new Date(),
+          isSender: data.senderId === 'currentUser', // Replace with actual current user ID
+        });
+      });
+      setMessages(newMessages);
+    });
+
+    return () => unsubscribe();
+  }, [chatId]);
+
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -43,18 +71,25 @@ export default function ChatPage() {
     }
   }, [messages])
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newMessage.trim() === '') return
+    if (newMessage.trim() === '' || !chatId) return
 
-    const message: Message = {
-      id: `msg-${Date.now()}`,
-      text: newMessage,
-      timestamp: new Date(),
-      isSender: true,
+    try {
+        await addDoc(collection(db, "chats", chatId, "messages"), {
+            text: newMessage,
+            senderId: 'currentUser', // Replace with actual current user ID
+            timestamp: serverTimestamp(),
+        });
+        setNewMessage('')
+    } catch (error) {
+        console.error("Error sending message: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to send message.",
+        });
     }
-    setMessages([...messages, message])
-    setNewMessage('')
   }
   
   const handleMediaButtonClick = () => {
@@ -83,10 +118,12 @@ export default function ChatPage() {
   }
 
   const handleDeleteMessage = (messageId: string) => {
+    // Note: Firestore deletion logic would go here.
+    // This is just a UI update for now.
     setMessages(messages.filter(msg => msg.id !== messageId));
     setSelectedMessage(null);
     toast({
-      title: "Message Deleted",
+      title: "Message Deleted (UI only)",
     });
   }
 
