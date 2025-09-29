@@ -16,11 +16,14 @@ import { useToast } from '@/hooks/use-toast'
 import { NavLink } from '@/components/nav-link'
 import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
+import { ImagePreviewDialog } from '@/components/image-preview-dialog'
+import type { ImagePreviewState } from '@/components/image-preview-dialog'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const { toast } = useToast()
 
   const navItems = [
@@ -40,6 +43,10 @@ export default function ChatsPage() {
   const filteredContacts = sortedContacts.filter(contact =>
     contact.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const handleAvatarClick = (contact: typeof contacts[0]) => {
+    setImagePreview({ urls: [contact.avatar], startIndex: 0 });
+  };
 
 
   return (
@@ -71,13 +78,15 @@ export default function ChatsPage() {
             {filteredContacts.map((contact) => {
               const lastMessage = contact.messages[contact.messages.length - 1]
               return (
-                <Link key={contact.id} href={`/chats/${contact.id}`} className="block hover:bg-accent/50 transition-colors border-b">
+                <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
                   <div className="flex items-center gap-4 p-4">
-                    <Avatar className="h-12 w-12">
-                      <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                    <div className="flex-1 overflow-hidden">
+                    <button onClick={() => handleAvatarClick(contact)}>
+                        <Avatar className="h-12 w-12">
+                          <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                          <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </button>
+                    <Link href={`/chats/${contact.id}`} className="flex-1 overflow-hidden">
                       <div className="flex items-baseline justify-between">
                         <div className="flex items-center gap-1">
                           <p className="font-bold truncate text-base">{contact.name}</p>
@@ -90,9 +99,9 @@ export default function ChatsPage() {
                         )}
                       </div>
                       {lastMessage && <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text}</p>}
-                    </div>
+                    </Link>
                   </div>
-                </Link>
+                </div>
               )
             })}
           </div>
@@ -106,6 +115,10 @@ export default function ChatsPage() {
         </footer>
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
+       <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
     </>
   )
 }

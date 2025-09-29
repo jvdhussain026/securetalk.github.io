@@ -21,7 +21,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { X, PlayCircle } from "lucide-react";
 
-type ImagePreviewState = {
+export type ImagePreviewState = {
   urls: string[];
   startIndex: number;
 } | null;
@@ -91,5 +91,3 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
     </Dialog>
   );
 }
-
-    

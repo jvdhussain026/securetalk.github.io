@@ -18,6 +18,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CallDetailsSheet } from '@/components/call-details-sheet'
 import { cn } from '@/lib/utils'
 import { NavLink } from '@/components/nav-link'
+import { ImagePreviewDialog } from '@/components/image-preview-dialog'
+import type { ImagePreviewState } from '@/components/image-preview-dialog'
 
 function formatCallTimestamp(timestamp: Date): string {
   if (isToday(timestamp)) {
@@ -55,6 +57,7 @@ export default function CallsPage() {
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const { toast } = useToast()
   
   const handleContactSelect = (call: CallRecord) => {
@@ -64,6 +67,11 @@ export default function CallsPage() {
       setIsSheetOpen(true)
     }
   }
+  
+  const handleAvatarClick = (call: CallRecord) => {
+    setImagePreview({ urls: [call.avatar], startIndex: 0 });
+  };
+
 
   const navItems = [
     { href: '/chats', icon: MessageSquare, label: 'Chats' },
@@ -78,19 +86,21 @@ export default function CallsPage() {
   const renderCallList = (calls: CallRecord[]) => (
     <div>
       {calls.map((call) => (
-        <button key={call.id} onClick={() => handleContactSelect(call)} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
+        <div key={call.id} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
           <div className="flex items-center gap-4 p-4">
-            <Avatar className="h-12 w-12">
-              <AvatarImage src={call.avatar} alt={call.name} data-ai-hint="person portrait" />
-              <AvatarFallback>{call.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 overflow-hidden">
+             <button onClick={() => handleAvatarClick(call)}>
+                <Avatar className="h-12 w-12">
+                    <AvatarImage src={call.avatar} alt={call.name} data-ai-hint="person portrait" />
+                    <AvatarFallback>{call.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </button>
+            <button onClick={() => handleContactSelect(call)} className="flex-1 overflow-hidden text-left">
               <p className="font-bold truncate text-base">{call.name}</p>
               <p className="text-sm text-muted-foreground whitespace-nowrap">{formatCallTimestamp(call.timestamp)}</p>
-            </div>
+            </button>
             <CallIcon type={call.type} direction={call.direction} />
           </div>
-        </button>
+        </div>
       ))}
     </div>
   )
@@ -151,6 +161,10 @@ export default function CallsPage() {
           contact={selectedContact}
         />
       )}
+       <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
     </>
   )
 }

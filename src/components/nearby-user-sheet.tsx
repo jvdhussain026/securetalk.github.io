@@ -1,11 +1,14 @@
-"use client"
 
+"use client"
+import React, { useState } from 'react';
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Check, UserPlus } from "lucide-react"
 import type { NearbyUser } from "@/lib/types"
 import { useToast } from '@/hooks/use-toast'
+import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+
 
 type NearbyUserSheetProps = {
   open: boolean;
@@ -16,6 +19,8 @@ type NearbyUserSheetProps = {
 
 export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyUserSheetProps) {
   const { toast } = useToast()
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+
 
   if (!open) return null;
 
@@ -23,6 +28,10 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
     onConnect(user.id)
     toast({ title: "Connection request sent!", description: `Waiting for ${user.name} to accept.` })
   }
+  
+  const handleAvatarClick = () => {
+    setImagePreview({ urls: [user.avatar], startIndex: 0 });
+  };
 
   const getButtonContent = () => {
     switch (user.connectionStatus) {
@@ -61,10 +70,12 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
       >
         <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted" />
         <div className="flex flex-col items-center text-center gap-4">
-          <Avatar className="h-24 w-24">
-            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-          </Avatar>
+            <button onClick={handleAvatarClick}>
+                <Avatar className="h-24 w-24">
+                    <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
+                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </button>
           <div className="flex-1">
             <h3 className="font-bold text-xl">{user.name}</h3>
             <p className="text-sm text-muted-foreground mt-1">
@@ -83,6 +94,10 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
           </Button>
         </div>
       </motion.div>
+       <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
     </>
   );
 }

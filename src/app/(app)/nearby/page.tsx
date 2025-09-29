@@ -11,6 +11,9 @@ import { Sidebar } from '@/components/sidebar'
 import { NearbyUserSheet } from '@/components/nearby-user-sheet'
 import { Input } from '@/components/ui/input'
 import { NavLink } from '@/components/nav-link'
+import { ImagePreviewDialog } from '@/components/image-preview-dialog'
+import type { ImagePreviewState } from '@/components/image-preview-dialog'
+
 
 export default function NearbyPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -18,6 +21,8 @@ export default function NearbyPage() {
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+
 
   const handleUserSelect = (user: NearbyUser) => {
     setSelectedUser(user)
@@ -35,6 +40,11 @@ export default function NearbyPage() {
         setIsSheetOpen(false)
     }, 1000)
   }
+  
+  const handleAvatarClick = (user: NearbyUser) => {
+    setImagePreview({ urls: [user.avatar], startIndex: 0 });
+  };
+
 
   const navItems = [
     { href: '/chats', icon: MessageSquare, label: 'Chats' },
@@ -59,7 +69,7 @@ export default function NearbyPage() {
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
               type="search" 
-              placeholder="Search..." 
+              placeholder="Search..." scope
               className="pl-10 rounded-full" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
@@ -76,20 +86,22 @@ export default function NearbyPage() {
           </div>
           <div>
             {filteredNearbyUsers.map(user => (
-              <button key={user.id} onClick={() => handleUserSelect(user)} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
+              <div key={user.id} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
                 <div className="flex items-center gap-4 p-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 overflow-hidden">
-                    <p className="font-bold truncate text-base">{user.name}</p>
-                    <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>
-                      {user.bio}
-                    </p>
-                  </div>
+                    <button onClick={() => handleAvatarClick(user)}>
+                        <Avatar className="h-12 w-12">
+                            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
+                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                    </button>
+                    <button onClick={() => handleUserSelect(user)} className="flex-1 overflow-hidden text-left">
+                        <p className="font-bold truncate text-base">{user.name}</p>
+                        <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>
+                        {user.bio}
+                        </p>
+                    </button>
                 </div>
-              </button>
+              </div>
             ))}
           </div>
         </main>
@@ -109,6 +121,10 @@ export default function NearbyPage() {
           onConnect={handleConnectRequest}
         />
       )}
+       <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
     </>
   )
 }

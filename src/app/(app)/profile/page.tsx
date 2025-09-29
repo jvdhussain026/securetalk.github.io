@@ -10,12 +10,14 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
+import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 
 export default function ProfilePage() {
   const { toast } = useToast()
   const [name, setName] = useState('Javed Hussain')
   const [bio, setBio] = useState('Digital nomad, coffee enthusiast, and lifelong learner. Exploring the world one city at a time.')
   const [avatar, setAvatar] = useState('https://picsum.photos/seed/user/200/200')
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
 
   const handleSave = () => {
     toast({
@@ -31,7 +33,13 @@ export default function ProfilePage() {
     })
   }
 
+  const handleAvatarClick = () => {
+    setImagePreview({ urls: [avatar], startIndex: 0 });
+  };
+
+
   return (
+      <>
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
       <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
         <Button variant="ghost" size="icon" asChild>
@@ -46,10 +54,12 @@ export default function ProfilePage() {
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <div className="flex flex-col items-center space-y-4">
           <div className="relative">
-            <Avatar className="w-32 h-32">
-              <AvatarImage src={avatar} alt={name} data-ai-hint="person portrait" />
-              <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-            </Avatar>
+            <button onClick={handleAvatarClick}>
+                <Avatar className="w-32 h-32">
+                <AvatarImage src={avatar} alt={name} data-ai-hint="person portrait" />
+                <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+            </button>
             <Button
               variant="outline"
               size="icon"
@@ -81,5 +91,10 @@ export default function ProfilePage() {
         </div>
       </main>
     </div>
+     <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
+    </>
   )
 }

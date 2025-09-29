@@ -23,14 +23,10 @@ import { UserDetailsSheet } from '@/components/user-details-sheet'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
-import { ImagePreviewDialog } from '@/components/image-preview-dialog'
+import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { AttachmentOptions } from '@/components/attachment-options'
 import { AudioPlayer } from '@/components/audio-player'
 
-type ImagePreviewState = {
-  urls: string[];
-  startIndex: number;
-} | null;
 
 export default function ChatPage() {
   const params = useParams()
@@ -207,12 +203,18 @@ export default function ChatPage() {
     });
   }
 
-  const handleImageClick = (message: Message, clickedIndex: number) => {
-    const imageUrls = message.attachments?.filter(a => a.type === 'image' || a.type === 'video').map(a => a.url) || [];
-    if (imageUrls.length > 0) {
-      setImagePreview({ urls: imageUrls, startIndex: clickedIndex });
+  const handleMediaClick = (message: Message, clickedIndex: number) => {
+    const mediaAttachments = message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
+    if (mediaAttachments.length > 0) {
+        const urls = mediaAttachments.map(a => a.url);
+        setImagePreview({ urls, startIndex: clickedIndex });
     }
   };
+  
+  const handleAvatarClick = (avatarUrl: string) => {
+      setImagePreview({ urls: [avatarUrl], startIndex: 0 });
+  };
+
 
   const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
     const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
@@ -246,7 +248,7 @@ export default function ChatPage() {
         if (mediaAttachments.length === 1) {
             const media = mediaAttachments[0];
             return (
-                <button onClick={() => handleImageClick(message, 0)} className="w-full relative">
+                <button onClick={() => handleMediaClick(message, 0)} className="w-full relative">
                     {renderAttachmentPreview(media, false)}
                 </button>
             );
@@ -258,7 +260,7 @@ export default function ChatPage() {
         return (
             <div className="grid grid-cols-2 gap-1">
                 {itemsToShow.map((media, index) => (
-                    <button key={index} onClick={() => handleImageClick(message, index)} className="relative">
+                    <button key={index} onClick={() => handleMediaClick(message, index)} className="relative">
                         {renderAttachmentPreview(media, true)}
                          {remainingItems > 0 && index === 3 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
@@ -333,13 +335,15 @@ export default function ChatPage() {
               <span className="sr-only">Back</span>
             </Link>
           </Button>
-          <button onClick={() => setIsUserDetailsOpen(true)} className="flex items-center gap-3 text-left">
+          <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
             <Avatar className="h-10 w-10">
               <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
               <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
             </Avatar>
+          </button>
+          <button onClick={() => setIsUserDetailsOpen(true)} className="flex items-center gap-3 text-left flex-1 overflow-hidden">
             <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold">{contact.name}</h2>
+              <h2 className="text-lg font-bold truncate">{contact.name}</h2>
               {contact.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
             </div>
           </button>

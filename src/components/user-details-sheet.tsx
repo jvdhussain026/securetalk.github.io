@@ -11,6 +11,8 @@ import Image from "next/image"
 import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck } from "lucide-react"
 
 import type { Contact } from "@/lib/types"
+import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+
 
 type UserDetailsSheetProps = {
   open: boolean
@@ -26,8 +28,14 @@ const placeholderMedia = {
 }
 
 export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsSheetProps) {
+  const [imagePreview, setImagePreview] = React.useState<ImagePreviewState>(null);
+
+  const handleAvatarClick = (avatarUrl: string) => {
+    setImagePreview({ urls: [avatarUrl], startIndex: 0 });
+  };
 
   return (
+      <>
     <Drawer.Root open={open} onOpenChange={onOpenChange} snapPoints={[0.6, 1]} modal={true}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40" />
@@ -39,10 +47,12 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
               <Drawer.Description className="sr-only">Detailed information and shared media for {contact.name}.</Drawer.Description>
               <ScrollArea className="h-[calc(100vh_-_150px)] md:h-[calc(100vh_-_174px)]">
                 <div className="flex flex-col items-center text-center p-4">
-                  <Avatar className="w-24 h-24 mb-4">
-                    <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                  <button onClick={() => handleAvatarClick(contact.avatar)}>
+                    <Avatar className="w-24 h-24 mb-4">
+                        <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                        <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </button>
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-bold">{contact.name}</h2>
                     {contact.verified && <BadgeCheck className="h-6 w-6 text-primary" />}
@@ -112,5 +122,10 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+     <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
+    </>
   )
 }

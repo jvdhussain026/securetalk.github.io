@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { ComingSoonDialog } from './coming-soon-dialog';
+import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 
 type SidebarProps = {
   open: boolean
@@ -30,6 +31,8 @@ type SidebarProps = {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const userAvatar = "https://picsum.photos/seed/user/200/200";
 
   const menuItems = [
     { icon: User, label: 'My Profile', href: '/profile' },
@@ -40,6 +43,11 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: MessageSquareWarning, label: 'Report / Feedback', href: '/feedback' },
     { icon: Code, label: 'Developer', href: '/readme' },
   ]
+  
+  const handleAvatarClick = () => {
+    setImagePreview({ urls: [userAvatar], startIndex: 0 });
+  };
+
 
   return (
     <>
@@ -50,10 +58,12 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
           <SheetDescription className="sr-only">A menu with user profile, settings, and other options.</SheetDescription>
         </SheetHeader>
         <div className="p-6 text-center">
-            <Avatar className="h-20 w-20 mx-auto mb-4">
-                <AvatarImage src="https://picsum.photos/seed/user/200/200" alt="User" data-ai-hint="person portrait"/>
-                <AvatarFallback>JH</AvatarFallback>
-            </Avatar>
+            <button onClick={handleAvatarClick} className="mx-auto">
+                <Avatar className="h-20 w-20 mx-auto mb-4">
+                    <AvatarImage src={userAvatar} alt="User" data-ai-hint="person portrait"/>
+                    <AvatarFallback>JH</AvatarFallback>
+                </Avatar>
+            </button>
              <div className="flex items-center justify-center gap-2">
                 <p className="font-bold text-xl">Javed Hussain</p>
                 <BadgeCheck className="h-6 w-6 text-primary" />
@@ -74,6 +84,10 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       </SheetContent>
     </Sheet>
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
+    <ImagePreviewDialog
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
+      />
     </>
   )
 }
