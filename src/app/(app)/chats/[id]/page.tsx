@@ -269,7 +269,7 @@ export default function ChatPage() {
     );
     
     const renderAudio = (attachment: Attachment) => (
-       <div key={attachment.url} className="mt-1 w-full">
+       <div key={attachment.url} className="mt-1 w-full max-w-xs">
          <AudioPlayer src={attachment.url} isSender={message.isSender} />
       </div>
     );
@@ -293,7 +293,7 @@ export default function ChatPage() {
       case 'document':
         return <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center"><File className="h-8 w-8 text-muted-foreground" /></div>;
       case 'audio':
-        return <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center"><Music className="h-8 w-8 text-muted-foreground" /></div>;
+        return <div className="w-full h-20 rounded-lg bg-muted flex items-center justify-center"><Music className="h-8 w-8 text-muted-foreground" /></div>;
       default:
         return null;
     }
