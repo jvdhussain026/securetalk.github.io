@@ -260,7 +260,7 @@ export default function ChatPage() {
       <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
         <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
         <div className="flex-1 overflow-hidden">
-          <p className="text-sm font-medium line-clamp-2">{attachment.name}</p>
+          <p className="text-sm font-medium line-clamp-2" style={{ wordBreak: 'break-word' }}>{attachment.name}</p>
           <p className="text-xs opacity-80">{attachment.size}</p>
         </div>
         <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
@@ -400,10 +400,10 @@ export default function ChatPage() {
             <div className="p-2">
               <p className="text-sm font-medium mb-2">Attachment Preview</p>
               <div className="grid grid-cols-4 gap-2">
-                {attachmentsToSend.map((attachment, index) => (
+                {attachmentsToSend.slice(0, 4).map((attachment, index) => (
                   <div key={index} className="relative">
                     {renderFooterAttachmentPreview(attachment)}
-                    {index >= 3 && attachmentsToSend.length > 4 && (
+                    {index === 3 && attachmentsToSend.length > 4 && (
                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
                          <span className="text-white font-bold text-lg">+{attachmentsToSend.length - 4}</span>
                        </div>
@@ -417,7 +417,7 @@ export default function ChatPage() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                )).slice(0, 4)}
+                ))}
               </div>
             </div>
           )}
@@ -485,6 +485,8 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
 
     
 
