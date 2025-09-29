@@ -11,13 +11,6 @@ import {
   DialogDescription,
   DialogClose,
 } from "@/components/ui/dialog";
-import {
-  Carousel,
-  CarouselContent,
-  CarouselItem,
-  CarouselNext,
-  CarouselPrevious,
-} from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
 import { X, PlayCircle } from "lucide-react";
 
@@ -33,9 +26,8 @@ type ImagePreviewDialogProps = {
 
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
   const open = !!imagePreview;
-  const urls = imagePreview?.urls || [];
-  const startIndex = imagePreview?.startIndex || 0;
-  
+  const url = imagePreview?.urls[imagePreview.startIndex] || null;
+
   const isVideo = (url: string) => url.startsWith('data:video');
 
   return (
@@ -43,7 +35,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
       <DialogContent className="p-0 bg-black/90 border-none max-w-none w-screen h-screen flex items-center justify-center">
         <DialogHeader className="sr-only">
           <DialogTitle>Media Preview</DialogTitle>
-          <DialogDescription>A full-screen, swipeable view of the selected images and videos.</DialogDescription>
+          <DialogDescription>A full-screen view of the selected media.</DialogDescription>
         </DialogHeader>
         <DialogClose asChild>
             <Button
@@ -55,37 +47,19 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                 <span className="sr-only">Close</span>
             </Button>
         </DialogClose>
-        {open && (
-          <Carousel
-            opts={{
-              loop: urls.length > 1,
-              startIndex: startIndex,
-            }}
-            className="w-full h-full"
-          >
-            <CarouselContent className="h-full">
-              {urls.map((url, index) => (
-                <CarouselItem key={index} className="relative h-full w-full flex items-center justify-center">
-                  {isVideo(url) ? (
-                    <video src={url} controls autoPlay className="max-w-full max-h-full" />
-                  ) : (
-                    <Image
-                      src={url}
-                      alt={`Image Preview ${index + 1}`}
-                      layout="fill"
-                      objectFit="contain"
-                    />
-                  )}
-                </CarouselItem>
-              ))}
-            </CarouselContent>
-            {urls.length > 1 && (
-              <>
-                <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50" />
-                <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2 text-white bg-black/30 hover:bg-black/50" />
-              </>
-            )}
-          </Carousel>
+        {url && (
+            <div className="relative h-full w-full flex items-center justify-center">
+                {isVideo(url) ? (
+                <video src={url} controls autoPlay className="max-w-full max-h-full" />
+                ) : (
+                <Image
+                    src={url}
+                    alt="Media Preview"
+                    layout="fill"
+                    objectFit="contain"
+                />
+                )}
+            </div>
         )}
       </DialogContent>
     </Dialog>
