@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState } from 'react'
@@ -10,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sidebar } from '@/components/sidebar'
+import { ClientOnly } from '@/components/client-only'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -54,7 +56,11 @@ export default function ChatsPage() {
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-baseline justify-between">
                         <p className="font-bold truncate text-base">{contact.name}</p>
-                        {lastMessage && <p className="text-xs text-muted-foreground whitespace-nowrap">{format(lastMessage.timestamp, 'p')}</p>}
+                        {lastMessage && (
+                          <ClientOnly>
+                            <p className="text-xs text-muted-foreground whitespace-nowrap">{format(lastMessage.timestamp, 'p')}</p>
+                          </ClientOnly>
+                        )}
                       </div>
                       {lastMessage && <p className="text-sm text-muted-foreground truncate">{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text}</p>}
                     </div>
