@@ -85,7 +85,7 @@ export default function CameraPage() {
       canvas.height = video.videoHeight;
       const context = canvas.getContext('2d');
       if (context) {
-        // Flip the image if it's from the front camera
+        // Flip the image back to normal if it's from the front camera
         if (facingMode === 'user') {
           context.translate(canvas.width, 0);
           context.scale(-1, 1);
@@ -129,34 +129,34 @@ export default function CameraPage() {
       {capturedImage ? (
         // Preview View
         <div className="flex-1 flex flex-col relative">
-           <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
             <header className="absolute top-0 left-0 w-full flex items-center p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
-               <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-12 w-12" onClick={handleBackFromPreview}>
-                  <ArrowLeft className="h-8 w-8" />
-                </Button>
-               </AlertDialogTrigger>
+              <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
+                <AlertDialogTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-12 w-12" onClick={handleBackFromPreview}>
+                    <ArrowLeft className="h-8 w-8" />
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Discard this photo?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      If you go back now, you will lose this photo. Are you sure you want to discard it?
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleRetake}>Yes, discard</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
             </header>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Discard this photo?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  If you go back now, you will lose this photo. Are you sure you want to discard it?
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>No, keep it</AlertDialogCancel>
-                <AlertDialogAction onClick={handleRetake}>Yes, discard</AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
           <div className="flex-1 bg-black flex items-center justify-center">
             <Image src={capturedImage} alt="Capture preview" layout="fill" objectFit="contain" />
           </div>
           <footer className="flex items-center justify-between p-6 bg-gradient-to-t from-black/50 to-transparent z-10">
               <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
                   <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-20 w-20 rounded-full bg-destructive/80 hover:bg-destructive text-destructive-foreground">
+                    <Button variant="ghost" size="icon" className="h-20 w-20 rounded-full bg-destructive/80 hover:bg-destructive text-destructive-foreground" onClick={handleBackFromPreview}>
                         <X className="h-10 w-10" />
                     </Button>
                   </AlertDialogTrigger>
@@ -198,7 +198,16 @@ export default function CameraPage() {
                     <p className="text-muted-foreground">Please grant camera permissions in your browser settings to continue.</p>
                  </div>
              ) : (
-                <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
+                <video 
+                  ref={videoRef} 
+                  className={cn(
+                    "w-full h-full object-cover",
+                    facingMode === 'user' && "transform -scale-x-100"
+                  )} 
+                  autoPlay 
+                  muted 
+                  playsInline 
+                />
              )}
           </div>
           
