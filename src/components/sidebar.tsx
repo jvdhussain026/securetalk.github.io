@@ -1,3 +1,4 @@
+
 'use client'
 
 import Link from 'next/link'
@@ -23,7 +24,7 @@ type SidebarProps = {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const menuItems = [
-    { icon: User, label: 'My Profile', href: '#' },
+    { icon: User, label: 'My Profile', href: '/profile' },
     { icon: Users, label: 'Connections', href: '#' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: Info, label: 'About Us', href: '#' },

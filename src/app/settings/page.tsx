@@ -1,3 +1,4 @@
+
 import Link from 'next/link'
 import { ArrowLeft, Bell, KeyRound, Lock, User, ChevronRight, Code, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -7,7 +8,7 @@ import { Separator } from '@/components/ui/separator'
 
 export default function SettingsPage() {
   const settingsItems = [
-    { icon: User, text: "Edit Profile", href: "#" },
+    { icon: User, text: "Edit Profile", href: "/profile" },
     { icon: Lock, text: "Privacy", href: "#" },
     { icon: KeyRound, text: "Change Password", href: "#" },
   ]
