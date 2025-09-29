@@ -4,13 +4,6 @@
 import { useState } from 'react';
 import Link from 'next/link'
 import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet'
-import {
   User,
   Settings,
   Info,
@@ -19,6 +12,13 @@ import {
   Code,
   Users,
 } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { ComingSoonDialog } from './coming-soon-dialog';
 
@@ -60,7 +60,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
             </Avatar>
             <p className="font-bold text-xl">Javed Hussain</p>
         </div>
-        <div className="flex-1 space-y-1 px-4">
+        <div className="flex-1 space-y-2 px-4">
           {menuItems.map((item, index) => (
             <div key={index}>
               <Link href={item.href} className="flex items-center p-3 -m-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={(e) => {
