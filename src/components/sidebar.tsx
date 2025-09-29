@@ -25,7 +25,7 @@ type SidebarProps = {
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const menuItems = [
     { icon: User, label: 'My Profile', href: '/profile' },
-    { icon: Users, label: 'Connections', href: '#' },
+    { icon: Users, label: 'Connections', href: '/connections' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: Info, label: 'About Us', href: '#' },
     { icon: Heart, label: 'Support Us', href: '#' },
@@ -58,3 +58,5 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     </Sheet>
   )
 }
+
+    
