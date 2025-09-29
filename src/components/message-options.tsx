@@ -36,7 +36,7 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
         animate={{ y: 0 }}
         exit={{ y: '100%' }}
         transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-card p-4 shadow-lg"
+        className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-card p-4 shadow-lg md:max-w-md md:mx-auto"
       >
         <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-muted" />
         <div className="p-2 bg-muted rounded-lg mb-4">
