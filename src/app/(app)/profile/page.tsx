@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Camera } from 'lucide-react'
+import { ArrowLeft, Camera, BadgeCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -65,7 +65,10 @@ export default function ProfilePage() {
         <div className="space-y-4">
           <div>
             <Label htmlFor="name">Name</Label>
-            <Input id="name" value={name} onChange={(e) => setName(e.target.value)} />
+            <div className="relative">
+              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" />
+              <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+            </div>
           </div>
           <div>
             <Label htmlFor="bio">Bio</Label>

@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
@@ -168,7 +168,10 @@ export default function ChatPage() {
               <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
               <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
             </Avatar>
-            <h2 className="text-lg font-bold">{contact.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-lg font-bold">{contact.name}</h2>
+              {contact.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
+            </div>
           </button>
           <div className="ml-auto flex items-center">
              <DropdownMenu>

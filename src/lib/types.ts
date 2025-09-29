@@ -1,3 +1,4 @@
+
 export type Message = {
   id: string;
   text: string;
@@ -12,6 +13,7 @@ export type Contact = {
   messages: Message[];
   status?: 'online' | 'offline';
   bio?: string;
+  verified?: boolean;
 };
 
 export type User = {

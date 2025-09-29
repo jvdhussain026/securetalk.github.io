@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -79,7 +79,10 @@ export default function ChatsPage() {
                     </Avatar>
                     <div className="flex-1 overflow-hidden">
                       <div className="flex items-baseline justify-between">
-                        <p className="font-bold truncate text-base">{contact.name}</p>
+                        <div className="flex items-center gap-1">
+                          <p className="font-bold truncate text-base">{contact.name}</p>
+                          {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                        </div>
                         {lastMessage && (
                           <ClientOnly>
                             <p className="text-xs text-muted-foreground whitespace-nowrap">{format(lastMessage.timestamp, 'p')}</p>

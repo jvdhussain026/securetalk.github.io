@@ -1,3 +1,4 @@
+
 "use client"
 
 import * as React from "react"
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Image from "next/image"
-import { FileText, Link as LinkIcon, Download, PlayCircle } from "lucide-react"
+import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck } from "lucide-react"
 
 import type { Contact } from "@/lib/types"
 
@@ -42,7 +43,10 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
                     <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
                     <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
                   </Avatar>
-                  <h2 className="text-2xl font-bold">{contact.name}</h2>
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-2xl font-bold">{contact.name}</h2>
+                    {contact.verified && <BadgeCheck className="h-6 w-6 text-primary" />}
+                  </div>
                   <p className="text-muted-foreground">Online</p>
                   <p className="text-sm text-muted-foreground mt-2">"{contact.status || 'Available for a chat!'}"</p>
                   <p className="text-sm mt-4 text-left w-full p-4 bg-muted rounded-lg">{contact.bio || 'Digital nomad, coffee enthusiast, and lifelong learner. Exploring the world one city at a time.'}</p>

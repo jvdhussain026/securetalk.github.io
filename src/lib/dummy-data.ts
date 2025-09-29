@@ -1,3 +1,4 @@
+
 import type { Contact } from './types';
 import { subMinutes, subHours, subDays } from 'date-fns';
 
@@ -67,5 +68,6 @@ export const contacts: Contact[] = [
     messages: [
       { id: 'sm1', text: 'Hello! How can I help you today?', timestamp: subMinutes(now, 5), isSender: false },
     ],
+    verified: true,
   },
 ];

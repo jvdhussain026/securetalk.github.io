@@ -11,6 +11,7 @@ import {
   MessageSquareWarning,
   Code,
   Users,
+  BadgeCheck,
 } from 'lucide-react'
 import {
   Sheet,
@@ -29,11 +30,6 @@ type SidebarProps = {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  const handleNonPageClick = (e: React.MouseEvent) => {
-    e.preventDefault();
-    setIsModalOpen(true);
-  }
 
   const menuItems = [
     { icon: User, label: 'My Profile', href: '/profile' },
@@ -58,15 +54,15 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
                 <AvatarImage src="https://picsum.photos/seed/user/200/200" alt="User" data-ai-hint="person portrait"/>
                 <AvatarFallback>JH</AvatarFallback>
             </Avatar>
-            <p className="font-bold text-xl">Javed Hussain</p>
+             <div className="flex items-center justify-center gap-2">
+                <p className="font-bold text-xl">Javed Hussain</p>
+                <BadgeCheck className="h-6 w-6 text-primary" />
+              </div>
         </div>
         <div className="flex-1 space-y-2 px-4">
           {menuItems.map((item, index) => (
             <div key={index}>
-              <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={(e) => {
-                if (item.href === '#') {
-                  handleNonPageClick(e);
-                }
+              <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={() => {
                 onOpenChange(false);
               }}>
                 <item.icon className="h-6 w-6 mr-4" />
