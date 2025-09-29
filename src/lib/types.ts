@@ -19,3 +19,11 @@ export type User = {
     name: string;
     avatar: string;
 }
+
+export type NearbyUser = {
+  id: string;
+  name: string;
+  avatar: string;
+  bio?: string;
+  connectionStatus: 'none' | 'requested' | 'connected';
+};
