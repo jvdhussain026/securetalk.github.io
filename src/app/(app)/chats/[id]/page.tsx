@@ -24,6 +24,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
+import { AttachmentOptions } from '@/components/attachment-options'
 
 type ImagePreviewState = {
   urls: string[];
@@ -40,6 +41,7 @@ export default function ChatPage() {
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
 
 
   const { toast } = useToast()
@@ -113,7 +115,7 @@ export default function ChatPage() {
   }
   
   const handleMediaButtonClick = () => {
-    fileInputRef.current?.click()
+    setIsAttachmentSheetOpen(true);
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -328,35 +330,42 @@ export default function ChatPage() {
 
         <footer className="p-2 border-t shrink-0 bg-card">
           {imagesToSend.length > 0 && (
-              <div className="p-2">
-                <div className="grid grid-cols-4 gap-2">
-                    {imagesToSend.slice(0, 4).map((image, index) => (
-                        <div key={index} className="relative">
-                            <Image src={image} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
-                            {imagesToSend.length > 4 && index === 3 && (
-                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
-                                    <span className="text-white font-bold text-lg">+{imagesToSend.length - 4}</span>
-                                </div>
-                            )}
-                             <Button
-                                size="icon"
-                                variant="destructive"
-                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                                onClick={() => removeImageFromPreview(index)}
-                            >
-                                <X className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    ))}
-                </div>
+            <div className="p-2">
+              <p className="text-sm font-medium mb-2">Image Preview</p>
+              <div className="grid grid-cols-4 gap-2">
+                {imagesToSend.slice(0, 4).map((image, index) => (
+                  <div key={index} className="relative">
+                    {index < 3 ? (
+                      <Image src={image} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
+                    ) : (
+                      <div className="relative">
+                        <Image src={image} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
+                        {imagesToSend.length > 4 && (
+                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                            <span className="text-white font-bold text-lg">+{imagesToSend.length - 4}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                    <Button
+                      size="icon"
+                      variant="destructive"
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                      onClick={() => removeImageFromPreview(index)}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
               </div>
+            </div>
           )}
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
             <Button type="button" size="icon" variant="ghost" onClick={handleMediaButtonClick}>
               <Plus className="h-6 w-6" />
               <span className="sr-only">Add media</span>
             </Button>
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" multiple />
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*,video/*" multiple />
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -389,6 +398,15 @@ export default function ChatPage() {
       <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
+      />
+      <AttachmentOptions
+        isOpen={isAttachmentSheetOpen}
+        onClose={() => setIsAttachmentSheetOpen(false)}
+        onSelect={(option) => {
+            if (option === 'image') {
+                fileInputRef.current?.click();
+            }
+        }}
       />
     </>
   )
