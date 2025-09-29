@@ -3,18 +3,20 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, Search, User } from 'lucide-react'
+import { MoreVertical, User, Phone, Video } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Sidebar } from '@/components/sidebar'
 import { ClientOnly } from '@/components/client-only'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { useToast } from '@/hooks/use-toast'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const { toast } = useToast()
 
   const sortedContacts = [...contacts].sort((a, b) => {
     const lastMessageA = a.messages[a.messages.length - 1]
@@ -33,14 +35,31 @@ export default function ChatsPage() {
             <User className="h-6 w-6" />
             <span className="sr-only">Open sidebar</span>
           </Button>
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input placeholder="Search..." className="pl-10 w-full" />
+          <h1 className="text-xl font-bold">Chats</h1>
+          <div className="ml-auto flex items-center">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Phone className="h-6 w-6" />
+                   <span className="sr-only">Call</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onSelect={() => toast({ title: "Starting voice call..." })}>
+                  <Phone className="mr-2 h-4 w-4" />
+                  <span>New Voice Call</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => toast({ title: "Starting video call..." })}>
+                  <Video className="mr-2 h-4 w-4" />
+                  <span>New Video Call</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button variant="ghost" size="icon">
+              <MoreVertical className="h-6 w-6" />
+              <span className="sr-only">More options</span>
+            </Button>
           </div>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-6 w-6" />
-            <span className="sr-only">More options</span>
-          </Button>
         </header>
         <div className="flex-1 overflow-y-auto">
           <div>

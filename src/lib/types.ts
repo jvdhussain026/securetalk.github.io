@@ -10,6 +10,8 @@ export type Contact = {
   name: string;
   avatar: string;
   messages: Message[];
+  status?: string;
+  bio?: string;
 };
 
 export type User = {
