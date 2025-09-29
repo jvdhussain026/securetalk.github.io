@@ -1,7 +1,9 @@
 
+
 export type Message = {
   id: string;
-  text: string;
+  text?: string;
+  imageUrl?: string;
   timestamp: Date;
   isSender: boolean;
 };
@@ -29,3 +31,5 @@ export type NearbyUser = {
   bio?: string;
   connectionStatus: 'none' | 'requested' | 'connected';
 };
+
+    

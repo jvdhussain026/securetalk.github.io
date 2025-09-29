@@ -3,10 +3,11 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
+import Image from 'next/image'
 
 import { contacts as allContacts } from '@/lib/dummy-data'
 import type { Message } from '@/lib/types'
@@ -30,6 +31,7 @@ export default function ChatPage() {
   
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
+  const [imagePreview, setImagePreview] = useState<string | null>(null)
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
 
@@ -52,6 +54,7 @@ export default function ChatPage() {
         newMessages.push({
           id: doc.id,
           text: data.text,
+          imageUrl: data.imageUrl,
           timestamp: data.timestamp?.toDate() || new Date(),
           isSender: data.senderId === 'currentUser', // Replace with actual current user ID
         });
@@ -74,14 +77,18 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (newMessage.trim() === '' || !chatId) return
+    if ((newMessage.trim() === '' && !imagePreview) || !chatId) return
 
-    const messageToSend = newMessage;
+    const textToSend = newMessage;
+    const imageToSend = imagePreview;
+
     setNewMessage('')
+    setImagePreview(null)
 
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
-            text: messageToSend,
+            text: textToSend,
+            imageUrl: imageToSend,
             senderId: 'currentUser', // Replace with actual current user ID
             timestamp: serverTimestamp(),
         });
@@ -92,7 +99,8 @@ export default function ChatPage() {
             title: "Error",
             description: "Failed to send message.",
         });
-        setNewMessage(messageToSend); // Restore message on error
+        setNewMessage(textToSend); // Restore on error
+        setImagePreview(imageToSend);
     }
   }
   
@@ -102,10 +110,17 @@ export default function ChatPage() {
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
-    if (file) {
+    if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            setImagePreview(reader.result as string);
+        };
+        reader.readAsDataURL(file);
+    } else if (file) {
       toast({
-        title: "File Selected",
-        description: `${file.name} is ready to be sent. (Sending not implemented)`,
+        variant: "destructive",
+        title: "Invalid File",
+        description: "Please select an image file.",
       })
     }
   }
@@ -223,12 +238,16 @@ export default function ChatPage() {
                   onTouchMove={handleTouchEnd} // Cancel on scroll
                 >
                   <div className={cn(
-                    "p-3 rounded-2xl max-w-[75%] lg:max-w-[65%]", 
-                    message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm"
+                    "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2", 
+                    message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
+                    message.imageUrl && !message.text ? "p-1 bg-transparent border-none" : ""
                   )}>
-                      <p className="text-sm break-words">{message.text}</p>
+                      {message.imageUrl && (
+                          <Image src={message.imageUrl} alt="Sent image" width={300} height={300} className="rounded-xl object-cover" />
+                      )}
+                      {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
                       <ClientOnly>
-                        <p className={cn("text-xs mt-1 text-right", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                        <p className={cn("text-xs text-right", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
                           {format(message.timestamp, 'p')}
                         </p>
                       </ClientOnly>
@@ -240,12 +259,25 @@ export default function ChatPage() {
         </main>
 
         <footer className="p-2 border-t shrink-0 bg-card">
+          {imagePreview && (
+              <div className="relative p-2">
+                <Image src={imagePreview} alt="Preview" width={80} height={80} className="rounded-lg object-cover" />
+                <Button
+                    size="icon"
+                    variant="destructive"
+                    className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
+                    onClick={() => setImagePreview(null)}
+                >
+                    <X className="h-4 w-4" />
+                </Button>
+              </div>
+          )}
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
             <Button type="button" size="icon" variant="ghost" onClick={handleMediaButtonClick}>
               <Plus className="h-6 w-6" />
               <span className="sr-only">Add media</span>
             </Button>
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} />
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -253,7 +285,7 @@ export default function ChatPage() {
               className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
               autoComplete="off"
             />
-             {newMessage.trim() ? (
+             {newMessage.trim() || imagePreview ? (
               <Button type="submit" size="icon" className="rounded-full">
                 <Send className="h-5 w-5" />
                 <span className="sr-only">Send</span>
@@ -278,3 +310,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    

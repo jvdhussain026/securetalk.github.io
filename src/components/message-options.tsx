@@ -1,3 +1,4 @@
+
 'use client';
 
 import { motion } from 'framer-motion';
@@ -15,8 +16,12 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
   const { toast } = useToast();
 
   const handleCopy = () => {
-    navigator.clipboard.writeText(message.text);
-    toast({ title: 'Message copied!' });
+    if (message.text) {
+      navigator.clipboard.writeText(message.text);
+      toast({ title: 'Message copied!' });
+    } else {
+      toast({ variant: 'destructive', title: 'Cannot copy image' });
+    }
     onClose();
   };
 
@@ -40,14 +45,14 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
       >
         <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-muted" />
         <div className="p-2 bg-muted rounded-lg mb-4">
-          <p className="line-clamp-2 text-sm text-muted-foreground">{message.text}</p>
+          <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Image'}</p>
         </div>
         <div className="grid grid-cols-5 gap-2 text-center">
           <button onClick={() => handleAction('Reply')} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary">
             <Reply className="h-6 w-6" />
             <span className="text-xs">Reply</span>
           </button>
-          <button onClick={handleCopy} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary">
+          <button onClick={handleCopy} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary disabled:opacity-50" disabled={!message.text}>
             <Copy className="h-6 w-6" />
             <span className="text-xs">Copy</span>
           </button>
@@ -68,3 +73,5 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
     </>
   );
 }
+
+    
