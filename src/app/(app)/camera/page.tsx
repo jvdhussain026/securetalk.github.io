@@ -16,7 +16,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -117,6 +116,10 @@ export default function CameraPage() {
     router.push('/chats');
   };
 
+  const handleBackFromPreview = () => {
+    setIsDiscardDialogOpen(true);
+  }
+
   return (
     <div className="flex flex-col h-full bg-black text-white">
       {/* This canvas is used for capturing the image but is not displayed */}
@@ -128,7 +131,7 @@ export default function CameraPage() {
            <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
             <header className="absolute top-0 left-0 w-full flex items-center p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
                <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-12 w-12">
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-12 w-12" onClick={handleBackFromPreview}>
                   <ArrowLeft className="h-8 w-8" />
                 </Button>
                </AlertDialogTrigger>
@@ -152,7 +155,7 @@ export default function CameraPage() {
           <footer className="flex items-center justify-between p-6 bg-gradient-to-t from-black/50 to-transparent z-10">
               <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
                   <AlertDialogTrigger asChild>
-                    <Button variant="destructive" size="icon" className="h-20 w-20 bg-red-600 hover:bg-red-700">
+                    <Button variant="ghost" size="icon" className="h-20 w-20 rounded-full bg-destructive/80 hover:bg-destructive text-destructive-foreground">
                         <X className="h-10 w-10" />
                     </Button>
                   </AlertDialogTrigger>
@@ -170,7 +173,7 @@ export default function CameraPage() {
                   </AlertDialogContent>
               </AlertDialog>
 
-            <Button size="icon" className="h-20 w-20 bg-primary hover:bg-primary/80" onClick={handleSend}>
+            <Button size="icon" className="h-20 w-20 rounded-full bg-primary hover:bg-primary/80" onClick={handleSend}>
                 <Check className="h-10 w-10" />
             </Button>
           </footer>
@@ -179,9 +182,9 @@ export default function CameraPage() {
         // Live Camera View
         <div className="flex-1 flex flex-col relative">
            <header className="absolute top-0 left-0 w-full flex items-center p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
-            <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20 hover:text-white">
+            <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20 hover:text-white h-12 w-12">
                 <Link href="/chats">
-                    <ArrowLeft className="h-7 w-7" />
+                    <ArrowLeft className="h-8 w-8" />
                 </Link>
             </Button>
           </header>
