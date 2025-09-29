@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
@@ -199,6 +199,26 @@ export default function ChatPage() {
     }
   };
 
+  const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
+    const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
+
+    switch(attachment.type) {
+      case 'image':
+        return <Image src={attachment.url} alt="Sent media" width={250} height={250} className={commonClass} />;
+      case 'video':
+        return (
+          <div className="relative">
+            <video src={attachment.url} className={commonClass} />
+            <div className={cn("absolute inset-0 bg-black/30 flex items-center justify-center", isGrid ? "rounded-md" : "rounded-xl")}>
+              <PlayCircle className={cn("text-white", isGrid ? "w-8 h-8" : "w-10 h-10")} />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
+
   const renderMessageContent = (message: Message) => {
     const { attachments = [], text } = message;
     const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
@@ -212,32 +232,22 @@ export default function ChatPage() {
             const media = mediaAttachments[0];
             return (
                 <button onClick={() => handleImageClick(message, 0)} className="w-full relative">
-                    <Image src={media.url} alt="Sent media" width={250} height={250} className="rounded-xl object-cover w-full max-w-xs" />
-                    {media.type === 'video' && (
-                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-xl">
-                            <PlayCircle className="w-10 h-10 text-white" />
-                        </div>
-                    )}
+                    {renderAttachmentPreview(media, false)}
                 </button>
             );
         }
 
-        const imagesToShow = mediaAttachments.slice(0, 4);
-        const remainingImages = mediaAttachments.length - 4;
+        const itemsToShow = mediaAttachments.slice(0, 4);
+        const remainingItems = mediaAttachments.length - 4;
 
         return (
             <div className="grid grid-cols-2 gap-1">
-                {imagesToShow.map((media, index) => (
+                {itemsToShow.map((media, index) => (
                     <button key={index} onClick={() => handleImageClick(message, index)} className="relative">
-                        <Image src={media.url} alt={`Sent media ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
-                         {media.type === 'video' && (
-                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-md">
-                                <PlayCircle className="w-8 h-8 text-white" />
-                            </div>
-                         )}
-                         {remainingImages > 0 && index === 3 && (
+                        {renderAttachmentPreview(media, true)}
+                         {remainingItems > 0 && index === 3 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
-                                <span className="text-white font-bold text-lg">+{remainingImages}</span>
+                                <span className="text-white font-bold text-lg">+{remainingItems}</span>
                             </div>
                         )}
                     </button>
@@ -247,7 +257,7 @@ export default function ChatPage() {
     };
 
     const renderDoc = (attachment: Attachment) => (
-      <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1">
+      <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
         <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
         <div className="flex-1 overflow-hidden">
           <p className="text-sm font-medium truncate">{attachment.name}</p>
@@ -271,6 +281,21 @@ export default function ChatPage() {
             {audioAttachments.map(renderAudio)}
         </div>
     );
+  };
+  
+  const renderFooterAttachmentPreview = (attachment: Attachment) => {
+    switch (attachment.type) {
+      case 'image':
+        return <Image src={attachment.url} alt={`Preview`} width={80} height={80} className="rounded-lg object-cover aspect-square" />;
+      case 'video':
+        return <div className="w-full aspect-square rounded-lg bg-black flex items-center justify-center"><VideoIcon className="h-8 w-8 text-white" /></div>;
+      case 'document':
+        return <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center"><File className="h-8 w-8 text-muted-foreground" /></div>;
+      case 'audio':
+        return <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center"><Music className="h-8 w-8 text-muted-foreground" /></div>;
+      default:
+        return null;
+    }
   };
 
 
@@ -375,19 +400,13 @@ export default function ChatPage() {
             <div className="p-2">
               <p className="text-sm font-medium mb-2">Attachment Preview</p>
               <div className="grid grid-cols-4 gap-2">
-                {attachmentsToSend.slice(0, 4).map((attachment, index) => (
+                {attachmentsToSend.map((attachment, index) => (
                   <div key={index} className="relative">
-                    {index < 3 ? (
-                       <Image src={attachment.url} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
-                    ) : (
-                      <div className="relative">
-                        <Image src={attachment.url} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
-                        {attachmentsToSend.length > 4 && (
-                          <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                            <span className="text-white font-bold text-lg">+{attachmentsToSend.length - 4}</span>
-                          </div>
-                        )}
-                      </div>
+                    {renderFooterAttachmentPreview(attachment)}
+                    {index >= 3 && attachmentsToSend.length > 4 && (
+                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                         <span className="text-white font-bold text-lg">+{attachmentsToSend.length - 4}</span>
+                       </div>
                     )}
                     <Button
                       size="icon"
@@ -398,7 +417,7 @@ export default function ChatPage() {
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
-                ))}
+                )).slice(0, 4)}
               </div>
             </div>
           )}
