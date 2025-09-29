@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Sidebar } from '@/components/sidebar'
 import { NearbyUserSheet } from '@/components/nearby-user-sheet'
 import { NavLink } from '@/components/nav-link'
+import { Input } from '@/components/ui/input'
 
 export default function NearbyPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -49,11 +50,10 @@ export default function NearbyPage() {
             <User className="h-7 w-7" />
             <span className="sr-only">Open sidebar</span>
           </Button>
-          <h1 className="text-xl font-bold">Nearby</h1>
-          <Button variant="ghost" size="icon" className="ml-auto h-11 w-11">
-            <MoreVertical className="h-6 w-6" />
-            <span className="sr-only">More options</span>
-          </Button>
+          <div className="relative flex-1">
+             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+            <Input type="search" placeholder="Search..." className="pl-10 rounded-full" />
+          </div>
         </header>
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 text-center border-b">
