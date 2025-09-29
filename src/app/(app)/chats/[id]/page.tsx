@@ -75,13 +75,15 @@ export default function ChatPage() {
     e.preventDefault()
     if (newMessage.trim() === '' || !chatId) return
 
+    const messageToSend = newMessage;
+    setNewMessage('')
+
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
-            text: newMessage,
+            text: messageToSend,
             senderId: 'currentUser', // Replace with actual current user ID
             timestamp: serverTimestamp(),
         });
-        setNewMessage('')
     } catch (error) {
         console.error("Error sending message: ", error);
         toast({
@@ -89,6 +91,7 @@ export default function ChatPage() {
             title: "Error",
             description: "Failed to send message.",
         });
+        setNewMessage(messageToSend); // Restore message on error
     }
   }
   
