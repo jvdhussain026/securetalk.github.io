@@ -5,6 +5,9 @@ import Link from 'next/link'
 import {
   Sheet,
   SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
 } from '@/components/ui/sheet'
 import {
   User,
@@ -36,6 +39,10 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="left" className="p-0 flex flex-col">
+        <SheetHeader>
+          <SheetTitle className="sr-only">User Menu</SheetTitle>
+          <SheetDescription className="sr-only">A menu with user profile, settings, and other options.</SheetDescription>
+        </SheetHeader>
         <div className="p-6 text-center">
             <Avatar className="h-20 w-20 mx-auto mb-4">
                 <AvatarImage src="https://picsum.photos/seed/user/200/200" alt="User" data-ai-hint="person portrait"/>
