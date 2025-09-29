@@ -10,7 +10,7 @@ export type Contact = {
   name: string;
   avatar: string;
   messages: Message[];
-  status?: string;
+  status?: 'online' | 'offline';
   bio?: string;
 };
 

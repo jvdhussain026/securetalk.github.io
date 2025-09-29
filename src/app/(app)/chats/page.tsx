@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Phone, Video, MessageSquare, Users, Search } from 'lucide-react'
+import { MoreVertical, User, Search } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -13,14 +13,9 @@ import { Input } from '@/components/ui/input'
 import { Sidebar } from '@/components/sidebar'
 import { ClientOnly } from '@/components/client-only'
 import { useToast } from '@/hooks/use-toast'
-import { NavLink } from '@/components/nav-link'
-import { ComingSoonDialog } from '@/components/coming-soon-dialog'
-import { cn } from '@/lib/utils'
-
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [isModalOpen, setIsModalOpen] = useState(false)
   const { toast } = useToast()
 
   const sortedContacts = [...contacts].sort((a, b) => {
@@ -30,12 +25,6 @@ export default function ChatsPage() {
     if (!lastMessageB) return -1
     return lastMessageB.timestamp.getTime() - lastMessageA.timestamp.getTime()
   })
-  
-  const navItems = [
-    { href: '/chats', icon: MessageSquare, label: 'Chats' },
-    { action: () => setIsModalOpen(true), icon: Phone, label: 'Calls' },
-    { action: () => setIsModalOpen(true), icon: Users, label: 'Nearby' },
-  ]
 
   return (
     <>
@@ -75,7 +64,7 @@ export default function ChatsPage() {
                           </ClientOnly>
                         )}
                       </div>
-                      {lastMessage && <p className="text-sm text-muted-foreground truncate">{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text}</p>}
+                      {lastMessage && <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text}</p>}
                     </div>
                   </div>
                 </Link>
@@ -83,28 +72,7 @@ export default function ChatsPage() {
             })}
           </div>
         </main>
-        <footer className="border-t shrink-0 bg-card">
-          <nav className="grid grid-cols-3 items-center p-2">
-            {navItems.map((item, index) => (
-              item.href ? (
-                <NavLink key={index} href={item.href} icon={item.icon} label={item.label} />
-              ) : (
-                <button
-                  key={index}
-                  onClick={item.action}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-1 p-2 rounded-md transition-colors text-muted-foreground hover:text-primary/80"
-                  )}
-                >
-                  <item.icon className="h-6 w-6" />
-                  <span className="text-xs font-medium">{item.label}</span>
-                </button>
-              )
-            ))}
-          </nav>
-        </footer>
       </div>
-      <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
     </>
   )
 }
