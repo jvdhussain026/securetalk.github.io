@@ -2,8 +2,8 @@
 'use client'
 
 import React, { useState } from 'react'
-import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, ArrowRight, MessageSquare, Users } from 'lucide-react'
-import { format, isToday, isYesterday, formatRelative } from 'date-fns'
+import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming } from 'lucide-react'
+import { format, isToday, isYesterday } from 'date-fns'
 
 import { callHistory } from '@/lib/dummy-call-data'
 import type { CallRecord } from '@/lib/dummy-call-data'
@@ -17,7 +17,6 @@ import { useToast } from '@/hooks/use-toast'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { CallDetailsSheet } from '@/components/call-details-sheet'
 import { cn } from '@/lib/utils'
-import { NavLink } from '@/components/nav-link'
 
 function formatCallTimestamp(timestamp: Date): string {
   if (isToday(timestamp)) {
@@ -56,12 +55,6 @@ export default function CallsPage() {
   const [isSheetOpen, setIsSheetOpen] = useState(false)
   const { toast } = useToast()
   
-  const navItems = [
-    { href: '/chats', icon: MessageSquare, label: 'Chats' },
-    { href: '/calls', icon: Phone, label: 'Calls' },
-    { href: '/nearby', icon: Users, label: 'Nearby' },
-  ]
-
   const handleContactSelect = (call: CallRecord) => {
     const contact = contacts.find(c => c.id === call.contactId);
     if (contact) {
@@ -125,13 +118,6 @@ export default function CallsPage() {
             </div>
           </Tabs>
         </main>
-         <footer className="border-t shrink-0 bg-card">
-          <nav className="grid grid-cols-3 items-center p-2">
-            {navItems.map((item, index) => (
-              <NavLink key={index} href={item.href} icon={item.icon} label={item.label} />
-            ))}
-          </nav>
-        </footer>
       </div>
       {selectedContact && (
         <CallDetailsSheet

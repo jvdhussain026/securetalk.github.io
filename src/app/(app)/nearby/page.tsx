@@ -2,14 +2,13 @@
 'use client'
 
 import React, { useState } from 'react'
-import { MoreVertical, User, Search, Wifi, MessageSquare, Phone, Users } from 'lucide-react'
+import { User, Search, Wifi } from 'lucide-react'
 import { nearbyUsers as initialNearbyUsers } from '@/lib/dummy-nearby-data'
 import type { NearbyUser } from '@/lib/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Sidebar } from '@/components/sidebar'
 import { NearbyUserSheet } from '@/components/nearby-user-sheet'
-import { NavLink } from '@/components/nav-link'
 import { Input } from '@/components/ui/input'
 
 export default function NearbyPage() {
@@ -17,12 +16,6 @@ export default function NearbyPage() {
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(initialNearbyUsers)
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
-
-  const navItems = [
-    { href: '/chats', icon: MessageSquare, label: 'Chats' },
-    { href: '/calls', icon: Phone, label: 'Calls' },
-    { href: '/nearby', icon: Users, label: 'Nearby' },
-  ]
 
   const handleUserSelect = (user: NearbyUser) => {
     setSelectedUser(user)
@@ -82,13 +75,6 @@ export default function NearbyPage() {
             ))}
           </div>
         </main>
-        <footer className="border-t shrink-0 bg-card">
-          <nav className="grid grid-cols-3 items-center p-2">
-            {navItems.map((item, index) => (
-              <NavLink key={index} href={item.href} icon={item.icon} label={item.label} />
-            ))}
-          </nav>
-        </footer>
       </div>
       {selectedUser && (
         <NearbyUserSheet
