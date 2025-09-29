@@ -30,7 +30,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: User, label: 'My Profile', href: '/profile' },
     { icon: Users, label: 'Connections', href: '/connections' },
     { icon: Settings, label: 'Settings', href: '/settings' },
-    { icon: Info, label: 'About Us', href: '#' },
+    { icon: Info, label: 'About Us', href: '/about' },
     { icon: Heart, label: 'Support Us', href: '#' },
     { icon: MessageSquareWarning, label: 'Report / Feedback', href: '#' },
     { icon: Code, label: 'Developer', href: '/readme' },
