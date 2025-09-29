@@ -17,6 +17,7 @@ export default function NearbyPage() {
   const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(initialNearbyUsers)
   const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const handleUserSelect = (user: NearbyUser) => {
     setSelectedUser(user)
@@ -40,6 +41,10 @@ export default function NearbyPage() {
     { href: '/calls', icon: Phone, label: 'Calls' },
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
+  
+  const filteredNearbyUsers = nearbyUsers.filter(user =>
+    user.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <>
@@ -52,7 +57,13 @@ export default function NearbyPage() {
           </Button>
           <div className="relative flex-1">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input type="search" placeholder="Search..." className="pl-10 rounded-full" />
+            <Input 
+              type="search" 
+              placeholder="Search..." 
+              className="pl-10 rounded-full" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
@@ -64,7 +75,7 @@ export default function NearbyPage() {
             </p>
           </div>
           <div>
-            {nearbyUsers.map(user => (
+            {filteredNearbyUsers.map(user => (
               <button key={user.id} onClick={() => handleUserSelect(user)} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
                 <div className="flex items-center gap-4 p-4">
                   <Avatar className="h-12 w-12">

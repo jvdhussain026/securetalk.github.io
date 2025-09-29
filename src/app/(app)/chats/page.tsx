@@ -20,6 +20,7 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const { toast } = useToast()
 
   const navItems = [
@@ -36,6 +37,11 @@ export default function ChatsPage() {
     return lastMessageB.timestamp.getTime() - lastMessageA.timestamp.getTime()
   })
 
+  const filteredContacts = sortedContacts.filter(contact =>
+    contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+
   return (
     <>
       <Sidebar open={isSidebarOpen} onOpenChange={setIsSidebarOpen} />
@@ -47,7 +53,13 @@ export default function ChatsPage() {
           </Button>
           <div className="relative flex-1">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input type="search" placeholder="Search..." className="pl-10 rounded-full" />
+            <Input 
+              type="search" 
+              placeholder="Search..." 
+              className="pl-10 rounded-full" 
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <Button variant="ghost" size="icon" className="h-11 w-11">
             <MoreVertical className="h-6 w-6" />
@@ -56,7 +68,7 @@ export default function ChatsPage() {
         </header>
         <main className="flex-1 overflow-y-auto">
           <div>
-            {sortedContacts.map((contact) => {
+            {filteredContacts.map((contact) => {
               const lastMessage = contact.messages[contact.messages.length - 1]
               return (
                 <Link key={contact.id} href={`/chats/${contact.id}`} className="block hover:bg-accent/50 transition-colors border-b">

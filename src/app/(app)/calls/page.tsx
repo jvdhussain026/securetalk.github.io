@@ -54,6 +54,7 @@ export default function CallsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
   const [isSheetOpen, setIsSheetOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
   const { toast } = useToast()
   
   const handleContactSelect = (call: CallRecord) => {
@@ -69,6 +70,10 @@ export default function CallsPage() {
     { href: '/calls', icon: Phone, label: 'Calls' },
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
+  
+  const filteredCallHistory = callHistory.filter(call =>
+    call.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const renderCallList = (calls: CallRecord[]) => (
     <div>
@@ -101,7 +106,13 @@ export default function CallsPage() {
           </Button>
           <div className="relative flex-1">
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input type="search" placeholder="Search..." className="pl-10 rounded-full" />
+            <Input 
+                type="search" 
+                placeholder="Search..." 
+                className="pl-10 rounded-full" 
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
           <Button variant="ghost" size="icon" className="h-11 w-11">
             <MoreVertical className="h-6 w-6" />
@@ -118,10 +129,10 @@ export default function CallsPage() {
               <TabsTrigger value="incoming">Incoming</TabsTrigger>
             </TabsList>
             <div className="flex-1 overflow-y-auto">
-                <TabsContent value="all">{renderCallList(callHistory)}</TabsContent>
-                <TabsContent value="missed">{renderCallList(callHistory.filter(c => c.direction === 'missed'))}</TabsContent>
-                <TabsContent value="outgoing">{renderCallList(callHistory.filter(c => c.direction === 'outgoing'))}</TabsContent>
-                <TabsContent value="incoming">{renderCallList(callHistory.filter(c => c.direction === 'incoming'))}</TabsContent>
+                <TabsContent value="all">{renderCallList(filteredCallHistory)}</TabsContent>
+                <TabsContent value="missed">{renderCallList(filteredCallHistory.filter(c => c.direction === 'missed'))}</TabsContent>
+                <TabsContent value="outgoing">{renderCallList(filteredCallHistory.filter(c => c.direction === 'outgoing'))}</TabsContent>
+                <TabsContent value="incoming">{renderCallList(filteredCallHistory.filter(c => c.direction === 'incoming'))}</TabsContent>
             </div>
           </Tabs>
         </main>
