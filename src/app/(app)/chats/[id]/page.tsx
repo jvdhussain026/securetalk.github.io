@@ -25,6 +25,10 @@ import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 
+type ImagePreviewState = {
+  urls: string[];
+  startIndex: number;
+} | null;
 
 export default function ChatPage() {
   const params = useParams()
@@ -35,7 +39,7 @@ export default function ChatPage() {
   const [imagesToSend, setImagesToSend] = useState<string[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
 
 
   const { toast } = useToast()
@@ -181,18 +185,26 @@ export default function ChatPage() {
     });
   }
 
+  const handleImageClick = (message: Message, clickedIndex: number) => {
+    const urls = message.imageUrls || (message.imageUrl ? [message.imageUrl] : []);
+    if (urls.length > 0) {
+      setImagePreview({ urls, startIndex: clickedIndex });
+    }
+  };
+
   const renderMessageContent = (message: Message) => {
     const hasSingleImage = message.imageUrl && (!message.imageUrls || message.imageUrls.length === 0);
     const hasMultipleImages = message.imageUrls && message.imageUrls.length > 0;
+    const imageUrls = message.imageUrls || (message.imageUrl ? [message.imageUrl] : []);
 
     if (hasMultipleImages) {
-        const imagesToShow = message.imageUrls!.slice(0, 4);
-        const remainingImages = message.imageUrls!.length - 4;
+        const imagesToShow = imageUrls.slice(0, 4);
+        const remainingImages = imageUrls.length - 4;
 
         return (
             <div className="grid grid-cols-2 gap-1">
                 {imagesToShow.map((url, index) => (
-                    <button key={index} onClick={() => setImagePreviewUrl(url)} className="relative">
+                    <button key={index} onClick={() => handleImageClick(message, index)} className="relative">
                         <Image src={url} alt={`Sent image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
                          {remainingImages > 0 && index === 3 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
@@ -207,7 +219,7 @@ export default function ChatPage() {
 
     if (hasSingleImage) {
         return (
-            <button onClick={() => setImagePreviewUrl(message.imageUrl!)} className="w-full">
+            <button onClick={() => handleImageClick(message, 0)} className="w-full">
                 <Image src={message.imageUrl!} alt="Sent image" width={200} height={200} className="rounded-xl object-cover w-full aspect-square" />
             </button>
         );
@@ -375,11 +387,9 @@ export default function ChatPage() {
         />
       )}
       <ImagePreviewDialog
-        imageUrl={imagePreviewUrl}
-        onOpenChange={(open) => !open && setImagePreviewUrl(null)}
+        imagePreview={imagePreview}
+        onOpenChange={(open) => !open && setImagePreview(null)}
       />
     </>
   )
 }
-
-    
