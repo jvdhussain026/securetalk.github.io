@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
   Carousel,
@@ -17,6 +18,8 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
+import { Button } from "@/components/ui/button";
+import { X } from "lucide-react";
 
 type ImagePreviewState = {
   urls: string[];
@@ -35,11 +38,21 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 bg-transparent border-none max-w-none w-screen h-screen flex items-center justify-center">
+      <DialogContent className="p-0 bg-black/80 border-none max-w-none w-screen h-screen flex items-center justify-center">
         <DialogHeader className="sr-only">
           <DialogTitle>Image Preview</DialogTitle>
           <DialogDescription>A full-screen, swipeable view of the selected images.</DialogDescription>
         </DialogHeader>
+        <DialogClose asChild>
+            <Button
+                variant="ghost"
+                size="icon"
+                className="absolute top-4 right-4 z-50 text-white bg-black/30 hover:bg-black/50 hover:text-white rounded-full"
+                >
+                <X className="h-6 w-6" />
+                <span className="sr-only">Close</span>
+            </Button>
+        </DialogClose>
         {open && (
           <Carousel
             opts={{
@@ -50,7 +63,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
           >
             <CarouselContent className="h-full">
               {urls.map((url, index) => (
-                <CarouselItem key={index} className="flex items-center justify-center">
+                <CarouselItem key={index} className="relative h-full w-full">
                   <Image
                     src={url}
                     alt={`Image Preview ${index + 1}`}
