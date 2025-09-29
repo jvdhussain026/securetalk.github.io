@@ -92,10 +92,7 @@ export default function ChatPage() {
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
             text: textToSend,
-            // For now, let's assume we send multiple URLs. A real implementation might need uploads.
-            // We'll just send the first image for now to demonstrate.
-            imageUrl: imagesToUpload.length === 1 ? imagesToUpload[0] : null,
-            imageUrls: imagesToUpload.length > 1 ? imagesToUpload : [],
+            imageUrls: imagesToUpload.length > 0 ? imagesToUpload : [],
             senderId: 'currentUser', // Replace with actual current user ID
             timestamp: serverTimestamp(),
         });
@@ -184,6 +181,42 @@ export default function ChatPage() {
     });
   }
 
+  const renderMessageContent = (message: Message) => {
+    const hasSingleImage = message.imageUrl && (!message.imageUrls || message.imageUrls.length === 0);
+    const hasMultipleImages = message.imageUrls && message.imageUrls.length > 0;
+
+    if (hasMultipleImages) {
+        const imagesToShow = message.imageUrls!.slice(0, 4);
+        const remainingImages = message.imageUrls!.length - 4;
+
+        return (
+            <div className="grid grid-cols-2 gap-1">
+                {imagesToShow.map((url, index) => (
+                    <button key={index} onClick={() => setImagePreviewUrl(url)} className="relative">
+                        <Image src={url} alt={`Sent image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
+                         {remainingImages > 0 && index === 3 && (
+                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                                <span className="text-white font-bold text-lg">+{remainingImages}</span>
+                            </div>
+                        )}
+                    </button>
+                ))}
+            </div>
+        );
+    }
+
+    if (hasSingleImage) {
+        return (
+            <button onClick={() => setImagePreviewUrl(message.imageUrl!)} className="w-full">
+                <Image src={message.imageUrl!} alt="Sent image" width={200} height={200} className="rounded-xl object-cover w-full aspect-square" />
+            </button>
+        );
+    }
+
+    return null;
+  };
+
+
   if (!contact) {
     return (
       <div className="flex flex-col h-full items-center justify-center">
@@ -267,19 +300,7 @@ export default function ChatPage() {
                     message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
                     (message.imageUrl || (message.imageUrls && message.imageUrls.length > 0)) && !message.text ? "p-1 bg-transparent border-none" : ""
                   )}>
-                      {(message.imageUrls && message.imageUrls.length > 1) ? (
-                         <div className="grid grid-cols-2 gap-1">
-                            {message.imageUrls.map((url, index) => (
-                                <button key={index} onClick={() => setImagePreviewUrl(url)} className="relative">
-                                    <Image src={url} alt={`Sent image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
-                                </button>
-                            ))}
-                         </div>
-                      ) : (message.imageUrl && (
-                          <button onClick={() => setImagePreviewUrl(message.imageUrl!)} className="w-full">
-                            <Image src={message.imageUrl} alt="Sent image" width={200} height={200} className="rounded-xl object-cover w-full aspect-square" />
-                          </button>
-                      ))}
+                      {renderMessageContent(message)}
                       {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
                       <ClientOnly>
                         <p className={cn("text-xs text-right", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
@@ -360,3 +381,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
