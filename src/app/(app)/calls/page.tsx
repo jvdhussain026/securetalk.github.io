@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState } from 'react'
@@ -65,7 +66,7 @@ export default function CallsPage() {
   const renderCallList = (calls: CallRecord[]) => (
     <div>
       {calls.map((call) => (
-        <button key={call.id} onClick={() => handleContactSelect(call)} className="w-full text-left block hover:bg-accent/50 transition-colors">
+        <button key={call.id} onClick={() => handleContactSelect(call)} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
           <div className="flex items-center gap-4 p-4">
             <Avatar className="h-12 w-12">
               <AvatarImage src={call.avatar} alt={call.name} data-ai-hint="person portrait" />

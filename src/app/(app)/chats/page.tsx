@@ -49,7 +49,7 @@ export default function ChatsPage() {
             {sortedContacts.map((contact) => {
               const lastMessage = contact.messages[contact.messages.length - 1]
               return (
-                <Link key={contact.id} href={`/chats/${contact.id}`} className="block hover:bg-accent/50 transition-colors">
+                <Link key={contact.id} href={`/chats/${contact.id}`} className="block hover:bg-accent/50 transition-colors border-b">
                   <div className="flex items-center gap-4 p-4">
                     <Avatar className="h-12 w-12">
                       <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
