@@ -4,15 +4,17 @@
 import { motion } from 'framer-motion';
 import { Camera, Image as ImageIcon, Video, FileText, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 type AttachmentOptionsProps = {
   isOpen: boolean;
   onClose: () => void;
-  onSelect: (option: 'camera' | 'image' | 'document' | 'audio') => void;
+  onSelect: (option: 'image' | 'document' | 'audio') => void;
 };
 
 export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptionsProps) {
   const { toast } = useToast();
+  const router = useRouter();
 
   const options = [
     { icon: Camera, label: 'Camera', key: 'camera' as const },
@@ -23,7 +25,7 @@ export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptio
 
   const handleSelect = (key: 'camera' | 'image' | 'document' | 'audio') => {
     if (key === 'camera') {
-        toast({ title: `Camera feature is coming soon!` });
+        router.push('/camera');
         onClose();
     } else {
        onSelect(key);
@@ -66,5 +68,3 @@ export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptio
     </>
   );
 }
-
-    

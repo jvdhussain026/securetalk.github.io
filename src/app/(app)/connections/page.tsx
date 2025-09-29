@@ -16,23 +16,21 @@ export default function ConnectionsPage() {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
-  const [isScanning, setIsScanning] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
   const [showQr, setShowQr] = useState(false);
   
   const connectionLink = "https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8";
   
+  // Stop camera stream when component unmounts or tab becomes inactive
   useEffect(() => {
-    // Stop camera stream when component unmounts or when scanning is stopped
     return () => {
-      if (videoRef.current && videoRef.current.srcObject) {
-        const stream = videoRef.current.srcObject as MediaStream;
+      if (stream) {
         stream.getTracks().forEach(track => track.stop());
       }
     };
-  }, []);
+  }, [stream]);
 
   const handleScanClick = async () => {
-    setIsScanning(true);
     if (typeof navigator.mediaDevices === 'undefined' || !navigator.mediaDevices.getUserMedia) {
       setHasCameraPermission(false);
       toast({
@@ -43,10 +41,11 @@ export default function ConnectionsPage() {
       return;
     }
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      setStream(newStream);
       setHasCameraPermission(true);
       if (videoRef.current) {
-        videoRef.current.srcObject = stream;
+        videoRef.current.srcObject = newStream;
       }
     } catch (error) {
       console.error('Error accessing camera:', error);
@@ -57,6 +56,13 @@ export default function ConnectionsPage() {
         description: 'Please enable camera permissions in your browser settings to scan a QR code.',
       });
     }
+  };
+
+  const stopScan = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+    }
+    setStream(null);
   };
 
 
@@ -101,7 +107,7 @@ export default function ConnectionsPage() {
       </header>
 
       <main className="flex-1 overflow-y-auto">
-        <Tabs defaultValue="scan" className="flex flex-col h-full">
+        <Tabs defaultValue="scan" className="flex flex-col h-full" onValueChange={stopScan}>
           <TabsList className="grid w-full grid-cols-2 shrink-0">
             <TabsTrigger value="scan"><ScanLine className="mr-2" />Scan Code</TabsTrigger>
             <TabsTrigger value="my-code"><QrCode className="mr-2" />My Code</TabsTrigger>
@@ -114,20 +120,9 @@ export default function ConnectionsPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                  <div className="relative aspect-square w-full bg-muted rounded-lg overflow-hidden flex items-center justify-center">
-                    {isScanning ? (
+                    {stream ? (
                       <>
                         <video ref={videoRef} className="w-full h-full object-cover" autoPlay muted playsInline />
-                        {hasCameraPermission === false && (
-                           <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 p-4">
-                               <Camera className="w-12 h-12 text-muted-foreground mb-4" />
-                               <Alert variant="destructive" className="text-center">
-                                  <AlertTitle>Camera Access Denied</AlertTitle>
-                                  <AlertDescription>
-                                    Please allow camera access to use this feature.
-                                  </AlertDescription>
-                               </Alert>
-                           </div>
-                        )}
                          <div className="absolute inset-0 border-8 border-black/20 rounded-lg" />
                          <ScanLine className="absolute w-2/3 h-2/3 text-white/50 animate-pulse" />
                       </>
@@ -136,6 +131,17 @@ export default function ConnectionsPage() {
                         <QrCode className="w-12 h-12" />
                         <span className="font-semibold">Tap to Scan QR Code</span>
                       </button>
+                    )}
+                    {hasCameraPermission === false && !stream && (
+                       <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/80 p-4">
+                           <Camera className="w-12 h-12 text-muted-foreground mb-4" />
+                           <Alert variant="destructive" className="text-center">
+                              <AlertTitle>Camera Access Denied</AlertTitle>
+                              <AlertDescription>
+                                Please allow camera access to use this feature.
+                              </AlertDescription>
+                           </Alert>
+                       </div>
                     )}
                  </div>
                  <div className="flex items-center gap-2">
