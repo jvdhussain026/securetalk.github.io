@@ -94,8 +94,8 @@ export default function ChatPage() {
             text: textToSend,
             // For now, let's assume we send multiple URLs. A real implementation might need uploads.
             // We'll just send the first image for now to demonstrate.
-            imageUrl: imagesToUpload[0] || null,
-            imageUrls: imagesToUpload,
+            imageUrl: imagesToUpload.length === 1 ? imagesToUpload[0] : null,
+            imageUrls: imagesToUpload.length > 1 ? imagesToUpload : [],
             senderId: 'currentUser', // Replace with actual current user ID
             timestamp: serverTimestamp(),
         });
@@ -265,9 +265,9 @@ export default function ChatPage() {
                   <div className={cn(
                     "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2", 
                     message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                    (message.imageUrl || message.imageUrls) && !message.text ? "p-1 bg-transparent border-none" : ""
+                    (message.imageUrl || (message.imageUrls && message.imageUrls.length > 0)) && !message.text ? "p-1 bg-transparent border-none" : ""
                   )}>
-                      {message.imageUrls && message.imageUrls.length > 1 ? (
+                      {(message.imageUrls && message.imageUrls.length > 1) ? (
                          <div className="grid grid-cols-2 gap-1">
                             {message.imageUrls.map((url, index) => (
                                 <button key={index} onClick={() => setImagePreviewUrl(url)} className="relative">
@@ -360,5 +360,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
