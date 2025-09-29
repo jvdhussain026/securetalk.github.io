@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Camera, RefreshCw, Check, X, Video, Image as ImageIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,8 @@ type CaptureMode = 'photo' | 'video';
 export default function CameraPage() {
   const { toast } = useToast();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const chatId = searchParams.get('chatId');
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -110,15 +112,30 @@ export default function CameraPage() {
   };
   
   const handleSend = () => {
-    toast({
-      title: 'Sending...',
-      description: 'The image has been sent (feature in progress).',
-    });
-    router.push('/chats');
+    if (capturedImage && chatId) {
+        const capturedMedia = {
+            type: 'image',
+            url: capturedImage,
+            name: `capture_${new Date().toISOString()}.png`,
+            size: 'N/A'
+        };
+        localStorage.setItem('pendingMedia', JSON.stringify([capturedMedia]));
+        router.push(`/chats/${chatId}`);
+    } else {
+        toast({
+            variant: "destructive",
+            title: 'Error',
+            description: 'Could not send image. Chat ID not found.',
+        });
+    }
   };
 
   const handleBackFromPreview = () => {
     setIsDiscardDialogOpen(true);
+  }
+  
+  const getBackLink = () => {
+      return chatId ? `/chats/${chatId}` : '/chats';
   }
 
   return (
@@ -184,7 +201,7 @@ export default function CameraPage() {
         <div className="flex-1 flex flex-col relative">
            <header className="absolute top-0 left-0 w-full flex items-center p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
             <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20 hover:text-white h-12 w-12">
-                <Link href="/chats">
+                <Link href={getBackLink()}>
                     <ArrowLeft className="h-8 w-8" />
                 </Link>
             </Button>

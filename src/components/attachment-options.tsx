@@ -10,9 +10,10 @@ type AttachmentOptionsProps = {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (option: 'image' | 'document' | 'audio') => void;
+  chatId: string;
 };
 
-export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptionsProps) {
+export function AttachmentOptions({ isOpen, onClose, onSelect, chatId }: AttachmentOptionsProps) {
   const { toast } = useToast();
   const router = useRouter();
 
@@ -25,7 +26,7 @@ export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptio
 
   const handleSelect = (key: 'camera' | 'image' | 'document' | 'audio') => {
     if (key === 'camera') {
-        router.push('/camera');
+        router.push(`/camera?chatId=${chatId}`);
         onClose();
     } else {
        onSelect(key);

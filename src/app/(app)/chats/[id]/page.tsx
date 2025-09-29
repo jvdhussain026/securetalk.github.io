@@ -74,6 +74,20 @@ export default function ChatPage() {
     return () => unsubscribe();
   }, [chatId]);
 
+  useEffect(() => {
+    try {
+      const pendingMediaString = localStorage.getItem('pendingMedia');
+      if (pendingMediaString) {
+        const pendingMedia = JSON.parse(pendingMediaString);
+        setAttachmentsToSend(prev => [...prev, ...pendingMedia]);
+        localStorage.removeItem('pendingMedia');
+      }
+    } catch (error) {
+      console.error("Failed to process pending media from localStorage:", error);
+      localStorage.removeItem('pendingMedia');
+    }
+  }, []);
+
 
   useEffect(() => {
     if (scrollAreaRef.current) {
@@ -471,6 +485,7 @@ export default function ChatPage() {
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}
         onClose={() => setIsAttachmentSheetOpen(false)}
+        chatId={chatId}
         onSelect={(option) => {
             setIsAttachmentSheetOpen(false);
             if (fileInputRef.current) {
