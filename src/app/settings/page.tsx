@@ -3,7 +3,7 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronRight, MoreVertical } from 'lucide-react'
+import { ArrowLeft, ChevronRight } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
@@ -40,10 +40,6 @@ export default function SettingsPage() {
             </Button>
             <h1 className="text-xl font-bold">Settings</h1>
           </div>
-          <Button variant="ghost" size="icon">
-            <MoreVertical className="h-6 w-6" />
-            <span className="sr-only">More options</span>
-          </Button>
         </header>
 
         <div className="flex-1 overflow-y-auto">
