@@ -1,12 +1,9 @@
 'use client'
 
 import React, { useState } from 'react'
-import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { MessageSquare, Phone, Users } from 'lucide-react'
 import { NavLink } from '@/components/nav-link'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
-import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {

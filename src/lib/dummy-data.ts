@@ -6,55 +6,58 @@ const now = new Date();
 export const contacts: Contact[] = [
   {
     id: '1',
-    name: 'Alice',
+    name: 'Javed',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
     messages: [
-      { id: 'm1', text: 'Hey, how are you?', timestamp: subDays(now, 2), isSender: false },
-      { id: 'm2', text: 'I am good, thanks! How about you?', timestamp: subDays(now, 2), isSender: true },
-      { id: 'm3', text: 'Doing great. Working on the new project.', timestamp: subHours(now, 24), isSender: false },
-      { id: 'm4', text: 'Sounds exciting!', timestamp: subHours(now, 23), isSender: true },
+      { id: 'm1', text: 'See you soon!', timestamp: subHours(now, 1), isSender: false },
     ],
   },
   {
     id: '2',
-    name: 'Bob',
+    name: 'Rehan',
     avatar: 'https://picsum.photos/seed/avatar2/200/200',
     messages: [
-      { id: 'm5', text: 'Can we meet tomorrow?', timestamp: subHours(now, 5), isSender: false },
-      { id: 'm6', text: 'Sure, what time works for you?', timestamp: subHours(now, 4), isSender: true },
+      { id: 'm2', text: 'I\'m on my way', timestamp: subHours(now, 1) , isSender: false },
     ],
   },
   {
     id: '3',
-    name: 'Charlie',
+    name: 'Kaish',
     avatar: 'https://picsum.photos/seed/avatar3/200/200',
     messages: [
-      { id: 'm7', text: 'Just saw your message. I will get back to you.', timestamp: subMinutes(now, 30), isSender: false },
+      { id: 'm3', text: 'Let\'s meet at the usual place', timestamp: subHours(now, 2), isSender: false },
     ],
   },
-  {
+    {
     id: '4',
-    name: 'Diana',
+    name: 'Aurangjeb',
     avatar: 'https://picsum.photos/seed/avatar4/200/200',
     messages: [
-        { id: 'm8', text: 'Happy Birthday!', timestamp: subDays(now, 1), isSender: true },
-        { id: 'm9', text: 'Thank you so much! 😊', timestamp: subDays(now, 1), isSender: false },
+      { id: 'm4', text: 'I\'ll be there in 10 minutes', timestamp: subHours(now, 3), isSender: false },
     ],
   },
   {
     id: '5',
-    name: 'Ethan',
+    name: 'Ava',
     avatar: 'https://picsum.photos/seed/avatar5/200/200',
     messages: [
-      { id: 'm10', text: 'The documents are ready for review.', timestamp: subHours(now, 2), isSender: false },
+        { id: 'm5', text: 'Did you see the new movie?', timestamp: subDays(now, 1), isSender: true },
     ],
   },
   {
     id: '6',
-    name: 'Fiona',
+    name: 'Liam',
     avatar: 'https://picsum.photos/seed/avatar6/200/200',
     messages: [
-      { id: 'm11', text: 'Let\'s catch up this weekend!', timestamp: subDays(now, 3), isSender: true },
+      { id: 'm6', text: 'Thanks for your help yesterday', timestamp: subDays(now, 1), isSender: false },
+    ],
+  },
+    {
+    id: '7',
+    name: 'Emma',
+    avatar: 'https://picsum.photos/seed/avatar7/200/200',
+    messages: [
+      { id: 'm7', text: 'Can we reschedule?', timestamp: subDays(now, 2), isSender: true },
     ],
   },
 ];

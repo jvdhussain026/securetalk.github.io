@@ -11,7 +11,7 @@ import type { Message } from '@/lib/types'
 import { cn } from '@/lib/utils'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Button } from '@/components/ui/button'
+import { Button, buttonVariants } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 
@@ -70,7 +70,7 @@ export default function ChatPage() {
             <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
             <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
           </Avatar>
-          <h2 className="text-lg font-bold font-headline">{contact.name}</h2>
+          <h2 className="text-lg font-bold">{contact.name}</h2>
         </div>
       </header>
 

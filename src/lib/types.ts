@@ -11,3 +11,9 @@ export type Contact = {
   avatar: string;
   messages: Message[];
 };
+
+export type User = {
+    id: string;
+    name: string;
+    avatar: string;
+}
