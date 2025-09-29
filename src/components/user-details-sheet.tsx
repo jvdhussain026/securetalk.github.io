@@ -32,7 +32,7 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
         <Drawer.Overlay className="fixed inset-0 bg-black/40" />
         <Drawer.Content className="bg-card flex flex-col rounded-t-[10px] h-full max-h-[96%] mt-24 fixed bottom-0 left-0 right-0 focus:outline-none md:max-w-md md:mx-auto md:h-[calc(96%_-_2rem)]">
            <div className="p-4 bg-card rounded-t-[10px] flex-1">
-            <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-muted mb-4" />
+            <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-border mb-4" />
             <div className="max-w-md mx-auto">
               <Drawer.Title className="sr-only">User Details: {contact.name}</Drawer.Title>
               <Drawer.Description className="sr-only">Detailed information and shared media for {contact.name}.</Drawer.Description>

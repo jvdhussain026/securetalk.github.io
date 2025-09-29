@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 
@@ -119,8 +119,9 @@ export default function ChatPage() {
           <div className="ml-auto flex items-center">
              <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="flex items-center gap-1">
                   <Phone className="h-5 w-5" />
+                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
                    <span className="sr-only">Call</span>
                 </Button>
               </DropdownMenuTrigger>
@@ -152,34 +153,30 @@ export default function ChatPage() {
           </div>
         </header>
 
-        <ScrollArea className="flex-1" ref={scrollAreaRef}>
-          <div className="p-4 space-y-1">
-            {messages.map((message) => (
-              <div 
-                key={message.id} 
-                className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
-                onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
-              >
-                {!message.isSender && (
-                   <Avatar className="h-8 w-8 self-end mb-3">
-                      <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-                )}
-                <div className="flex flex-col items-end">
-                    <div className={cn("p-3 rounded-2xl max-w-[75%] lg:max-w-[65%]", message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm")}>
-                        <p className="text-sm">{message.text}</p>
-                    </div>
-                    <ClientOnly>
-                      <p className={cn("text-xs mt-1", "text-muted-foreground")}>
-                        {format(message.timestamp, 'p')}
-                      </p>
-                    </ClientOnly>
+        <main className="flex-1 overflow-y-auto">
+          <ScrollArea className="h-full" ref={scrollAreaRef}>
+            <div className="p-4 space-y-1">
+              {messages.map((message) => (
+                <div 
+                  key={message.id} 
+                  className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
+                  onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
+                >
+                  <div className="flex flex-col items-end max-w-full">
+                      <div className={cn("p-3 rounded-2xl max-w-[75%] lg:max-w-[65%]", message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm")}>
+                          <p className="text-sm break-words">{message.text}</p>
+                      </div>
+                      <ClientOnly>
+                        <p className={cn("text-xs mt-1", "text-muted-foreground")}>
+                          {format(message.timestamp, 'p')}
+                        </p>
+                      </ClientOnly>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        </ScrollArea>
+              ))}
+            </div>
+          </ScrollArea>
+        </main>
 
         <footer className="p-2 border-t shrink-0 bg-card">
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
