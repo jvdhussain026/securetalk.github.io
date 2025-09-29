@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Send, MessageSquareWarning, Github, Twitter, Mail } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquareWarning, Github, Twitter, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -92,6 +92,23 @@ export default function FeedbackPage() {
                 Send Feedback
               </Button>
             </form>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Need Help?</CardTitle>
+            <CardDescription>
+              If you have a question or need immediate assistance, start a chat with our support team.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild className="w-full">
+                <Link href="/chats/support-javed">
+                    <MessageSquare className="mr-2" />
+                    Start a Chat with Us
+                </Link>
+            </Button>
           </CardContent>
         </Card>
 

@@ -60,4 +60,12 @@ export const contacts: Contact[] = [
       { id: 'm7', text: 'Can we reschedule?', timestamp: subDays(now, 2), isSender: true },
     ],
   },
+  {
+    id: 'support-javed',
+    name: 'Javed Hussain (Support)',
+    avatar: 'https://picsum.photos/seed/user/200/200',
+    messages: [
+      { id: 'sm1', text: 'Hello! How can I help you today?', timestamp: subMinutes(now, 5), isSender: false },
+    ],
+  },
 ];
