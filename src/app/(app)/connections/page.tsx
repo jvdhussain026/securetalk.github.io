@@ -21,6 +21,12 @@ export default function ConnectionsPage() {
   
   const connectionLink = "https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8";
   
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+  }, [stream]);
+
   // Stop camera stream when component unmounts or tab becomes inactive
   useEffect(() => {
     return () => {
@@ -44,9 +50,6 @@ export default function ConnectionsPage() {
       const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       setStream(newStream);
       setHasCameraPermission(true);
-      if (videoRef.current) {
-        videoRef.current.srcObject = newStream;
-      }
     } catch (error) {
       console.error('Error accessing camera:', error);
       setHasCameraPermission(false);
