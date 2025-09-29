@@ -46,10 +46,9 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         <div className="p-6 text-center">
             <Avatar className="h-20 w-20 mx-auto mb-4">
                 <AvatarImage src="https://picsum.photos/seed/user/200/200" alt="User" data-ai-hint="person portrait"/>
-                <AvatarFallback>SC</AvatarFallback>
+                <AvatarFallback>JH</AvatarFallback>
             </Avatar>
-            <p className="font-bold text-xl">Sophia Chen</p>
-            <p className="text-sm text-muted-foreground">Secure ID: a1b2-c3d4-e5f6</p>
+            <p className="font-bold text-xl">Javed Hussain</p>
         </div>
         <div className="flex-1 space-y-1 px-4">
           {menuItems.map((item, index) => (
@@ -65,5 +64,3 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     </Sheet>
   )
 }
-
-    

@@ -6,7 +6,7 @@ const now = new Date();
 export const contacts: Contact[] = [
   {
     id: '1',
-    name: 'Javed',
+    name: 'Zehra',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
     messages: [
       { id: 'm1', text: 'See you soon!', timestamp: subHours(now, 1), isSender: false },

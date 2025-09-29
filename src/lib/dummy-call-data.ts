@@ -18,7 +18,7 @@ export const callHistory: CallRecord[] = [
   {
     id: 'call1',
     contactId: '1',
-    name: 'Javed',
+    name: 'Zehra',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
     timestamp: subMinutes(now, 30),
     type: 'voice',

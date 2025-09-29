@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast'
 
 export default function ProfilePage() {
   const { toast } = useToast()
-  const [name, setName] = useState('Sophia Chen')
+  const [name, setName] = useState('Javed Hussain')
   const [bio, setBio] = useState('Digital nomad, coffee enthusiast, and lifelong learner. Exploring the world one city at a time.')
   const [avatar, setAvatar] = useState('https://picsum.photos/seed/user/200/200')
 
@@ -48,7 +48,7 @@ export default function ProfilePage() {
           <div className="relative">
             <Avatar className="w-32 h-32">
               <AvatarImage src={avatar} alt={name} data-ai-hint="person portrait" />
-              <AvatarFallback>{name.charAt(0)}</AvatarFallback>
+              <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
             </Avatar>
             <Button
               variant="outline"
