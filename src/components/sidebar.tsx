@@ -41,7 +41,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: Info, label: 'About Us', href: '/about' },
     { icon: Heart, label: 'Support Us', href: '/support' },
-    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '#', onClick: handleNonPageClick },
+    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '/feedback' },
     { icon: Code, label: 'Developer', href: '/readme' },
   ]
 
@@ -64,8 +64,8 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
           {menuItems.map((item, index) => (
             <div key={index}>
               <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={(e) => {
-                if (item.onClick) {
-                  item.onClick(e);
+                if (item.href === '#') {
+                  handleNonPageClick(e);
                 }
                 onOpenChange(false);
               }}>
