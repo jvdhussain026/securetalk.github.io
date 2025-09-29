@@ -125,33 +125,52 @@ export default function CameraPage() {
       {capturedImage ? (
         // Preview View
         <div className="flex-1 flex flex-col relative">
-          <header className="absolute top-0 left-0 w-full flex items-center p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
-             {/* Retake button with confirmation */}
-            <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
-              <AlertDialogTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
-                  <X className="h-7 w-7" />
+           <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
+            <header className="absolute top-0 left-0 w-full flex items-center p-4 z-10 bg-gradient-to-b from-black/50 to-transparent">
+               <AlertDialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white h-12 w-12">
+                  <ArrowLeft className="h-8 w-8" />
                 </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Discard this photo?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    If you go back now, you will lose this photo. Are you sure you want to discard it?
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>No, keep it</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleRetake}>Yes, discard</AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </header>
+               </AlertDialogTrigger>
+            </header>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Discard this photo?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  If you go back now, you will lose this photo. Are you sure you want to discard it?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                <AlertDialogAction onClick={handleRetake}>Yes, discard</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
           <div className="flex-1 bg-black flex items-center justify-center">
             <Image src={capturedImage} alt="Capture preview" layout="fill" objectFit="contain" />
           </div>
-          <footer className="flex items-center justify-center p-6 bg-gradient-to-t from-black/50 to-transparent">
-             <Button size="icon" className="h-20 w-20 bg-primary hover:bg-primary/80" onClick={handleSend}>
+          <footer className="flex items-center justify-between p-6 bg-gradient-to-t from-black/50 to-transparent z-10">
+              <AlertDialog open={isDiscardDialogOpen} onOpenChange={setIsDiscardDialogOpen}>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive" size="icon" className="h-20 w-20 bg-red-600 hover:bg-red-700">
+                        <X className="h-10 w-10" />
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Discard this photo?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        If you go back now, you will lose this photo. Are you sure you want to discard it?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>No, keep it</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleRetake}>Yes, discard</AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+              </AlertDialog>
+
+            <Button size="icon" className="h-20 w-20 bg-primary hover:bg-primary/80" onClick={handleSend}>
                 <Check className="h-10 w-10" />
             </Button>
           </footer>
