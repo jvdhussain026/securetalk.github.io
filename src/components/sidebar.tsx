@@ -40,7 +40,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Users, label: 'Connections', href: '/connections' },
     { icon: Settings, label: 'Settings', href: '/settings' },
     { icon: Info, label: 'About Us', href: '/about' },
-    { icon: Heart, label: 'Support Us', href: '#', onClick: handleNonPageClick },
+    { icon: Heart, label: 'Support Us', href: '/support' },
     { icon: MessageSquareWarning, label: 'Report / Feedback', href: '#', onClick: handleNonPageClick },
     { icon: Code, label: 'Developer', href: '/readme' },
   ]
@@ -63,7 +63,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         <div className="flex-1 space-y-2 px-4">
           {menuItems.map((item, index) => (
             <div key={index}>
-              <Link href={item.href} className="flex items-center p-3 -m-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={(e) => {
+              <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={(e) => {
                 if (item.onClick) {
                   item.onClick(e);
                 }

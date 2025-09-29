@@ -20,10 +20,6 @@ export default function AboutUsPage() {
     { name: 'Javed Hussain', role: 'Lead Developer', avatar: 'https://picsum.photos/seed/user/200/200' },
   ];
   
-  const handleSupportClick = (e: React.MouseEvent) => {
-      e.preventDefault();
-      setIsModalOpen(true);
-  }
 
   const corePrinciples = [
     { 
@@ -107,8 +103,8 @@ export default function AboutUsPage() {
                 <p className="text-sm text-muted-foreground">
                     We are funded entirely by donations from users like you. This model allows us to stay independent and focused on our privacy-first mission. Contributions help cover costs for servers, maintenance, support, and future updates.
                 </p>
-                <Button onClick={handleSupportClick} asChild>
-                    <Link href="#">
+                <Button asChild>
+                    <Link href="/support">
                         <Heart className="mr-2" />
                         Support Us
                     </Link>
