@@ -25,6 +25,7 @@ import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import { AttachmentOptions } from '@/components/attachment-options'
+import { AudioPlayer } from '@/components/audio-player'
 
 type ImagePreviewState = {
   urls: string[];
@@ -268,8 +269,8 @@ export default function ChatPage() {
     );
     
     const renderAudio = (attachment: Attachment) => (
-       <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 w-full">
-        <audio controls src={attachment.url} className="w-full h-10" />
+       <div key={attachment.url} className="mt-1 w-full">
+         <AudioPlayer src={attachment.url} isSender={message.isSender} />
       </div>
     );
 
@@ -485,9 +486,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
-
-    
-
-    
