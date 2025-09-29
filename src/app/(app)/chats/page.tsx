@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Search } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -13,12 +13,20 @@ import { Input } from '@/components/ui/input'
 import { Sidebar } from '@/components/sidebar'
 import { ClientOnly } from '@/components/client-only'
 import { useToast } from '@/hooks/use-toast'
+import { NavLink } from '@/components/nav-link'
+import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const { toast } = useToast()
+
+  const navItems = [
+    { href: '/chats', icon: MessageSquare, label: 'Chats' },
+    { href: '/calls', icon: Phone, label: 'Calls' },
+    { href: '/nearby', icon: Users, label: 'Nearby' },
+  ]
 
   const sortedContacts = [...contacts].sort((a, b) => {
     const lastMessageA = a.messages[a.messages.length - 1]
@@ -74,6 +82,13 @@ export default function ChatsPage() {
             })}
           </div>
         </main>
+         <footer className="border-t shrink-0 bg-card">
+          <nav className="grid grid-cols-3 items-center p-2">
+            {navItems.map((item, index) => (
+              <NavLink key={index} href={item.href} icon={item.icon} label={item.label} />
+            ))}
+          </nav>
+        </footer>
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
     </>
