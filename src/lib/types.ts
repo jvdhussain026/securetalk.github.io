@@ -4,6 +4,7 @@ export type Message = {
   id: string;
   text?: string;
   imageUrl?: string;
+  imageUrls?: string[];
   timestamp: Date;
   isSender: boolean;
 };
@@ -31,5 +32,7 @@ export type NearbyUser = {
   bio?: string;
   connectionStatus: 'none' | 'requested' | 'connected';
 };
+
+    
 
     

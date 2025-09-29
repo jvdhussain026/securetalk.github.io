@@ -32,7 +32,7 @@ export default function ChatPage() {
   
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [imageToSend, setImageToSend] = useState<string | null>(null)
+  const [imagesToSend, setImagesToSend] = useState<string[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
@@ -58,6 +58,7 @@ export default function ChatPage() {
           id: doc.id,
           text: data.text,
           imageUrl: data.imageUrl,
+          imageUrls: data.imageUrls,
           timestamp: data.timestamp?.toDate() || new Date(),
           isSender: data.senderId === 'currentUser', // Replace with actual current user ID
         });
@@ -80,18 +81,21 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((newMessage.trim() === '' && !imageToSend) || !chatId) return
+    if ((newMessage.trim() === '' && imagesToSend.length === 0) || !chatId) return
 
     const textToSend = newMessage;
-    const imageToUpload = imageToSend;
+    const imagesToUpload = imagesToSend;
 
     setNewMessage('')
-    setImageToSend(null)
+    setImagesToSend([])
 
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
             text: textToSend,
-            imageUrl: imageToUpload,
+            // For now, let's assume we send multiple URLs. A real implementation might need uploads.
+            // We'll just send the first image for now to demonstrate.
+            imageUrl: imagesToUpload[0] || null,
+            imageUrls: imagesToUpload,
             senderId: 'currentUser', // Replace with actual current user ID
             timestamp: serverTimestamp(),
         });
@@ -103,7 +107,7 @@ export default function ChatPage() {
             description: "Failed to send message.",
         });
         setNewMessage(textToSend); // Restore on error
-        setImageToSend(imageToUpload);
+        setImagesToSend(imagesToUpload);
     }
   }
   
@@ -112,21 +116,39 @@ export default function ChatPage() {
   }
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0]
-    if (file && file.type.startsWith('image/')) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            setImageToSend(reader.result as string);
-        };
-        reader.readAsDataURL(file);
-    } else if (file) {
-      toast({
-        variant: "destructive",
-        title: "Invalid File",
-        description: "Please select an image file.",
-      })
+    const files = event.target.files
+    if (files) {
+      const imageFiles: File[] = Array.from(files).filter(file => file.type.startsWith('image/'));
+      if (imageFiles.length > 0) {
+        const readerPromises = imageFiles.map(file => {
+            return new Promise<string>((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    resolve(reader.result as string);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        });
+
+        Promise.all(readerPromises).then(base64Images => {
+            setImagesToSend(prev => [...prev, ...base64Images]);
+        }).catch(error => {
+            console.error("Error reading files:", error);
+            toast({
+                variant: "destructive",
+                title: "Error Reading Files",
+                description: "There was a problem reading the selected images.",
+            });
+        });
+      }
     }
   }
+  
+  const removeImageFromPreview = (index: number) => {
+    setImagesToSend(prev => prev.filter((_, i) => i !== index));
+  }
+
 
   const handleMicClick = () => {
     toast({
@@ -243,17 +265,25 @@ export default function ChatPage() {
                   <div className={cn(
                     "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2", 
                     message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                    message.imageUrl && !message.text ? "p-1 bg-transparent border-none" : ""
+                    (message.imageUrl || message.imageUrls) && !message.text ? "p-1 bg-transparent border-none" : ""
                   )}>
-                      {message.imageUrl && (
+                      {message.imageUrls && message.imageUrls.length > 1 ? (
+                         <div className="grid grid-cols-2 gap-1">
+                            {message.imageUrls.map((url, index) => (
+                                <button key={index} onClick={() => setImagePreviewUrl(url)} className="relative">
+                                    <Image src={url} alt={`Sent image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
+                                </button>
+                            ))}
+                         </div>
+                      ) : (message.imageUrl && (
                           <button onClick={() => setImagePreviewUrl(message.imageUrl!)} className="w-full">
                             <Image src={message.imageUrl} alt="Sent image" width={200} height={200} className="rounded-xl object-cover w-full aspect-square" />
                           </button>
-                      )}
+                      ))}
                       {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
                       <ClientOnly>
                         <p className={cn("text-xs text-right", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                          {format(message.timestamp, 'p')}
+                          {format(new Date(message.timestamp), 'p')}
                         </p>
                       </ClientOnly>
                   </div>
@@ -264,17 +294,28 @@ export default function ChatPage() {
         </main>
 
         <footer className="p-2 border-t shrink-0 bg-card">
-          {imageToSend && (
-              <div className="relative p-2">
-                <Image src={imageToSend} alt="Preview" width={80} height={80} className="rounded-lg object-cover" />
-                <Button
-                    size="icon"
-                    variant="destructive"
-                    className="absolute -top-1 -right-1 h-6 w-6 rounded-full"
-                    onClick={() => setImageToSend(null)}
-                >
-                    <X className="h-4 w-4" />
-                </Button>
+          {imagesToSend.length > 0 && (
+              <div className="p-2">
+                <div className="grid grid-cols-4 gap-2">
+                    {imagesToSend.slice(0, 4).map((image, index) => (
+                        <div key={index} className="relative">
+                            <Image src={image} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
+                            {imagesToSend.length > 4 && index === 3 && (
+                                <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-lg">
+                                    <span className="text-white font-bold text-lg">+{imagesToSend.length - 4}</span>
+                                </div>
+                            )}
+                             <Button
+                                size="icon"
+                                variant="destructive"
+                                className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                                onClick={() => removeImageFromPreview(index)}
+                            >
+                                <X className="h-4 w-4" />
+                            </Button>
+                        </div>
+                    ))}
+                </div>
               </div>
           )}
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
@@ -282,7 +323,7 @@ export default function ChatPage() {
               <Plus className="h-6 w-6" />
               <span className="sr-only">Add media</span>
             </Button>
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" />
+            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*" multiple />
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -290,7 +331,7 @@ export default function ChatPage() {
               className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
               autoComplete="off"
             />
-             {newMessage.trim() || imageToSend ? (
+             {newMessage.trim() || imagesToSend.length > 0 ? (
               <Button type="submit" size="icon" className="rounded-full">
                 <Send className="h-5 w-5" />
                 <span className="sr-only">Send</span>
@@ -319,3 +360,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
