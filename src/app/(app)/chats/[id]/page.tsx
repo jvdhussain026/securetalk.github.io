@@ -36,6 +36,7 @@ export default function ChatPage() {
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const chatId = params.id as string;
 
@@ -115,6 +116,19 @@ export default function ChatPage() {
       description: "Voice recording is not implemented yet.",
     })
   }
+
+  const handleTouchStart = (message: Message) => {
+    longPressTimerRef.current = setTimeout(() => {
+        handleMessageLongPress(message);
+    }, 500); // 500ms for a long press
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+      longPressTimerRef.current = null;
+    }
+  };
   
   const handleMessageLongPress = (message: Message) => {
     setSelectedMessage(message);
@@ -201,6 +215,9 @@ export default function ChatPage() {
                   key={message.id} 
                   className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
                   onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
+                  onTouchStart={() => handleTouchStart(message)}
+                  onTouchEnd={handleTouchEnd}
+                  onTouchMove={handleTouchEnd} // Cancel on scroll
                 >
                   <div className={cn(
                     "p-3 rounded-2xl max-w-[75%] lg:max-w-[65%]", 
