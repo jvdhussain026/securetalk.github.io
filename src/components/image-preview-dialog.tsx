@@ -19,7 +19,7 @@ import {
   CarouselPrevious,
 } from "@/components/ui/carousel";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, PlayCircle } from "lucide-react";
 
 type ImagePreviewState = {
   urls: string[];
@@ -35,13 +35,15 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   const open = !!imagePreview;
   const urls = imagePreview?.urls || [];
   const startIndex = imagePreview?.startIndex || 0;
+  
+  const isVideo = (url: string) => url.startsWith('data:video');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="p-0 bg-black/80 border-none max-w-none w-screen h-screen flex items-center justify-center">
+      <DialogContent className="p-0 bg-black/90 border-none max-w-none w-screen h-screen flex items-center justify-center">
         <DialogHeader className="sr-only">
-          <DialogTitle>Image Preview</DialogTitle>
-          <DialogDescription>A full-screen, swipeable view of the selected images.</DialogDescription>
+          <DialogTitle>Media Preview</DialogTitle>
+          <DialogDescription>A full-screen, swipeable view of the selected images and videos.</DialogDescription>
         </DialogHeader>
         <DialogClose asChild>
             <Button
@@ -63,13 +65,17 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
           >
             <CarouselContent className="h-full">
               {urls.map((url, index) => (
-                <CarouselItem key={index} className="relative h-full w-full">
-                  <Image
-                    src={url}
-                    alt={`Image Preview ${index + 1}`}
-                    layout="fill"
-                    objectFit="contain"
-                  />
+                <CarouselItem key={index} className="relative h-full w-full flex items-center justify-center">
+                  {isVideo(url) ? (
+                    <video src={url} controls autoPlay className="max-w-full max-h-full" />
+                  ) : (
+                    <Image
+                      src={url}
+                      alt={`Image Preview ${index + 1}`}
+                      layout="fill"
+                      objectFit="contain"
+                    />
+                  )}
                 </CarouselItem>
               ))}
             </CarouselContent>
@@ -85,3 +91,5 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
     </Dialog>
   );
 }
+
+    

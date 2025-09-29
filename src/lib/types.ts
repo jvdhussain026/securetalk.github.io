@@ -1,10 +1,15 @@
 
+export type Attachment = {
+  type: 'image' | 'video' | 'audio' | 'document';
+  url: string;
+  name?: string;
+  size?: string;
+};
 
 export type Message = {
   id: string;
   text?: string;
-  imageUrl?: string;
-  imageUrls?: string[];
+  attachments?: Attachment[];
   timestamp: Date;
   isSender: boolean;
 };
@@ -32,7 +37,5 @@ export type NearbyUser = {
   bio?: string;
   connectionStatus: 'none' | 'requested' | 'connected';
 };
-
-    
 
     

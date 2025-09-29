@@ -22,12 +22,12 @@ export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptio
   ];
 
   const handleSelect = (key: 'camera' | 'image' | 'document' | 'audio') => {
-    if (key === 'image') {
-      onSelect(key);
+    if (key === 'camera') {
+        toast({ title: `Camera feature is coming soon!` });
+        onClose();
     } else {
-      toast({ title: `${options.find(o => o.key === key)?.label} feature is coming soon!` });
+       onSelect(key);
     }
-    onClose();
   };
 
   if (!isOpen) {
@@ -66,3 +66,5 @@ export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptio
     </>
   );
 }
+
+    

@@ -3,14 +3,14 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
 import Image from 'next/image'
 
 import { contacts as allContacts } from '@/lib/dummy-data'
-import type { Message } from '@/lib/types'
+import type { Message, Attachment } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
 
@@ -37,12 +37,11 @@ export default function ChatPage() {
   
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState('')
-  const [imagesToSend, setImagesToSend] = useState<string[]>([])
+  const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
   const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
-
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -63,8 +62,7 @@ export default function ChatPage() {
         newMessages.push({
           id: doc.id,
           text: data.text,
-          imageUrl: data.imageUrl,
-          imageUrls: data.imageUrls,
+          attachments: data.attachments || [],
           timestamp: data.timestamp?.toDate() || new Date(),
           isSender: data.senderId === 'currentUser', // Replace with actual current user ID
         });
@@ -87,18 +85,18 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
-    if ((newMessage.trim() === '' && imagesToSend.length === 0) || !chatId) return
+    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !chatId) return
 
     const textToSend = newMessage;
-    const imagesToUpload = imagesToSend;
+    const attachmentsToUpload = attachmentsToSend;
 
     setNewMessage('')
-    setImagesToSend([])
+    setAttachmentsToSend([])
 
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
             text: textToSend,
-            imageUrls: imagesToUpload.length > 0 ? imagesToUpload : [],
+            attachments: attachmentsToUpload,
             senderId: 'currentUser', // Replace with actual current user ID
             timestamp: serverTimestamp(),
         });
@@ -110,7 +108,7 @@ export default function ChatPage() {
             description: "Failed to send message.",
         });
         setNewMessage(textToSend); // Restore on error
-        setImagesToSend(imagesToUpload);
+        setAttachmentsToSend(attachmentsToUpload);
     }
   }
   
@@ -121,37 +119,44 @@ export default function ChatPage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files
     if (files) {
-      const imageFiles: File[] = Array.from(files).filter(file => file.type.startsWith('image/'));
-      if (imageFiles.length > 0) {
-        const readerPromises = imageFiles.map(file => {
-            return new Promise<string>((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onloadend = () => {
-                    resolve(reader.result as string);
-                };
-                reader.onerror = reject;
-                reader.readAsDataURL(file);
+      const filePromises = Array.from(files).map(file => {
+        return new Promise<Attachment>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const url = reader.result as string;
+            let type: Attachment['type'] = 'document';
+            if (file.type.startsWith('image/')) type = 'image';
+            if (file.type.startsWith('video/')) type = 'video';
+            if (file.type.startsWith('audio/')) type = 'audio';
+            
+            resolve({
+              type,
+              url,
+              name: file.name,
+              size: `${(file.size / 1024).toFixed(2)} KB`
             });
+          };
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
         });
+      });
 
-        Promise.all(readerPromises).then(base64Images => {
-            setImagesToSend(prev => [...prev, ...base64Images]);
-        }).catch(error => {
-            console.error("Error reading files:", error);
-            toast({
-                variant: "destructive",
-                title: "Error Reading Files",
-                description: "There was a problem reading the selected images.",
-            });
+      Promise.all(filePromises).then(newAttachments => {
+        setAttachmentsToSend(prev => [...prev, ...newAttachments]);
+      }).catch(error => {
+        console.error("Error reading files:", error);
+        toast({
+          variant: "destructive",
+          title: "Error Reading Files",
+          description: "There was a problem reading the selected files.",
         });
-      }
+      });
     }
   }
   
-  const removeImageFromPreview = (index: number) => {
-    setImagesToSend(prev => prev.filter((_, i) => i !== index));
+  const removeAttachmentFromPreview = (index: number) => {
+    setAttachmentsToSend(prev => prev.filter((_, i) => i !== index));
   }
-
 
   const handleMicClick = () => {
     toast({
@@ -188,40 +193,48 @@ export default function ChatPage() {
   }
 
   const handleImageClick = (message: Message, clickedIndex: number) => {
-    const urls = message.imageUrls || (message.imageUrl ? [message.imageUrl] : []);
-    if (urls.length > 0) {
-      setImagePreview({ urls, startIndex: clickedIndex });
+    const imageUrls = message.attachments?.filter(a => a.type === 'image' || a.type === 'video').map(a => a.url) || [];
+    if (imageUrls.length > 0) {
+      setImagePreview({ urls: imageUrls, startIndex: clickedIndex });
     }
   };
 
   const renderMessageContent = (message: Message) => {
-    const imageUrls = message.imageUrls || (message.imageUrl ? [message.imageUrl] : []);
-    const hasImages = imageUrls.length > 0;
+    const { attachments = [], text } = message;
+    const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
+    const docAttachments = attachments.filter(a => a.type === 'document');
+    const audioAttachments = attachments.filter(a => a.type === 'audio');
 
-    if (!hasImages) {
-        return message.text ? <p className="text-sm break-words px-2">{message.text}</p> : null;
-    }
+    const renderMediaGrid = () => {
+        if (mediaAttachments.length === 0) return null;
 
-    if (imageUrls.length === 1) {
-        return (
-            <div className="space-y-2">
-                 <button onClick={() => handleImageClick(message, 0)} className="w-full">
-                    <Image src={imageUrls[0]} alt="Sent image" width={250} height={250} className="rounded-xl object-cover w-full max-w-xs" />
+        if (mediaAttachments.length === 1) {
+            const media = mediaAttachments[0];
+            return (
+                <button onClick={() => handleImageClick(message, 0)} className="w-full relative">
+                    <Image src={media.url} alt="Sent media" width={250} height={250} className="rounded-xl object-cover w-full max-w-xs" />
+                    {media.type === 'video' && (
+                        <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-xl">
+                            <PlayCircle className="w-10 h-10 text-white" />
+                        </div>
+                    )}
                 </button>
-                {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
-            </div>
-        );
-    }
-    
-    const imagesToShow = imageUrls.slice(0, 4);
-    const remainingImages = imageUrls.length - 4;
+            );
+        }
 
-    return (
-        <div className="space-y-2">
+        const imagesToShow = mediaAttachments.slice(0, 4);
+        const remainingImages = mediaAttachments.length - 4;
+
+        return (
             <div className="grid grid-cols-2 gap-1">
-                {imagesToShow.map((url, index) => (
+                {imagesToShow.map((media, index) => (
                     <button key={index} onClick={() => handleImageClick(message, index)} className="relative">
-                        <Image src={url} alt={`Sent image ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
+                        <Image src={media.url} alt={`Sent media ${index + 1}`} width={150} height={150} className="rounded-md object-cover aspect-square" />
+                         {media.type === 'video' && (
+                            <div className="absolute inset-0 bg-black/30 flex items-center justify-center rounded-md">
+                                <PlayCircle className="w-8 h-8 text-white" />
+                            </div>
+                         )}
                          {remainingImages > 0 && index === 3 && (
                             <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
                                 <span className="text-white font-bold text-lg">+{remainingImages}</span>
@@ -230,7 +243,32 @@ export default function ChatPage() {
                     </button>
                 ))}
             </div>
-             {message.text && <p className="text-sm break-words px-2">{message.text}</p>}
+        );
+    };
+
+    const renderDoc = (attachment: Attachment) => (
+      <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1">
+        <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
+        <div className="flex-1 overflow-hidden">
+          <p className="text-sm font-medium truncate">{attachment.name}</p>
+          <p className="text-xs opacity-80">{attachment.size}</p>
+        </div>
+        <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
+      </div>
+    );
+    
+    const renderAudio = (attachment: Attachment) => (
+       <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 w-full">
+        <audio controls src={attachment.url} className="w-full h-10" />
+      </div>
+    );
+
+    return (
+        <div className="space-y-2">
+            {renderMediaGrid()}
+            {text && <p className="text-sm break-words px-2 pt-1">{text}</p>}
+            {docAttachments.map(renderDoc)}
+            {audioAttachments.map(renderAudio)}
         </div>
     );
   };
@@ -317,7 +355,7 @@ export default function ChatPage() {
                   <div className={cn(
                     "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2", 
                     message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                     (!message.text || (message.imageUrls && message.imageUrls.length > 0)) ? "p-1" : ""
+                     (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : ""
                   )}>
                       {renderMessageContent(message)}
                       <ClientOnly>
@@ -333,20 +371,20 @@ export default function ChatPage() {
         </main>
 
         <footer className="p-2 border-t shrink-0 bg-card">
-          {imagesToSend.length > 0 && (
+          {attachmentsToSend.length > 0 && (
             <div className="p-2">
-              <p className="text-sm font-medium mb-2">Image Preview</p>
+              <p className="text-sm font-medium mb-2">Attachment Preview</p>
               <div className="grid grid-cols-4 gap-2">
-                {imagesToSend.slice(0, 4).map((image, index) => (
+                {attachmentsToSend.slice(0, 4).map((attachment, index) => (
                   <div key={index} className="relative">
                     {index < 3 ? (
-                      <Image src={image} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
+                       <Image src={attachment.url} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
                     ) : (
                       <div className="relative">
-                        <Image src={image} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
-                        {imagesToSend.length > 4 && (
+                        <Image src={attachment.url} alt={`Preview ${index}`} width={80} height={80} className="rounded-lg object-cover aspect-square" />
+                        {attachmentsToSend.length > 4 && (
                           <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                            <span className="text-white font-bold text-lg">+{imagesToSend.length - 4}</span>
+                            <span className="text-white font-bold text-lg">+{attachmentsToSend.length - 4}</span>
                           </div>
                         )}
                       </div>
@@ -355,7 +393,7 @@ export default function ChatPage() {
                       size="icon"
                       variant="destructive"
                       className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                      onClick={() => removeImageFromPreview(index)}
+                      onClick={() => removeAttachmentFromPreview(index)}
                     >
                       <X className="h-4 w-4" />
                     </Button>
@@ -369,7 +407,14 @@ export default function ChatPage() {
               <Plus className="h-6 w-6" />
               <span className="sr-only">Add media</span>
             </Button>
-            <input type="file" ref={fileInputRef} className="hidden" onChange={handleFileChange} accept="image/*,video/*" multiple />
+            <input 
+                type="file" 
+                ref={fileInputRef} 
+                className="hidden" 
+                onChange={handleFileChange} 
+                accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
+                multiple 
+            />
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
@@ -377,7 +422,7 @@ export default function ChatPage() {
               className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
               autoComplete="off"
             />
-             {newMessage.trim() || imagesToSend.length > 0 ? (
+             {newMessage.trim() || attachmentsToSend.length > 0 ? (
               <Button type="submit" size="icon" className="rounded-full">
                 <Send className="h-5 w-5" />
                 <span className="sr-only">Send</span>
@@ -407,8 +452,14 @@ export default function ChatPage() {
         isOpen={isAttachmentSheetOpen}
         onClose={() => setIsAttachmentSheetOpen(false)}
         onSelect={(option) => {
-            if (option === 'image') {
-                fileInputRef.current?.click();
+            setIsAttachmentSheetOpen(false);
+            if (fileInputRef.current) {
+                let accept = 'image/*,video/*';
+                if (option === 'document') accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+                if (option === 'audio') accept = 'audio/*';
+                
+                fileInputRef.current.accept = accept;
+                fileInputRef.current.click();
             }
         }}
       />
