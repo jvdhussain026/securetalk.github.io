@@ -12,7 +12,7 @@ import {
   DialogClose,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { X, PlayCircle } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export type ImagePreviewState = {
   urls: string[];
@@ -41,9 +41,9 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
             <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 right-4 z-50 text-white bg-black/30 hover:bg-black/50 hover:text-white rounded-full"
+                className="absolute top-6 left-4 z-50 text-white bg-black/30 hover:bg-black/50 hover:text-white rounded-full h-12 w-12"
                 >
-                <X className="h-6 w-6" />
+                <ArrowLeft className="h-8 w-8" />
                 <span className="sr-only">Close</span>
             </Button>
         </DialogClose>
