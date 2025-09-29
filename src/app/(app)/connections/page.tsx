@@ -157,7 +157,10 @@ export default function ConnectionsPage() {
                   onClick={() => setShowQr(!showQr)}
                 >
                   {showQr ? (
-                     <Image src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8" alt="Your QR Code" width={400} height={400} className="p-4" data-ai-hint="qr code"/>
+                    <div className="text-center p-4">
+                        <Image src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8" alt="Your QR Code" width={400} height={400} className="p-4" data-ai-hint="qr code"/>
+                        <p className="text-xs text-muted-foreground mt-2">This is a dummy QR code for UI purposes only.</p>
+                    </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
                       <QrCode className="w-12 h-12" />
