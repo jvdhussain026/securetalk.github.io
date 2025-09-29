@@ -162,12 +162,13 @@ export default function ChatPage() {
                   className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
                   onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
                 >
-                  <div className="flex flex-col items-end max-w-full">
-                      <div className={cn("p-3 rounded-2xl max-w-[75%] lg:max-w-[65%]", message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm")}>
-                          <p className="text-sm break-words">{message.text}</p>
-                      </div>
+                  <div className={cn(
+                    "p-3 rounded-2xl max-w-[75%] lg:max-w-[65%]", 
+                    message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm"
+                  )}>
+                      <p className="text-sm break-words">{message.text}</p>
                       <ClientOnly>
-                        <p className={cn("text-xs mt-1", "text-muted-foreground")}>
+                        <p className={cn("text-xs mt-1 text-right", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
                           {format(message.timestamp, 'p')}
                         </p>
                       </ClientOnly>

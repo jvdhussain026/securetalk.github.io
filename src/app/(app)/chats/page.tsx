@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Phone, Video, MessageSquare, Users, ChevronDown } from 'lucide-react'
+import { MoreVertical, User, Phone, Video, MessageSquare, Users } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
