@@ -26,6 +26,7 @@ import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { AttachmentOptions } from '@/components/attachment-options'
 import { AudioPlayer } from '@/components/audio-player'
+import { DeleteMessageDialog } from '@/components/delete-message-dialog'
 
 
 export default function ChatPage() {
@@ -37,6 +38,7 @@ export default function ChatPage() {
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
   const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
 
@@ -192,15 +194,26 @@ export default function ChatPage() {
   const handleMessageLongPress = (message: Message) => {
     setSelectedMessage(message);
   }
+  
+  const openDeleteDialog = () => {
+    setIsDeleteAlertOpen(true);
+    setSelectedMessage(selectedMessage);
+  }
 
-  const handleDeleteMessage = (messageId: string) => {
+  const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
+    if (!selectedMessage) return;
+
     // Note: Firestore deletion logic would go here.
     // This is just a UI update for now.
-    setMessages(messages.filter(msg => msg.id !== messageId));
-    setSelectedMessage(null);
+    setMessages(messages.filter(msg => msg.id !== selectedMessage.id));
+    
     toast({
-      title: "Message Deleted (UI only)",
+      title: "Message Deleted",
+      description: `The message has been deleted ${forEveryone ? 'for everyone' : 'for you'}. (UI only)`,
     });
+
+    setSelectedMessage(null);
+    setIsDeleteAlertOpen(false);
   }
 
   const handleMediaClick = (message: Message, clickedIndex: number) => {
@@ -478,8 +491,16 @@ export default function ChatPage() {
        {selectedMessage && (
         <MessageOptions
           message={selectedMessage}
-          onDelete={() => handleDeleteMessage(selectedMessage.id)}
+          onDelete={openDeleteDialog}
           onClose={() => setSelectedMessage(null)}
+        />
+      )}
+      {selectedMessage && contact && (
+        <DeleteMessageDialog
+          open={isDeleteAlertOpen}
+          onOpenChange={setIsDeleteAlertOpen}
+          onConfirm={handleDeleteMessage}
+          contactName={contact.name}
         />
       )}
       <ImagePreviewDialog

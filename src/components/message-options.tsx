@@ -20,7 +20,7 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
       navigator.clipboard.writeText(message.text);
       toast({ title: 'Message copied!' });
     } else {
-      toast({ variant: 'destructive', title: 'Cannot copy image' });
+      toast({ variant: 'destructive', title: 'Cannot copy media' });
     }
     onClose();
   };
@@ -29,6 +29,14 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
     toast({ title: `${actionName} not implemented yet.` });
     onClose();
   };
+  
+  const handleDeleteClick = () => {
+    onClose();
+    // A slight delay to allow the bottom sheet to close before opening the dialog
+    setTimeout(() => {
+        onDelete();
+    }, 150);
+  }
 
   return (
     <>
@@ -45,7 +53,7 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
       >
         <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-muted" />
         <div className="p-2 bg-muted rounded-lg mb-4">
-          <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Image'}</p>
+          <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Media message'}</p>
         </div>
         <div className="grid grid-cols-5 gap-2 text-center">
           <button onClick={() => handleAction('Reply')} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary">
@@ -64,7 +72,7 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
             <Star className="h-6 w-6" />
             <span className="text-xs">Star</span>
           </button>
-          <button onClick={onDelete} className="flex flex-col items-center gap-1 text-destructive">
+          <button onClick={handleDeleteClick} className="flex flex-col items-center gap-1 text-destructive">
             <Trash2 className="h-6 w-6" />
             <span className="text-xs">Delete</span>
           </button>
@@ -73,5 +81,3 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
     </>
   );
 }
-
-    
