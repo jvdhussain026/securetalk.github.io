@@ -3,7 +3,7 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -113,6 +113,14 @@ export default function ChatsPage() {
             ))}
           </nav>
         </footer>
+        
+        <Button asChild size="icon" className="fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg z-10 md:right-[calc(50%_-_200px)]">
+            <Link href="/connections">
+              <UserPlus className="h-7 w-7" />
+              <span className="sr-only">Add Connection</span>
+            </Link>
+        </Button>
+
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
        <ImagePreviewDialog
