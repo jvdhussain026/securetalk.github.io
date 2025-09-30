@@ -288,7 +288,7 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
                             ))}
                         </div>
                         <Button size="sm" onClick={handleNext}>
-                            {stepIndex === tourSteps.length - 1 ? 'Finish' : 'Finish'}
+                            {stepIndex === tourSteps.length - 1 ? 'Finish' : 'Next'}
                         </Button>
                     </div>
                  </div>
@@ -367,3 +367,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
+
+    
