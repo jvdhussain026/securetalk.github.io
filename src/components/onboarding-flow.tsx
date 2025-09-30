@@ -2,7 +2,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
@@ -84,26 +84,55 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                 <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
                 <p className="text-muted-foreground">Please read and agree to continue.</p>
             </div>
-            <div className="flex-1 min-h-0">
+             <div className="flex-1 min-h-0">
                 <Card className="h-full">
                     <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
-                        <h3 className="font-bold text-foreground mb-2">1. Your Privacy is Paramount</h3>
-                        <p className="mb-4">Secure Talk is designed with privacy at its core. All communications are end-to-end encrypted. We, the developers, have no ability to read your messages, listen to your calls, or see your shared media.</p>
+                        <h3 className="font-bold text-foreground mb-2">Conditions of Use – Secure Talk</h3>
+                        <p className="mb-4">Welcome to Secure Talk. By creating an account or using this application, you agree to the following terms and conditions. Please read them carefully before proceeding. If you do not agree with any part of these conditions, you must not use this application.</p>
+                        
+                        <h3 className="font-bold text-foreground mb-2">1. Purpose of the App</h3>
+                        <p className="mb-4">Secure Talk is designed to provide a private, encrypted, and user-controlled messaging experience. Our goal is to give users a safe platform to communicate without unnecessary data collection or tracking. You are solely responsible for how you use this service.</p>
 
-                        <h3 className="font-bold text-foreground mb-2">2. Responsible Use</h3>
-                        <p className="mb-4">You agree not to use Secure Talk for any purpose that is illegal, malicious, or violates the rights of others. This includes, but is not limited to, harassment, spreading misinformation, spamming, or engaging in fraudulent activities. The decentralized nature of this app means you are responsible for your own conduct.</p>
+                        <h3 className="font-bold text-foreground mb-2">2. Legal and Responsible Use</h3>
+                        <p className="mb-4">You agree not to use Secure Talk for any illegal, harmful, or abusive purposes, including but not limited to:</p>
+                        <ul className="list-disc list-inside mb-4 space-y-1">
+                            <li>Spreading or planning violence, hate, or harassment.</li>
+                            <li>Engaging in fraud, scams, or identity theft.</li>
+                            <li>Sharing or distributing illegal, harmful, or copyrighted content.</li>
+                            <li>Attempting to exploit, hack, or interfere with the app’s services or other users.</li>
+                        </ul>
+                        <p className="mb-4">We reserve the right to suspend or terminate accounts involved in such activities and cooperate with law enforcement if required by applicable law.</p>
 
-                        <h3 className="font-bold text-foreground mb-2">3. No Warranties</h3>
-                        <p className="mb-4">This software is provided "as is", without warranty of any kind, express or implied. While we strive for maximum security and reliability, we cannot guarantee that the service will be uninterrupted or error-free.</p>
+                        <h3 className="font-bold text-foreground mb-2">3. Privacy and Security</h3>
+                        <p className="mb-4">Secure Talk uses end-to-end encryption and does not store unnecessary personal information. We do not require phone numbers, emails, or other permanent identifiers by default. However:</p>
+                         <ul className="list-disc list-inside mb-4 space-y-1">
+                            <li>Basic technical data (like anonymous user ID, pairing tokens, or encrypted message storage) may be used to operate the app.</li>
+                            <li>Temporary storage of messages may occur only until delivery and is then automatically deleted.</li>
+                            <li>In the future, if required by law, optional verification methods (such as phone number verification) may be introduced.</li>
+                        </ul>
 
-                         <h3 className="font-bold text-foreground mb-2">4. Self-Hosting</h3>
-                        <p>Users have the option to host their own servers. If you choose to do so, you are solely responsible for the maintenance, security, and legal compliance of that server and the data stored on it.</p>
+                        <h3 className="font-bold text-foreground mb-2">4. User Responsibility</h3>
+                        <p className="mb-4">All communication and content shared through Secure Talk is the responsibility of the user who sends it. You must ensure that your use of the service complies with all applicable laws and regulations in your country. Secure Talk and its developers are not liable for any misuse of the platform by its users.</p>
+                        
+                        <h3 className="font-bold text-foreground mb-2">5. Safety and Reporting</h3>
+                        <p className="mb-4">If you encounter abusive, harmful, or suspicious activity, you agree to report it through the in-app reporting feature or by contacting our support. We may take necessary action, including account suspension or cooperation with lawful investigations, when required.</p>
+                        
+                        <h3 className="font-bold text-foreground mb-2">6. App Changes and Availability</h3>
+                        <p className="mb-4">We may update, modify, or discontinue parts of the service at any time for security, legal, or technical reasons. We may also make changes to these conditions, and continued use of the app after changes are published means you accept them.</p>
+
+                        <h3 className="font-bold text-foreground mb-2">7. Termination</h3>
+                        <p className="mb-4">You may stop using Secure Talk at any time. We reserve the right to suspend or terminate your access if you violate these conditions or use the app in a harmful or unlawful manner.</p>
+                        
+                        <h3 className="font-bold text-foreground mb-2">8. Disclaimer of Liability</h3>
+                        <p className="mb-4">Secure Talk is provided “as is” without warranties of any kind. While we make every effort to ensure security and privacy, no digital service can be 100% secure. You use this application at your own risk.</p>
+                        
+                        <p className="font-semibold text-foreground">By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.</p>
                     </ScrollArea>
                 </Card>
             </div>
             <div className="mt-4 grid grid-cols-2 gap-2 shrink-0">
                  <Button size="lg" variant="outline" onClick={onBack}>
-                    <ArrowLeft className="mr-2" /> Back
+                    <ArrowLeft className="mr-2" /> Decline
                  </Button>
                 <Button size="lg" onClick={onNext}>
                     Accept & Continue
@@ -183,12 +212,13 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
     
     const [element, setElement] = useState<HTMLElement | null>(null);
 
-    React.useEffect(() => {
+    useEffect(() => {
         // This is a workaround to wait for the main app to render
-        setTimeout(() => {
+        const timer = setTimeout(() => {
              const el = document.getElementById(currentStep.elementId);
              setElement(el);
         }, 100);
+        return () => clearTimeout(timer);
     }, [currentStep.elementId]);
 
     if (!element) return <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" />;
@@ -200,14 +230,13 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
     const screenPadding = 16; // p-4 or similar
 
     let left = rect.left + rect.width / 2 - tooltipWidth / 2;
-    let transform = 'translateX(0)';
-
+    
     if (left < screenPadding) {
         left = screenPadding;
     } else if (left + tooltipWidth > window.innerWidth - screenPadding) {
         left = window.innerWidth - screenPadding - tooltipWidth;
     }
-
+    
     const tooltipStyle: React.CSSProperties = {
         position: 'fixed',
         width: `${tooltipWidth}px`,
