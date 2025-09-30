@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle } from 'lucide-react'
 import { useParams } from 'next/navigation'
@@ -14,6 +14,8 @@ import type { Message, Attachment } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
 import { translateMessage } from '@/ai/flows/translate-message-flow'
+import { detectLanguage } from '@/ai/flows/detect-language-flow'
+import { useDebounce } from '@/hooks/use-debounce'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -215,6 +217,10 @@ export default function ChatPage() {
   const [preferredLang, setPreferredLang] = useState<string | null>(null);
   const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
   const [isTranslating, setIsTranslating] = useState<string | null>(null);
+  
+  const [showOutboundTranslate, setShowOutboundTranslate] = useState(false);
+  const [inputLang, setInputLang] = useState<string | null>(null);
+  const debouncedNewMessage = useDebounce(newMessage, 500);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -231,6 +237,24 @@ export default function ChatPage() {
       setPreferredLang(lang);
     }
   }, []);
+  
+  useEffect(() => {
+    async function checkLanguage() {
+      if (debouncedNewMessage.trim().length > 5 && contact) {
+        const { languageCode } = await detectLanguage({ text: debouncedNewMessage });
+        setInputLang(languageCode);
+        if (languageCode !== contact.language && languageCode !== 'und') {
+          setShowOutboundTranslate(true);
+        } else {
+          setShowOutboundTranslate(false);
+        }
+      } else {
+        setShowOutboundTranslate(false);
+      }
+    }
+    checkLanguage();
+  }, [debouncedNewMessage, contact]);
+
 
   useEffect(() => {
     if (!chatId) return;
@@ -602,7 +626,7 @@ export default function ChatPage() {
     }
   }
 
-  const handleTranslate = async () => {
+  const handleInboundTranslate = async () => {
     if (!selectedMessage || !selectedMessage.text) {
       toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
       return;
@@ -637,6 +661,26 @@ export default function ChatPage() {
       setIsTranslating(null);
     }
   };
+  
+  const handleOutboundTranslate = async () => {
+    if (!newMessage.trim() || !contact) return;
+    
+    try {
+      const result = await translateMessage({ text: newMessage, targetLanguage: contact.language });
+      if (result.translatedText) {
+        setNewMessage(result.translatedText);
+        if (contentEditableRef.current) {
+          contentEditableRef.current.textContent = result.translatedText;
+        }
+        setShowOutboundTranslate(false);
+        toast({ title: `Translated to ${new Intl.DisplayNames(['en'], { type: 'language' }).of(contact.language)}` });
+      }
+    } catch (error) {
+      console.error("Outbound translation error:", error);
+      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
+    }
+  };
+
 
   const handleLanguageSelected = (lang: string) => {
     setPreferredLang(lang);
@@ -645,7 +689,7 @@ export default function ChatPage() {
     // After selection, trigger translation for the message that was originally selected
     if (selectedMessage) {
         // A small delay to allow the dialog to close before starting translation
-        setTimeout(() => handleTranslate(), 100);
+        setTimeout(() => handleInboundTranslate(), 100);
     }
   };
   
@@ -955,6 +999,13 @@ export default function ChatPage() {
                     />
                 </div>
 
+                {showOutboundTranslate && (
+                  <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={handleOutboundTranslate}>
+                    <Languages className="h-6 w-6" />
+                    <span className="sr-only">Translate</span>
+                  </Button>
+                )}
+
                 {newMessage.trim() || attachmentsToSend.length > 0 ? (
                   <Button type="submit" size="icon" className="rounded-full">
                     <Send className="h-5 w-5" />
@@ -995,7 +1046,7 @@ export default function ChatPage() {
             onEdit={handleEdit}
             onReply={handleReply}
             onStar={handleToggleStar}
-            onTranslate={handleTranslate}
+            onTranslate={handleInboundTranslate}
             isTranslated={!!translatedMessages[selectedMessage.id]}
             onClose={() => {
                 setSelectedMessage(null);
@@ -1043,5 +1094,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    

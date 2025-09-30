@@ -23,6 +23,7 @@ export type Contact = {
   name: string;
   avatar: string;
   messages: Message[];
+  language: string;
   status?: 'online' | 'offline';
   bio?: string;
   verified?: boolean;

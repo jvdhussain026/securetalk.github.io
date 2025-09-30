@@ -9,6 +9,7 @@ export const contacts: Contact[] = [
   {
     id: '1',
     name: 'Zehra',
+    language: 'ur',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
     messages: [
       { id: 'm1a', text: 'آپ کہاں ہیں؟', timestamp: subHours(now, 1), isSender: false },
@@ -20,6 +21,7 @@ export const contacts: Contact[] = [
   {
     id: '2',
     name: 'Rehan',
+    language: 'hi',
     avatar: 'https://picsum.photos/seed/avatar2/200/200',
     messages: [
       { id: 'm2a', text: 'मैं रास्ते में हूँ', timestamp: subHours(now, 1) , isSender: false },
@@ -31,6 +33,7 @@ export const contacts: Contact[] = [
   {
     id: '3',
     name: 'Kaish',
+    language: 'es',
     avatar: 'https://picsum.photos/seed/avatar3/200/200',
     messages: [
        { id: 'm3a', text: 'Nos vemos en el lugar de siempre', timestamp: subHours(now, 2), isSender: false },
@@ -41,6 +44,7 @@ export const contacts: Contact[] = [
     {
     id: '4',
     name: 'Aurangjeb',
+    language: 'fr',
     avatar: 'https://picsum.photos/seed/avatar4/200/200',
     messages: [
       { id: 'm4a', text: 'J\'arrive dans 10 minutes', timestamp: subHours(now, 3), isSender: false },
@@ -50,6 +54,7 @@ export const contacts: Contact[] = [
   {
     id: '5',
     name: 'Ava',
+    language: 'de',
     avatar: 'https://picsum.photos/seed/avatar5/200/200',
     messages: [
         { id: 'm5a', text: 'Hast du den neuen Film gesehen?', timestamp: subDays(now, 1), isSender: true },
@@ -60,6 +65,7 @@ export const contacts: Contact[] = [
   {
     id: '6',
     name: 'Liam',
+    language: 'ja',
     avatar: 'https://picsum.photos/seed/avatar6/200/200',
     messages: [
       { id: 'm6a', text: '昨日は助けてくれてありがとう', timestamp: subDays(now, 1), isSender: false },
@@ -69,6 +75,7 @@ export const contacts: Contact[] = [
     {
     id: '7',
     name: 'Emma',
+    language: 'ru',
     avatar: 'https://picsum.photos/seed/avatar7/200/200',
     messages: [
       { id: 'm7a', text: 'Мы можем перенести?', timestamp: subDays(now, 2), isSender: true },
@@ -78,6 +85,7 @@ export const contacts: Contact[] = [
   {
     id: 'support-javed',
     name: 'Javed Hussain (Support)',
+    language: 'en',
     avatar: 'https://picsum.photos/seed/user/200/200',
     messages: [
       { id: 'sm1', text: 'Hello! How can I help you today?', timestamp: subMinutes(now, 5), isSender: false },
@@ -86,5 +94,3 @@ export const contacts: Contact[] = [
     verified: true,
   },
 ];
-
-    
