@@ -65,33 +65,40 @@ export function AudioPlayer({ src, isSender }: AudioPlayerProps) {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
   
+  const WaveformBar = ({ height }: { height: number }) => (
+    <div
+      className="w-0.5 rounded-full bg-current"
+      style={{ height: `${height}px` }}
+    />
+  );
+
   const Waveform = () => (
-    <div className="flex items-center h-full w-full absolute top-0 left-0 -z-10">
-      <div className="h-[4px] w-[2px] bg-current opacity-30 rounded-full mr-px" />
-      <div className="h-[6px] w-[2px] bg-current opacity-30 rounded-full mr-px" />
-      <div className="h-[8px] w-[2px] bg-current opacity-30 rounded-full mr-px" />
-      <div className="h-[10px] w-[2px] bg-current opacity-40 rounded-full mr-px" />
-      <div className="h-[12px] w-[2px] bg-current opacity-40 rounded-full mr-px" />
-      <div className="h-[14px] w-[2px] bg-current opacity-50 rounded-full mr-px" />
-      <div className="h-[12px] w-[2px] bg-current opacity-50 rounded-full mr-px" />
-      <div className="h-[10px] w-[2px] bg-current opacity-60 rounded-full mr-px" />
-      <div className="h-[12px] w-[2px] bg-current opacity-60 rounded-full mr-px" />
-      <div className="h-[14px] w-[2px] bg-current opacity-70 rounded-full mr-px" />
-      <div className="h-[16px] w-[2px] bg-current opacity-70 rounded-full mr-px" />
-      <div className="h-[18px] w-[2px] bg-current opacity-80 rounded-full mr-px" />
-      <div className="h-[16px] w-[2px] bg-current opacity-80 rounded-full mr-px" />
-      <div className="h-[14px] w-[2px] bg-current opacity-70 rounded-full mr-px" />
-      <div className="h-[12px] w-[2px] bg-current opacity-70 rounded-full mr-px" />
-      <div className="h-[10px] w-[2px] bg-current opacity-60 rounded-full mr-px" />
-      <div className="h-[12px] w-[2px] bg-current opacity-60 rounded-full mr-px" />
-      <div className="h-[14px] w-[2px] bg-current opacity-50 rounded-full mr-px" />
-      <div className="h-[12px] w-[2px] bg-current opacity-50 rounded-full mr-px" />
-      <div className="h-[10px] w-[2px] bg-current opacity-40 rounded-full mr-px" />
-      <div className="h-[8px] w-[2px] bg-current opacity-40 rounded-full mr-px" />
-      <div className="h-[6px] w-[2px] bg-current opacity-30 rounded-full mr-px" />
-      <div className="h-[4px] w-[2px] bg-current opacity-30 rounded-full mr-px" />
+    <div className="flex items-center gap-px h-full w-full">
+      <WaveformBar height={4} />
+      <WaveformBar height={6} />
+      <WaveformBar height={8} />
+      <WaveformBar height={10} />
+      <WaveformBar height={12} />
+      <WaveformBar height={14} />
+      <WaveformBar height={12} />
+      <WaveformBar height={10} />
+      <WaveformBar height={12} />
+      <WaveformBar height={14} />
+      <WaveformBar height={16} />
+      <WaveformBar height={18} />
+      <WaveformBar height={16} />
+      <WaveformBar height={14} />
+      <WaveformBar height={12} />
+      <WaveformBar height={10} />
+      <WaveformBar height={12} />
+      <WaveformBar height={14} />
+      <WaveformBar height={12} />
+      <WaveformBar height={10} />
+      <WaveformBar height={8} />
+      <WaveformBar height={6} />
+      <WaveformBar height={4} />
     </div>
-  )
+  );
 
 
   return (
@@ -116,22 +123,20 @@ export function AudioPlayer({ src, isSender }: AudioPlayerProps) {
         {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
       </Button>
       <div className="flex-grow flex flex-col gap-1">
-        <div className="relative w-full h-4">
-             <div className="absolute w-full h-full left-0 top-1/2 -translate-y-1/2 flex items-center">
-                 <Waveform />
-                 <Waveform />
-                 <Waveform />
-                 <Waveform />
-             </div>
+        <div className="relative w-full h-5 flex items-center">
+            <div className="absolute w-full h-full left-0 top-0 flex items-center opacity-30 overflow-hidden">
+                 <Waveform /><Waveform /><Waveform /><Waveform /><Waveform /><Waveform /><Waveform />
+            </div>
             <Slider
               value={[currentTime]}
               max={duration || 100}
               step={0.1}
               onValueChange={handleSliderChange}
               className={cn(
-                  "[&>span:first-child]:h-1 [&>span>span]:h-1", 
+                  "[&>span:first-child]:h-0.5",
+                  "[&>span:first-child>span]:h-0.5",
                   isSender ? "[&>span>span]:bg-white" : "",
-                  "[&>span:last-child]:h-4 [&>span:last-child]:w-4"
+                  "[&>span:last-child]:h-3 [&>span:last-child]:w-3"
               )}
             />
         </div>
