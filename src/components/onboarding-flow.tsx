@@ -84,51 +84,52 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                 <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
                 <p className="text-muted-foreground">Please read and agree to continue.</p>
             </div>
-            <div className="flex-1 flex flex-col min-h-0">
-                <Card className="flex-1 flex flex-col">
-                    <ScrollArea className="flex-1 p-6 text-sm text-muted-foreground">
-                        <h3 className="font-bold text-foreground mb-2">Conditions of Use – Secure Talk</h3>
-                        <p className="mb-4">Welcome to Secure Talk. By creating an account or using this application, you agree to the following terms and conditions. Please read them carefully before proceeding. If you do not agree with any part of these conditions, you must not use this application.</p>
-                        
-                        <h3 className="font-bold text-foreground mb-2">1. Purpose of the App</h3>
-                        <p className="mb-4">Secure Talk is designed to provide a private, encrypted, and user-controlled messaging experience. Our goal is to give users a safe platform to communicate without unnecessary data collection or tracking. You are solely responsible for how you use this service.</p>
+            <Card className="flex-1 flex flex-col min-h-0">
+                <ScrollArea className="flex-1 p-6 text-sm text-muted-foreground">
+                    <h3 className="font-bold text-foreground mb-2">Conditions of Use – Secure Talk</h3>
+                    <p className="mb-4">Welcome to Secure Talk. By creating an account or using this application, you agree to the following terms and conditions. Please read them carefully before proceeding. If you do not agree with any part of these conditions, you must not use this application.</p>
+                    
+                    <h3 className="font-bold text-foreground mb-2">1. Purpose of the App</h3>
+                    <p className="mb-4">Secure Talk is designed to provide a private, encrypted, and user-controlled messaging experience. Our goal is to give users a safe platform to communicate without unnecessary data collection or tracking. You are solely responsible for how you use this service.</p>
 
-                        <h3 className="font-bold text-foreground mb-2">2. Legal and Responsible Use</h3>
-                        <p className="mb-4">You agree not to use Secure Talk for any illegal, harmful, or abusive purposes, including but not limited to:</p>
-                        <ul className="list-disc list-inside mb-4 space-y-1">
-                            <li>Spreading or planning violence, hate, or harassment.</li>
-                            <li>Engaging in fraud, scams, or identity theft.</li>
-                            <li>Sharing or distributing illegal, harmful, or copyrighted content.</li>
-                            <li>Attempting to exploit, hack, or interfere with the app’s services or other users.</li>
-                        </ul>
-                        <p className="mb-4">We reserve the right to suspend or terminate accounts involved in such activities and cooperate with law enforcement if required by applicable law.</p>
+                    <h3 className="font-bold text-foreground mb-2">2. Legal and Responsible Use</h3>
+                    <p className="mb-4">You agree not to use Secure Talk for any illegal, harmful, or abusive purposes, including but not limited to:</p>
+                    <ul className="list-disc list-inside mb-4 space-y-1">
+                        <li>Spreading or planning violence, hate, or harassment.</li>
+                        <li>Engaging in fraud, scams, or identity theft.</li>
+                        <li>Sharing or distributing illegal, harmful, or copyrighted content.</li>
+                        <li>Attempting to exploit, hack, or interfere with the app’s services or other users.</li>
+                    </ul>
+                    <p className="mb-4">We reserve the right to suspend or terminate accounts involved in such activities and cooperate with law enforcement if required by applicable law.</p>
 
-                        <h3 className="font-bold text-foreground mb-2">3. Privacy and Security</h3>
-                        <p className="mb-4">Secure Talk uses end-to-end encryption and does not store unnecessary personal information. We do not require phone numbers, emails, or other permanent identifiers by default. However:</p>
-                         <ul className="list-disc list-inside mb-4 space-y-1">
-                            <li>Basic technical data (like anonymous user ID, pairing tokens, or encrypted message storage) may be used to operate the app.</li>
-                            <li>Temporary storage of messages may occur only until delivery and is then automatically deleted.</li>
-                            <li>In the future, if required by law, optional verification methods (such as phone number verification) may be introduced.</li>
-                        </ul>
+                    <h3 className="font-bold text-foreground mb-2">3. Privacy and Security</h3>
+                    <p className="mb-4">Secure Talk uses end-to-end encryption and does not store unnecessary personal information. We do not require phone numbers, emails, or other permanent identifiers by default. However:</p>
+                     <ul className="list-disc list-inside mb-4 space-y-1">
+                        <li>Basic technical data (like anonymous user ID, pairing tokens, or encrypted message storage) may be used to operate the app.</li>
+                        <li>Temporary storage of messages may occur only until delivery and is then automatically deleted.</li>
+                        <li>In the future, if required by law, optional verification methods (such as phone number verification) may be introduced.</li>
+                    </ul>
 
-                        <h3 className="font-bold text-foreground mb-2">4. User Responsibility</h3>
-                        <p className="mb-4">All communication and content shared through Secure Talk is the responsibility of the user who sends it. You must ensure that your use of the service complies with all applicable laws and regulations in your country. Secure Talk and its developers are not liable for any misuse of the platform by its users.</p>
-                        
-                        <h3 className="font-bold text-foreground mb-2">5. Safety and Reporting</h3>
-                        <p className="mb-4">If you encounter abusive, harmful, or suspicious activity, you agree to report it through the in-app reporting feature or by contacting our support. We may take necessary action, including account suspension or cooperation with lawful investigations, when required.</p>
-                        
-                        <h3 className="font-bold text-foreground mb-2">6. App Changes and Availability</h3>
-                        <p className="mb-4">We may update, modify, or discontinue parts of the service at any time for security, legal, or technical reasons. We may also make changes to these conditions, and continued use of the app after changes are published means you accept them.</p>
+                    <h3 className="font-bold text-foreground mb-2">4. User Responsibility</h3>
+                    <p className="mb-4">All communication and content shared through Secure Talk is the responsibility of the user who sends it. You must ensure that your use of the service complies with all applicable laws and regulations in your country. Secure Talk and its developers are not liable for any misuse of the platform by its users.</p>
+                    
+                    <h3 className="font-bold text-foreground mb-2">5. Safety and Reporting</h3>
+                    <p className="mb-4">If you encounter abusive, harmful, or suspicious activity, you agree to report it through the in-app reporting feature or by contacting our support. We may take necessary action, including account suspension or cooperation with lawful investigations, when required.</p>
+                    
+                    <h3 className="font-bold text-foreground mb-2">6. App Changes and Availability</h3>
+                    <p className="mb-4">We may update, modify, or discontinue parts of the service at any time for security, legal, or technical reasons. We may also make changes to these conditions, and continued use of the app after changes are published means you accept them.</p>
 
-                        <h3 className="font-bold text-foreground mb-2">7. Termination</h3>
-                        <p className="mb-4">You may stop using Secure Talk at any time. We reserve the right to suspend or terminate your access if you violate these conditions or use the app in a harmful or unlawful manner.</p>
-                        
-                        <h3 className="font-bold text-foreground mb-2">8. Disclaimer of Liability</h3>
-                        <p className="mb-4">Secure Talk is provided “as is” without warranties of any kind. While we make every effort to ensure security and privacy, no digital service can be 100% secure. You use this application at your own risk.</p>
-                    </ScrollArea>
-                </Card>
-            </div>
+                    <h3 className="font-bold text-foreground mb-2">7. Termination</h3>
+                    <p className="mb-4">You may stop using Secure Talk at any time. We reserve the right to suspend or terminate your access if you violate these conditions or use the app in a harmful or unlawful manner.</p>
+                    
+                    <h3 className="font-bold text-foreground mb-2">8. Disclaimer of Liability</h3>
+                    <p className="mb-4">Secure Talk is provided “as is” without warranties of any kind. While we make every effort to ensure security and privacy, no digital service can be 100% secure. You use this application at your own risk.</p>
+                </ScrollArea>
+            </Card>
             <div className="shrink-0 mt-4 space-y-2">
+                <p className="text-xs text-muted-foreground text-center pb-2">
+                    By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                     <Button size="lg" variant="outline" onClick={onBack}>
                         <ArrowLeft className="mr-2" /> Decline
@@ -137,9 +138,6 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                         Accept & Continue
                     </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground text-center pt-2">
-                    By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.
-                </p>
             </div>
         </div>
     );
@@ -369,10 +367,3 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
-
-    
-    
-
-    
-
-    
