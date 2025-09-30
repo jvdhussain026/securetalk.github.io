@@ -1,9 +1,9 @@
 
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
@@ -27,6 +27,8 @@ import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-p
 import { AttachmentOptions } from '@/components/attachment-options'
 import { AudioPlayer } from '@/components/audio-player'
 import { DeleteMessageDialog } from '@/components/delete-message-dialog'
+import { AnimatePresence, motion } from 'framer-motion'
+import { ChatSearch } from '@/components/chat-search'
 
 
 export default function ChatPage() {
@@ -42,11 +44,16 @@ export default function ChatPage() {
   const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
   const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchMatches, setSearchMatches] = useState<{ messageId: string, index: number }[]>([]);
+  const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const messageRefs = useRef<Record<string, HTMLDivElement>>({});
 
   const chatId = params.id as string;
 
@@ -89,13 +96,53 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    if (scrollAreaRef.current) {
+    if (scrollAreaRef.current && !isSearchOpen) {
       const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
       if (viewport) {
         viewport.scrollTop = viewport.scrollHeight;
       }
     }
-  }, [messages])
+  }, [messages, isSearchOpen])
+  
+  // Search logic
+  useEffect(() => {
+    if (searchQuery.length > 1) {
+      const matches: { messageId: string, index: number }[] = [];
+      messages.forEach(message => {
+        if (message.text) {
+          const regex = new RegExp(searchQuery, 'gi');
+          let match;
+          while ((match = regex.exec(message.text)) !== null) {
+            matches.push({ messageId: message.id, index: match.index });
+          }
+        }
+      });
+      setSearchMatches(matches);
+      setCurrentMatchIndex(0);
+    } else {
+      setSearchMatches([]);
+    }
+  }, [searchQuery, messages]);
+  
+  useEffect(() => {
+    if (searchMatches.length > 0 && messageRefs.current) {
+      const { messageId } = searchMatches[currentMatchIndex];
+      const messageElement = messageRefs.current[messageId];
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  }, [currentMatchIndex, searchMatches]);
+  
+  const handleNavigateMatch = (direction: 'next' | 'prev') => {
+    if (searchMatches.length === 0) return;
+    if (direction === 'next') {
+      setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
+    } else {
+      setCurrentMatchIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
+    }
+  };
+
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -229,6 +276,14 @@ export default function ChatPage() {
   const handleAvatarClick = (avatarUrl: string) => {
       setImagePreview({ urls: [avatarUrl], startIndex: 0 });
   };
+  
+  const handleAction = (action: 'star' | 'find' | 'mute') => {
+    if (action === 'find') {
+      setIsSearchOpen(true);
+    } else {
+      toast({ title: `Feature coming soon!`, description: `The "${action}" feature is not yet implemented.`});
+    }
+  }
 
 
   const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
@@ -304,11 +359,39 @@ export default function ChatPage() {
          <AudioPlayer src={attachment.url} isSender={message.isSender} />
       </div>
     );
+    
+    const highlightedText = useMemo(() => {
+      if (!text || !isSearchOpen || searchQuery.length <= 1) {
+        return <p className="text-sm break-words px-2 pt-1">{text}</p>;
+      }
+      const regex = new RegExp(`(${searchQuery})`, 'gi');
+      const parts = text.split(regex);
+      return (
+        <p className="text-sm break-words px-2 pt-1">
+          {parts.map((part, i) => {
+              const isMatch = part.toLowerCase() === searchQuery.toLowerCase();
+              const isCurrent = isMatch && searchMatches.some(m => m.messageId === message.id && m.index === text.indexOf(part, (i > 0 ? text.indexOf(parts[i-1]) + parts[i-1].length : 0))) && searchMatches[currentMatchIndex]?.messageId === message.id;
+              
+              return (
+                <span
+                  key={i}
+                  className={cn({
+                    'bg-yellow-300 text-black rounded': isMatch,
+                    'bg-yellow-500': isCurrent,
+                  })}
+                >
+                  {part}
+                </span>
+              );
+          })}
+        </p>
+      );
+    }, [text, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
 
     return (
         <div className="space-y-2">
             {renderMediaGrid()}
-            {text && <p className="text-sm break-words px-2 pt-1">{text}</p>}
+            {text && highlightedText}
             {docAttachments.map(renderDoc)}
             {audioAttachments.map(renderAudio)}
         </div>
@@ -343,77 +426,100 @@ export default function ChatPage() {
   return (
     <>
       <div className="flex flex-col h-full bg-background">
-        <header className="flex items-center gap-4 p-2 border-b shrink-0">
-          <Button variant="ghost" size="icon" asChild>
-            <Link href="/chats">
-              <ArrowLeft className="h-6 w-6" />
-              <span className="sr-only">Back</span>
-            </Link>
-          </Button>
-          <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
-            <Avatar className="h-10 w-10">
-              <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-              <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-          </button>
-          <button onClick={() => setIsUserDetailsOpen(true)} className="flex items-center gap-3 text-left flex-1 overflow-hidden">
-            <div className="flex items-center gap-2">
-              <h2 className="text-lg font-bold truncate">{contact.name}</h2>
-              {contact.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
-            </div>
-          </button>
-          <div className="ml-auto flex items-center">
-             <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="flex items-center gap-1">
-                  <Phone className="h-5 w-5" />
-                  <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                   <span className="sr-only">Call</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem onSelect={() => toast({ title: "Starting voice call..." })}>
-                  <Phone className="mr-2 h-4 w-4" />
-                  <span>Voice Call</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onSelect={() => toast({ title: "Starting video call..." })}>
-                  <Video className="mr-2 h-4 w-4" />
-                  <span>Video Call</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+        <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px]">
+          <AnimatePresence>
+            {isSearchOpen ? (
+               <ChatSearch 
+                onClose={() => setIsSearchOpen(false)}
+                searchQuery={searchQuery}
+                setSearchQuery={setSearchQuery}
+                matches={searchMatches}
+                currentMatchIndex={currentMatchIndex}
+                onNavigate={handleNavigateMatch}
+               />
+            ) : (
+             <motion.div 
+                key="header-content"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2 w-full"
+              >
+                  <Button variant="ghost" size="icon" asChild>
+                    <Link href="/chats">
+                      <ArrowLeft className="h-6 w-6" />
+                      <span className="sr-only">Back</span>
+                    </Link>
+                  </Button>
+                  <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
+                    <Avatar className="h-10 w-10">
+                      <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                      <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                  </button>
+                  <button onClick={() => setIsUserDetailsOpen(true)} className="flex items-center gap-3 text-left flex-1 overflow-hidden">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-lg font-bold truncate">{contact.name}</h2>
+                      {contact.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
+                    </div>
+                  </button>
+                  <div className="ml-auto flex items-center">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="flex items-center gap-1">
+                          <Phone className="h-5 w-5" />
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                          <span className="sr-only">Call</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => toast({ title: "Starting voice call..." })}>
+                          <Phone className="mr-2 h-4 w-4" />
+                          <span>Voice Call</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => toast({ title: "Starting video call..." })}>
+                          <Video className="mr-2 h-4 w-4" />
+                          <span>Video Call</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
 
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreVertical className="h-5 w-5" />
-                  <span className="sr-only">More options</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem>
-                  <Star className="mr-2 h-4 w-4" />
-                  <span>Starred Messages</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <Search className="mr-2 h-4 w-4" />
-                  <span>Find</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem>
-                  <BellOff className="mr-2 h-4 w-4" />
-                  <span>Mute Notifications</span>
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                          <MoreVertical className="h-5 w-5" />
+                          <span className="sr-only">More options</span>
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent>
+                        <DropdownMenuItem onSelect={() => handleAction('star')}>
+                          <Star className="mr-2 h-4 w-4" />
+                          <span>Starred Messages</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('find')}>
+                          <Search className="mr-2 h-4 w-4" />
+                          <span>Find</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('mute')}>
+                          <BellOff className="mr-2 h-4 w-4" />
+                          <span>Mute Notifications</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </header>
 
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-1">
-              {messages.map((message) => (
+              {messages.map((message, messageIndex) => (
                 <div 
                   key={message.id} 
+                  ref={el => { if(el) messageRefs.current[message.id] = el }}
                   className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
                   onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
                   onTouchStart={() => handleTouchStart(message)}
@@ -545,5 +651,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
