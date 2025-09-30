@@ -57,7 +57,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
           <SheetTitle className="sr-only">User Menu</SheetTitle>
           <SheetDescription className="sr-only">A menu with user profile, settings, and other options.</SheetDescription>
         </SheetHeader>
-        <div className="p-6 text-center bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-b-2xl shadow-lg">
+        <div className="p-6 text-center bg-muted rounded-b-2xl shadow-inner">
             <button onClick={handleAvatarClick} className="mx-auto">
                 <Avatar className="h-20 w-20 mx-auto mb-4 border-2 border-white/50">
                     <AvatarImage src={userAvatar} alt="User" data-ai-hint="person portrait"/>
@@ -65,8 +65,8 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
                 </Avatar>
             </button>
              <div className="flex items-center justify-center gap-2">
-                <p className="font-bold text-xl drop-shadow-sm">Javed Hussain</p>
-                <BadgeCheck className="h-6 w-6 text-white/90 drop-shadow-sm" />
+                <p className="font-bold text-xl drop-shadow-sm text-foreground">Javed Hussain</p>
+                <BadgeCheck className="h-6 w-6 text-primary drop-shadow-sm" />
               </div>
         </div>
         <div className="flex-1 space-y-2 p-4">
