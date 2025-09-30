@@ -125,12 +125,13 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                         
                         <h3 className="font-bold text-foreground mb-2">8. Disclaimer of Liability</h3>
                         <p className="mb-4">Secure Talk is provided “as is” without warranties of any kind. While we make every effort to ensure security and privacy, no digital service can be 100% secure. You use this application at your own risk.</p>
-                        
-                        <p className="font-semibold text-foreground mt-6">By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.</p>
                     </ScrollArea>
                 </Card>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2 shrink-0">
+            <p className="text-xs text-muted-foreground text-center mt-4 mb-2">
+                By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.
+            </p>
+            <div className="grid grid-cols-2 gap-2 shrink-0">
                  <Button size="lg" variant="outline" onClick={onBack}>
                     <ArrowLeft className="mr-2" /> Decline
                  </Button>
@@ -287,7 +288,7 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
                             ))}
                         </div>
                         <Button size="sm" onClick={handleNext}>
-                            {stepIndex === tourSteps.length - 1 ? 'Finish' : 'Next'}
+                            {stepIndex === tourSteps.length - 1 ? 'Finish' : 'Finish'}
                         </Button>
                     </div>
                  </div>
@@ -368,4 +369,6 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
 Card.displayName = "Card"
 
     
+    
+
     
