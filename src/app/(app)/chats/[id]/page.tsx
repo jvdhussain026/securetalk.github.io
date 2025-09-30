@@ -305,7 +305,7 @@ export default function ChatPage() {
     
     setNewMessage('')
     setAttachmentsToSend([])
-
+    
     try {
         if (editingMessage) {
             const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
@@ -394,25 +394,6 @@ export default function ChatPage() {
         audioChunksRef.current.push(event.data);
       };
 
-      recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        const reader = new FileReader();
-        reader.onloadend = () => {
-            const audioUrl = reader.result as string;
-            const newAttachment: Attachment = {
-              type: 'audio',
-              url: audioUrl,
-              name: `recording_${new Date().toISOString()}.webm`,
-              size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
-            };
-            setAttachmentsToSend(prev => [...prev, newAttachment]);
-        }
-        reader.readAsDataURL(audioBlob);
-        
-        // Clean up stream
-        stream.getTracks().forEach(track => track.stop());
-      };
-
       recorder.start();
       setIsRecording(true);
 
@@ -430,8 +411,8 @@ export default function ChatPage() {
     }
   };
 
-  const stopRecordingAndSend = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const stopRecordingAndSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (mediaRecorderRef.current && isRecording) {
       
       mediaRecorderRef.current.onstop = async () => {
@@ -811,7 +792,7 @@ export default function ChatPage() {
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-center gap-2">
             {!isRecording ? (
               <>
-                <Button type="button" size="icon" variant="ghost" onClick={handleMediaButtonClick}>
+                <Button type="button" size="icon" variant="secondary" className="rounded-full" onClick={handleMediaButtonClick}>
                   <Plus className="h-6 w-6" />
                   <span className="sr-only">Add media</span>
                 </Button>
@@ -838,7 +819,7 @@ export default function ChatPage() {
                     <span className="sr-only">Send</span>
                   </Button>
                 ) : (
-                  <Button type="button" size="icon" variant="ghost" onClick={startRecording}>
+                  <Button type="button" size="icon" variant="secondary" className="rounded-full" onClick={startRecording}>
                     <Mic className="h-6 w-6" />
                     <span className="sr-only">Record audio</span>
                   </Button>
