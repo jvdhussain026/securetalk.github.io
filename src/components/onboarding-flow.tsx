@@ -84,21 +84,23 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                 <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
                 <p className="text-muted-foreground">Please read and agree to continue.</p>
             </div>
-            <Card className="flex-1 min-h-0">
-                <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
-                    <h3 className="font-bold text-foreground mb-2">1. Your Privacy is Paramount</h3>
-                    <p className="mb-4">Secure Talk is designed with privacy at its core. All communications are end-to-end encrypted. We, the developers, have no ability to read your messages, listen to your calls, or see your shared media.</p>
+            <div className="flex-1 min-h-0">
+                <Card className="h-full">
+                    <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
+                        <h3 className="font-bold text-foreground mb-2">1. Your Privacy is Paramount</h3>
+                        <p className="mb-4">Secure Talk is designed with privacy at its core. All communications are end-to-end encrypted. We, the developers, have no ability to read your messages, listen to your calls, or see your shared media.</p>
 
-                    <h3 className="font-bold text-foreground mb-2">2. Responsible Use</h3>
-                    <p className="mb-4">You agree not to use Secure Talk for any purpose that is illegal, malicious, or violates the rights of others. This includes, but is not limited to, harassment, spreading misinformation, spamming, or engaging in fraudulent activities. The decentralized nature of this app means you are responsible for your own conduct.</p>
+                        <h3 className="font-bold text-foreground mb-2">2. Responsible Use</h3>
+                        <p className="mb-4">You agree not to use Secure Talk for any purpose that is illegal, malicious, or violates the rights of others. This includes, but is not limited to, harassment, spreading misinformation, spamming, or engaging in fraudulent activities. The decentralized nature of this app means you are responsible for your own conduct.</p>
 
-                    <h3 className="font-bold text-foreground mb-2">3. No Warranties</h3>
-                    <p className="mb-4">This software is provided "as is", without warranty of any kind, express or implied. While we strive for maximum security and reliability, we cannot guarantee that the service will be uninterrupted or error-free.</p>
+                        <h3 className="font-bold text-foreground mb-2">3. No Warranties</h3>
+                        <p className="mb-4">This software is provided "as is", without warranty of any kind, express or implied. While we strive for maximum security and reliability, we cannot guarantee that the service will be uninterrupted or error-free.</p>
 
-                     <h3 className="font-bold text-foreground mb-2">4. Self-Hosting</h3>
-                    <p>Users have the option to host their own servers. If you choose to do so, you are solely responsible for the maintenance, security, and legal compliance of that server and the data stored on it.</p>
-                </ScrollArea>
-            </Card>
+                         <h3 className="font-bold text-foreground mb-2">4. Self-Hosting</h3>
+                        <p>Users have the option to host their own servers. If you choose to do so, you are solely responsible for the maintenance, security, and legal compliance of that server and the data stored on it.</p>
+                    </ScrollArea>
+                </Card>
+            </div>
             <div className="mt-4 grid grid-cols-2 gap-2 shrink-0">
                  <Button size="lg" variant="outline" onClick={onBack}>
                     <ArrowLeft className="mr-2" /> Back
@@ -119,6 +121,7 @@ const NotificationsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () 
     const handleRequestPermission = () => {
         if (!('Notification' in window)) {
             toast({ variant: 'destructive', title: 'This browser does not support notifications.' });
+            onNext(); // Still proceed
             return;
         }
 
@@ -193,16 +196,32 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
     const rect = element.getBoundingClientRect();
     const isBottomHalf = rect.top > window.innerHeight / 2;
 
+    const tooltipWidth = 256; // w-64
+    const screenPadding = 16; // p-4 or similar
+
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    let transform = 'translateX(0)';
+
+    if (left < screenPadding) {
+        left = screenPadding;
+    } else if (left + tooltipWidth > window.innerWidth - screenPadding) {
+        left = window.innerWidth - screenPadding - tooltipWidth;
+    }
+
     const tooltipStyle: React.CSSProperties = {
         position: 'fixed',
+        width: `${tooltipWidth}px`,
         top: isBottomHalf ? rect.top - 16 : rect.bottom + 16,
-        left: rect.left + rect.width / 2,
-        transform: isBottomHalf ? 'translate(-50%, -100%)' : 'translateX(-50%)',
+        left: `${left}px`,
+        transform: isBottomHalf ? 'translateY(-100%)' : 'translateY(0)',
     };
     
+    // Adjust arrow position based on the centered element, not the adjusted tooltip
+    const arrowLeft = rect.left + rect.width / 2 - left;
+
     const arrowStyle: React.CSSProperties = {
         position: 'absolute',
-        left: '50%',
+        left: `${arrowLeft}px`,
         transform: 'translateX(-50%)',
         width: 0,
         height: 0,
@@ -226,7 +245,7 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
                 borderRadius: 'var(--radius)',
                 transition: 'all 0.3s ease-in-out',
              }} />
-             <div style={tooltipStyle} className="z-[100] bg-card p-4 rounded-lg shadow-2xl w-64 max-w-[calc(100vw-2rem)] transition-all duration-300 ease-in-out">
+             <div style={tooltipStyle} className="z-[100] bg-card p-4 rounded-lg shadow-2xl max-w-[calc(100vw-2rem)] transition-all duration-300 ease-in-out">
                 <div style={arrowStyle} />
                  <h3 className="font-bold mb-1">{currentStep.title}</h3>
                  <p className="text-sm text-muted-foreground mb-4">{currentStep.description}</p>
@@ -274,6 +293,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     }
 
     const handleNotificationsNext = () => {
+        // This is the final step of this flow.
         onComplete();
     };
 
@@ -285,7 +305,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     ];
 
     return (
-        <div className="h-full w-full fixed inset-0 z-50 bg-background">
+        <div className="h-full w-full fixed inset-0 z-[60] bg-background">
             <AnimatePresence mode="wait">
                 {step < steps.length && (
                     <motion.div
@@ -317,3 +337,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
+
+    
