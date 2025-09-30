@@ -45,7 +45,14 @@ const translateMessageFlow = ai.defineFlow(
     outputSchema: TranslateMessageOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    return output!;
+    try {
+      const {output} = await prompt(input);
+      return output!;
+    } catch (error) {
+      // If there's an error (e.g., 503), wait 2 seconds and retry once.
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const {output} = await prompt(input);
+      return output!;
+    }
   }
 );
