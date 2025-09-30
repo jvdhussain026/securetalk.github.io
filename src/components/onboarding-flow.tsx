@@ -240,9 +240,9 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
     
     const tooltipStyle: React.CSSProperties = {
         position: 'fixed',
-        width: `${tooltipWidth}px`,
+        width: `${''}${tooltipWidth}px`,
         top: isBottomHalf ? rect.top - 16 : rect.bottom + 16,
-        left: `${left}px`,
+        left: `${''}${left}px`,
         transform: isBottomHalf ? 'translateY(-100%)' : 'translateY(0)',
     };
     
@@ -251,7 +251,7 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
 
     const arrowStyle: React.CSSProperties = {
         position: 'absolute',
-        left: `${arrowLeft}px`,
+        left: `${''}${arrowLeft}px`,
         transform: 'translateX(-50%)',
         width: 0,
         height: 0,
@@ -369,6 +369,8 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
 Card.displayName = "Card"
 
     
+    
+
     
 
     
