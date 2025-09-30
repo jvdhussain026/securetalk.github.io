@@ -39,6 +39,7 @@ export default function ChatPage() {
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
   const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
 
@@ -193,11 +194,12 @@ export default function ChatPage() {
   
   const handleMessageLongPress = (message: Message) => {
     setSelectedMessage(message);
+    setIsMessageOptionsOpen(true);
   }
   
   const openDeleteDialog = () => {
+    setIsMessageOptionsOpen(false);
     setIsDeleteAlertOpen(true);
-    setSelectedMessage(selectedMessage);
   }
 
   const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
@@ -490,9 +492,13 @@ export default function ChatPage() {
       {contact && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={contact} />}
        {selectedMessage && (
         <MessageOptions
+          isOpen={isMessageOptionsOpen}
           message={selectedMessage}
           onDelete={openDeleteDialog}
-          onClose={() => setSelectedMessage(null)}
+          onClose={() => {
+            setIsMessageOptionsOpen(false);
+            setSelectedMessage(null);
+          }}
         />
       )}
       {selectedMessage && contact && (
@@ -500,6 +506,10 @@ export default function ChatPage() {
           open={isDeleteAlertOpen}
           onOpenChange={setIsDeleteAlertOpen}
           onConfirm={handleDeleteMessage}
+          onCancel={() => {
+            setIsDeleteAlertOpen(false);
+            setIsMessageOptionsOpen(true);
+          }}
           contactName={contact.name}
         />
       )}

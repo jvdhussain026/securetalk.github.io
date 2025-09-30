@@ -7,13 +7,16 @@ import type { Message } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 type MessageOptionsProps = {
+  isOpen: boolean;
   message: Message;
   onDelete: () => void;
   onClose: () => void;
 };
 
-export function MessageOptions({ message, onDelete, onClose }: MessageOptionsProps) {
+export function MessageOptions({ isOpen, message, onDelete, onClose }: MessageOptionsProps) {
   const { toast } = useToast();
+
+  if (!isOpen) return null;
 
   const handleCopy = () => {
     if (message.text) {
@@ -31,11 +34,7 @@ export function MessageOptions({ message, onDelete, onClose }: MessageOptionsPro
   };
   
   const handleDeleteClick = () => {
-    onClose();
-    // A slight delay to allow the bottom sheet to close before opening the dialog
-    setTimeout(() => {
-        onDelete();
-    }, 150);
+    onDelete();
   }
 
   return (

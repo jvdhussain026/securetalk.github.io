@@ -4,8 +4,6 @@
 import { useState } from 'react';
 import {
   AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
   AlertDialogContent,
   AlertDialogDescription,
   AlertDialogFooter,
@@ -20,6 +18,7 @@ type DeleteMessageDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onConfirm: (options: { forEveryone: boolean }) => void;
+  onCancel: () => void;
   contactName: string;
 };
 
@@ -27,6 +26,7 @@ export function DeleteMessageDialog({
   open,
   onOpenChange,
   onConfirm,
+  onCancel,
   contactName,
 }: DeleteMessageDialogProps) {
   const [forEveryone, setForEveryone] = useState(false);
@@ -34,14 +34,18 @@ export function DeleteMessageDialog({
   const handleConfirm = () => {
     onConfirm({ forEveryone });
   };
+  
+  const handleCancel = () => {
+    onCancel();
+  };
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+          <AlertDialogTitle>Delete message?</AlertDialogTitle>
           <AlertDialogDescription>
-            Are you sure you want to delete this message? This action cannot be undone.
+            This message will be permanently deleted. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
@@ -53,12 +57,10 @@ export function DeleteMessageDialog({
         </div>
 
         <AlertDialogFooter>
-          <AlertDialogCancel>No, keep it</AlertDialogCancel>
-          <AlertDialogAction asChild>
-            <Button onClick={handleConfirm} variant="destructive">
+           <Button variant="ghost" onClick={handleCancel}>No, keep it</Button>
+           <Button onClick={handleConfirm} variant="destructive">
               Yes, delete
             </Button>
-          </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
