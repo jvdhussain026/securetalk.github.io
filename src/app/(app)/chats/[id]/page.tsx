@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, StopCircle, Trash2 } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
@@ -171,6 +171,11 @@ export default function ChatPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchMatches, setSearchMatches] = useState<{ messageId: string, index: number }[]>([]);
   const [currentMatchIndex, setCurrentMatchIndex] = useState(0);
+
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingTime, setRecordingTime] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -342,12 +347,79 @@ export default function ChatPage() {
     setAttachmentsToSend(prev => prev.filter((_, i) => i !== index));
   }
 
-  const handleMicClick = () => {
-    toast({
-      title: "Voice Recording",
-      description: "Voice recording is not implemented yet.",
-    })
-  }
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = recorder;
+
+      const audioChunks: Blob[] = [];
+      recorder.ondataavailable = (event) => {
+        audioChunks.push(event.data);
+      };
+
+      recorder.onstop = () => {
+        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+        const audioUrl = URL.createObjectURL(audioBlob);
+        const newAttachment: Attachment = {
+          type: 'audio',
+          url: audioUrl,
+          name: `recording_${new Date().toISOString()}.webm`,
+          size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
+        };
+        setAttachmentsToSend((prev) => [...prev, newAttachment]);
+        
+        // Clean up stream
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      recorder.start();
+      setIsRecording(true);
+
+      recordingIntervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+
+    } catch (error) {
+      console.error("Error starting recording:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Microphone access denied',
+        description: 'Please allow microphone access in your browser settings.',
+      });
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+      }
+      setRecordingTime(0);
+    }
+  };
+
+  const cancelRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+        mediaRecorderRef.current.onstop = null; // prevent onstop from firing
+        mediaRecorderRef.current.stop();
+    }
+    setIsRecording(false);
+    if (recordingIntervalRef.current) {
+        clearInterval(recordingIntervalRef.current);
+    }
+    setRecordingTime(0);
+  };
+
+
+  const formatRecordingTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+  };
 
   const handleTouchStart = (message: Message) => {
     longPressTimerRef.current = setTimeout(() => {
@@ -588,35 +660,57 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-            <Button type="button" size="icon" variant="ghost" onClick={handleMediaButtonClick}>
-              <Plus className="h-6 w-6" />
-              <span className="sr-only">Add media</span>
-            </Button>
-            <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                onChange={handleFileChange} 
-                accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document" 
-                multiple 
-            />
-            <Input
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message..."
-              className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
-              autoComplete="off"
-            />
-             {newMessage.trim() || attachmentsToSend.length > 0 ? (
-              <Button type="submit" size="icon" className="rounded-full">
-                <Send className="h-5 w-5" />
-                <span className="sr-only">Send</span>
-              </Button>
+            {!isRecording ? (
+              <>
+                <Button type="button" size="icon" variant="ghost" onClick={handleMediaButtonClick}>
+                  <Plus className="h-6 w-6" />
+                  <span className="sr-only">Add media</span>
+                </Button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  className="hidden"
+                  onChange={handleFileChange}
+                  accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                  multiple
+                />
+                <Input
+                  value={newMessage}
+                  onChange={(e) => setNewMessage(e.target.value)}
+                  placeholder="Type a message..."
+                  className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
+                  autoComplete="off"
+                />
+                {newMessage.trim() || attachmentsToSend.length > 0 ? (
+                  <Button type="submit" size="icon" className="rounded-full">
+                    <Send className="h-5 w-5" />
+                    <span className="sr-only">Send</span>
+                  </Button>
+                ) : (
+                  <Button type="button" size="icon" variant="ghost" onClick={startRecording}>
+                    <Mic className="h-6 w-6" />
+                    <span className="sr-only">Record audio</span>
+                  </Button>
+                )}
+              </>
             ) : (
-              <Button type="button" size="icon" variant="ghost" onClick={handleMicClick}>
-                <Mic className="h-6 w-6" />
-                <span className="sr-only">Record audio</span>
-              </Button>
+              <div className="flex items-center justify-between w-full h-10 px-2 bg-muted rounded-full">
+                <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive">
+                  <Trash2 className="h-5 w-5" />
+                </Button>
+                <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                    <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                    <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+                </div>
+                <div className="flex items-center">
+                    <Button type="button" size="icon" variant="ghost" onClick={stopRecording}>
+                        <StopCircle className="h-6 w-6 text-red-600" />
+                    </Button>
+                    <Button type="submit" size="icon" className="rounded-full ml-2">
+                        <Send className="h-5 w-5" />
+                    </Button>
+                </div>
+              </div>
             )}
           </form>
         </footer>
@@ -668,5 +762,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
