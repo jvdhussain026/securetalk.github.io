@@ -3,13 +3,27 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, ChevronRight } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { ArrowLeft, ChevronRight, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 
 export default function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isAlertOpen, setIsAlertOpen] = useState(false)
+  const router = useRouter()
 
   const settingsItems = [
     { text: "Privacy", href: "#" },
@@ -27,6 +41,12 @@ export default function SettingsPage() {
     }
   }
 
+  const handleResetOnboarding = () => {
+    localStorage.removeItem('hasCompletedOnboarding');
+    // A full page reload is better to ensure all state is reset
+    window.location.href = '/chats';
+  }
+
   return (
     <>
       <div className="flex flex-col h-full bg-card">
@@ -42,7 +62,7 @@ export default function SettingsPage() {
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto">
+        <main className="flex-1 overflow-y-auto">
           <div className="py-2">
             {settingsItems.map((item, index) => (
               <div key={index}>
@@ -54,7 +74,30 @@ export default function SettingsPage() {
               </div>
             ))}
           </div>
-        </div>
+        </main>
+
+        <footer className="p-4 border-t">
+            <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                        <RefreshCw className="mr-2" />
+                        Reset Onboarding
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        This will restart the app's initial introduction and tour. Are you sure you want to continue?
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResetOnboarding}>Yes, Reset</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        </footer>
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
     </>
