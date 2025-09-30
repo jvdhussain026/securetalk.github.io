@@ -643,26 +643,34 @@ export default function ChatPage() {
   };
   
   const handlePaste = (event: React.ClipboardEvent) => {
+    event.preventDefault();
     const items = event.clipboardData.items;
+    let foundImage = false;
+
     for (let i = 0; i < items.length; i++) {
         if (items[i].type.indexOf('image') !== -1) {
             const file = items[i].getAsFile();
             if (file) {
+                foundImage = true;
                 const reader = new FileReader();
                 reader.onloadend = () => {
                     const url = reader.result as string;
                     const newAttachment: Attachment = {
                         type: 'image',
                         url,
-                        name: file.name,
+                        name: file.name || `pasted_image_${Date.now()}.png`,
                         size: `${(file.size / 1024).toFixed(2)} KB`
                     };
                     setAttachmentsToSend(prev => [...prev, newAttachment]);
                 };
                 reader.readAsDataURL(file);
-                event.preventDefault(); // Prevent image from being pasted into contentEditable
             }
         }
+    }
+
+    if (!foundImage) {
+        const text = event.clipboardData.getData('text/plain');
+        document.execCommand('insertText', false, text);
     }
   };
 
@@ -932,6 +940,7 @@ export default function ChatPage() {
                     <div
                         ref={contentEditableRef}
                         contentEditable
+                        inputMode="text"
                         onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
                         onPaste={handlePaste}
                         className="w-full rounded-full bg-muted px-4 py-2 text-base min-h-[40px] flex items-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
