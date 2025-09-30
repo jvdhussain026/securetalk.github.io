@@ -11,7 +11,7 @@ export const contacts: Contact[] = [
     name: 'Zehra',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
     messages: [
-      { id: 'm1', text: 'See you soon!', timestamp: subHours(now, 1), isSender: false },
+      { id: 'm1', text: 'آپ جلد ہی ملیں گے', timestamp: subHours(now, 1), isSender: false },
     ],
   },
   {
@@ -19,7 +19,7 @@ export const contacts: Contact[] = [
     name: 'Rehan',
     avatar: 'https://picsum.photos/seed/avatar2/200/200',
     messages: [
-      { id: 'm2', text: 'I\'m on my way', timestamp: subHours(now, 1) , isSender: false },
+      { id: 'm2', text: 'मैं रास्ते में हूँ', timestamp: subHours(now, 1) , isSender: false },
     ],
   },
   {
@@ -27,7 +27,7 @@ export const contacts: Contact[] = [
     name: 'Kaish',
     avatar: 'https://picsum.photos/seed/avatar3/200/200',
     messages: [
-      { id: 'm3', text: 'Let\'s meet at the usual place', timestamp: subHours(now, 2), isSender: false },
+      { id: 'm3', text: 'Nos vemos en el lugar de siempre', timestamp: subHours(now, 2), isSender: false },
     ],
   },
     {
@@ -35,7 +35,7 @@ export const contacts: Contact[] = [
     name: 'Aurangjeb',
     avatar: 'https://picsum.photos/seed/avatar4/200/200',
     messages: [
-      { id: 'm4', text: 'I\'ll be there in 10 minutes', timestamp: subHours(now, 3), isSender: false },
+      { id: 'm4', text: 'J\'arrive dans 10 minutes', timestamp: subHours(now, 3), isSender: false },
     ],
   },
   {
@@ -43,7 +43,7 @@ export const contacts: Contact[] = [
     name: 'Ava',
     avatar: 'https://picsum.photos/seed/avatar5/200/200',
     messages: [
-        { id: 'm5', text: 'Did you see the new movie?', timestamp: subDays(now, 1), isSender: true },
+        { id: 'm5', text: 'Hast du den neuen Film gesehen?', timestamp: subDays(now, 1), isSender: true },
     ],
   },
   {
@@ -51,7 +51,7 @@ export const contacts: Contact[] = [
     name: 'Liam',
     avatar: 'https://picsum.photos/seed/avatar6/200/200',
     messages: [
-      { id: 'm6', text: 'Thanks for your help yesterday', timestamp: subDays(now, 1), isSender: false },
+      { id: 'm6', text: '昨日は助けてくれてありがとう', timestamp: subDays(now, 1), isSender: false },
     ],
   },
     {
@@ -59,7 +59,7 @@ export const contacts: Contact[] = [
     name: 'Emma',
     avatar: 'https://picsum.photos/seed/avatar7/200/200',
     messages: [
-      { id: 'm7', text: 'Can we reschedule?', timestamp: subDays(now, 2), isSender: true },
+      { id: 'm7', text: 'Мы можем перенести?', timestamp: subDays(now, 2), isSender: true },
     ],
   },
   {
