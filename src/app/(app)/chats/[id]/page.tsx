@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
@@ -126,9 +126,6 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
       return (
         <p className="text-sm break-words px-2 pt-1 whitespace-pre-wrap">
           {currentText}
-          {translatedText && (
-            <button onClick={onShowOriginal} className="text-xs ml-2 text-primary/80 hover:underline">(Show Original)</button>
-          )}
         </p>
       );
     }
@@ -152,12 +149,9 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
               </span>
             );
         })}
-        {translatedText && (
-          <button onClick={onShowOriginal} className="text-xs ml-2 text-primary/80 hover:underline">(Show Original)</button>
-        )}
       </p>
     );
-  }, [currentText, text, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id, translatedText, onShowOriginal]);
+  }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
 
   return (
       <div className="space-y-2">
@@ -165,6 +159,11 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
           {currentText && highlightedText}
           {docAttachments.map(renderDoc)}
           {audioAttachments.map(renderAudio)}
+          {translatedText && (
+            <button onClick={onShowOriginal} className="text-xs pt-2 px-2 text-primary/80 hover:underline">
+              Translated. Tap to see original.
+            </button>
+          )}
       </div>
   );
 }
@@ -789,7 +788,7 @@ export default function ChatPage() {
                         <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
                           {isTranslating === message.id ? (
                             <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
-                              <Languages className="h-4 w-4 animate-spin"/>
+                              <LoaderCircle className="h-4 w-4 animate-spin"/>
                               <span>Translating...</span>
                             </div>
                           ) : (
@@ -812,6 +811,7 @@ export default function ChatPage() {
                           )}
                           <ClientOnly>
                             <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                              {translatedText && <Languages className="h-3 w-3" />}
                               {message.isEdited && <Pencil className="h-3 w-3" />}
                               <span>{format(new Date(message.timestamp), 'p')}</span>
                               {message.isStarred && !message.isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
@@ -989,3 +989,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
