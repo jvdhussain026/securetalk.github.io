@@ -18,15 +18,15 @@ import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
-import { OnboardingFlow } from '@/components/onboarding-flow'
+import { OnboardingFlow, TourStep } from '@/components/onboarding-flow'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
-  const [showOnboarding, setShowOnboarding] = useState(false);
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
+  const [showTour, setShowTour] = useState(false);
 
   const { toast } = useToast()
 
@@ -40,7 +40,13 @@ export default function ChatsPage() {
   const handleOnboardingComplete = () => {
     localStorage.setItem('hasCompletedOnboarding', 'true');
     setIsOnboardingComplete(true);
+    // Show the tour right after the main onboarding is done
+    setShowTour(true);
   };
+  
+  const handleTourComplete = () => {
+    setShowTour(false);
+  }
 
 
   const navItems = [
@@ -148,6 +154,7 @@ export default function ChatsPage() {
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
       />
+      {showTour && <TourStep onComplete={handleTourComplete} />}
     </>
   )
 }

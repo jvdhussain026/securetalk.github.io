@@ -80,9 +80,9 @@ const NameStep = ({ onNext }: { onNext: (name: string) => void }) => {
 const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void; }) => {
     return (
         <div className="h-full w-full flex flex-col p-8 bg-background">
-            <div className="text-center shrink-0">
+            <div className="text-center shrink-0 mb-4">
                 <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
-                <p className="text-muted-foreground mb-4">Please read and agree to continue.</p>
+                <p className="text-muted-foreground">Please read and agree to continue.</p>
             </div>
             <Card className="flex-1 min-h-0">
                 <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
@@ -161,7 +161,7 @@ const tourSteps: TourStepInfo[] = [
     { elementId: 'footer-nav', title: 'Navigate the App', description: 'Easily switch between your chats, calls, and the offline "Nearby" feature.' },
 ];
 
-const TourStep = ({ onComplete }: { onComplete: () => void }) => {
+export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
     const [stepIndex, setStepIndex] = useState(0);
 
     const handleNext = () => {
@@ -253,7 +253,6 @@ const TourStep = ({ onComplete }: { onComplete: () => void }) => {
 export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const [step, setStep] = useState(0);
     const [userName, setUserName] = useState('');
-    const [showTour, setShowTour] = useState(false);
     const { toast } = useToast();
     
     const nextStep = () => setStep(s => s + 1);
@@ -275,11 +274,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     }
 
     const handleNotificationsNext = () => {
-        setStep(s => s + 1); // Move past the last step
-        setShowTour(true);
-    };
-
-    const handleTourComplete = () => {
         onComplete();
     };
 
@@ -306,7 +300,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
                     </motion.div>
                 )}
             </AnimatePresence>
-            {showTour && <TourStep onComplete={handleTourComplete} />}
         </div>
     );
 }
@@ -324,5 +317,3 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
-
-    
