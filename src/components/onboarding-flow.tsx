@@ -80,10 +80,12 @@ const NameStep = ({ onNext }: { onNext: (name: string) => void }) => {
 const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void; }) => {
     return (
         <div className="h-full w-full flex flex-col p-8 bg-background">
-            <h2 className="text-2xl font-bold mb-2 font-headline text-center">Conditions of Use</h2>
-            <p className="text-muted-foreground mb-4 text-center">Please read and agree to continue.</p>
-            <Card className="flex-1 flex flex-col">
-                <ScrollArea className="flex-1 p-6 text-sm text-muted-foreground">
+            <div className="text-center shrink-0">
+                <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
+                <p className="text-muted-foreground mb-4">Please read and agree to continue.</p>
+            </div>
+            <Card className="flex-1 overflow-hidden">
+                <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
                     <h3 className="font-bold text-foreground mb-2">1. Your Privacy is Paramount</h3>
                     <p className="mb-4">Secure Talk is designed with privacy at its core. All communications are end-to-end encrypted. We, the developers, have no ability to read your messages, listen to your calls, or see your shared media.</p>
 
@@ -97,7 +99,7 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                     <p>Users have the option to host their own servers. If you choose to do so, you are solely responsible for the maintenance, security, and legal compliance of that server and the data stored on it.</p>
                 </ScrollArea>
             </Card>
-            <div className="mt-4 grid grid-cols-2 gap-2">
+            <div className="mt-4 grid grid-cols-2 gap-2 shrink-0">
                  <Button size="lg" variant="outline" onClick={onBack}>
                     <ArrowLeft className="mr-2" /> Back
                  </Button>
