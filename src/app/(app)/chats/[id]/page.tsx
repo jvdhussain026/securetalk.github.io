@@ -220,9 +220,9 @@ export default function ChatPage() {
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const contentEditableRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
-  const inputRef = useRef<HTMLInputElement>(null);
 
   const chatId = params.id as string;
 
@@ -332,6 +332,9 @@ export default function ChatPage() {
     
     setNewMessage('')
     setAttachmentsToSend([])
+    if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = '';
+    }
     
     if (editingMessage) {
         const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
@@ -534,16 +537,20 @@ export default function ChatPage() {
   const handleEdit = () => {
     if (!selectedMessage) return;
     setEditingMessage(selectedMessage);
-    setNewMessage(selectedMessage.text || '');
+    const messageText = selectedMessage.text || '';
+    setNewMessage(messageText);
     setIsMessageOptionsOpen(false);
-    inputRef.current?.focus();
+    if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = messageText;
+        contentEditableRef.current.focus();
+    }
   }
 
   const handleReply = () => {
     if (!selectedMessage) return;
     setReplyingTo(selectedMessage);
     setIsMessageOptionsOpen(false);
-    inputRef.current?.focus();
+    contentEditableRef.current?.focus();
   }
 
   const handleToggleStar = async () => {
@@ -634,6 +641,30 @@ export default function ChatPage() {
         setTimeout(() => handleTranslate(), 100);
     }
   };
+  
+  const handlePaste = (event: React.ClipboardEvent) => {
+    const items = event.clipboardData.items;
+    for (let i = 0; i < items.length; i++) {
+        if (items[i].type.indexOf('image') !== -1) {
+            const file = items[i].getAsFile();
+            if (file) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    const url = reader.result as string;
+                    const newAttachment: Attachment = {
+                        type: 'image',
+                        url,
+                        name: file.name,
+                        size: `${(file.size / 1024).toFixed(2)} KB`
+                    };
+                    setAttachmentsToSend(prev => [...prev, newAttachment]);
+                };
+                reader.readAsDataURL(file);
+                event.preventDefault(); // Prevent image from being pasted into contentEditable
+            }
+        }
+    }
+  };
 
 
   const renderFooterAttachmentPreview = (attachment: Attachment) => {
@@ -666,6 +697,9 @@ export default function ChatPage() {
   const cancelEdit = () => {
     setEditingMessage(null);
     setNewMessage('');
+     if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = '';
+    }
   }
 
   const cancelReply = () => {
@@ -880,7 +914,7 @@ export default function ChatPage() {
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-center gap-2">
             {!isRecording ? (
               <>
-                <Button type="button" size="icon" variant="ghost" className="rounded-full bg-muted" onClick={handleMediaButtonClick}>
+                <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={handleMediaButtonClick}>
                   <Plus className="h-6 w-6" />
                   <span className="sr-only">Add media</span>
                 </Button>
@@ -892,22 +926,26 @@ export default function ChatPage() {
                   accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   multiple
                 />
-                <Input
-                  ref={inputRef}
-                  value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
-                  placeholder="Type a message..."
-                  className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
-                  autoComplete="off"
-                  disabled={!!editingMessage && !editingMessage.text}
-                />
+                <div 
+                    className="relative flex-1"
+                >
+                    <div
+                        ref={contentEditableRef}
+                        contentEditable
+                        onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                        onPaste={handlePaste}
+                        className="w-full rounded-full bg-muted px-4 py-2 text-base min-h-[40px] flex items-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        data-placeholder="Type a message..."
+                    />
+                </div>
+
                 {newMessage.trim() || attachmentsToSend.length > 0 ? (
                   <Button type="submit" size="icon" className="rounded-full">
                     <Send className="h-5 w-5" />
                     <span className="sr-only">Send</span>
                   </Button>
                 ) : (
-                  <Button type="button" size="icon" variant="ghost" className="rounded-full bg-muted" onClick={startRecording}>
+                  <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={startRecording}>
                     <Mic className="h-6 w-6" />
                     <span className="sr-only">Record audio</span>
                   </Button>
@@ -989,5 +1027,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    

@@ -66,3 +66,10 @@
     @apply bg-background text-foreground;
   }
 }
+
+@layer utilities {
+  [contenteditable][data-placeholder]:empty:before {
+    content: attr(data-placeholder);
+    @apply text-muted-foreground pointer-events-none;
+  }
+}
