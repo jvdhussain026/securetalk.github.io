@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, StopCircle, Trash2, Pencil, Reply } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
@@ -195,6 +195,7 @@ export default function ChatPage() {
   const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -295,8 +296,8 @@ export default function ChatPage() {
   };
 
 
-  const handleSendMessage = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const handleSendMessage = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !chatId) return
 
     const textToSend = newMessage;
@@ -387,22 +388,26 @@ export default function ChatPage() {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
       mediaRecorderRef.current = recorder;
+      audioChunksRef.current = [];
 
-      const audioChunks: Blob[] = [];
       recorder.ondataavailable = (event) => {
-        audioChunks.push(event.data);
+        audioChunksRef.current.push(event.data);
       };
 
       recorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        const newAttachment: Attachment = {
-          type: 'audio',
-          url: audioUrl,
-          name: `recording_${new Date().toISOString()}.webm`,
-          size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
-        };
-        setAttachmentsToSend((prev) => [...prev, newAttachment]);
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = () => {
+            const audioUrl = reader.result as string;
+            const newAttachment: Attachment = {
+              type: 'audio',
+              url: audioUrl,
+              name: `recording_${new Date().toISOString()}.webm`,
+              size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
+            };
+            setAttachmentsToSend(prev => [...prev, newAttachment]);
+        }
+        reader.readAsDataURL(audioBlob);
         
         // Clean up stream
         stream.getTracks().forEach(track => track.stop());
@@ -425,8 +430,47 @@ export default function ChatPage() {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecordingAndSend = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (mediaRecorderRef.current && isRecording) {
+      
+      mediaRecorderRef.current.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onloadend = async () => {
+            const audioUrl = reader.result as string;
+            const newAttachment: Attachment = {
+              type: 'audio',
+              url: audioUrl,
+              name: `recording_${new Date().toISOString()}.webm`,
+              size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
+            };
+            
+            // Set attachments and send immediately
+            try {
+                await addDoc(collection(db, "chats", chatId, "messages"), {
+                    text: '',
+                    attachments: [newAttachment],
+                    senderId: 'currentUser',
+                    timestamp: serverTimestamp(),
+                    replyTo: replyingTo?.id || null,
+                });
+                setReplyingTo(null);
+            } catch (error) {
+                console.error("Error sending voice message: ", error);
+                toast({
+                    variant: "destructive",
+                    title: "Error",
+                    description: "Failed to send voice message.",
+                });
+            }
+        }
+        reader.readAsDataURL(audioBlob);
+        
+        // Clean up stream
+        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
+      };
+      
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (recordingIntervalRef.current) {
@@ -764,7 +808,7 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+          <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-center gap-2">
             {!isRecording ? (
               <>
                 <Button type="button" size="icon" variant="ghost" onClick={handleMediaButtonClick}>
@@ -809,14 +853,9 @@ export default function ChatPage() {
                     <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
                     <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
                 </div>
-                <div className="flex items-center">
-                    <Button type="button" size="icon" variant="ghost" onClick={stopRecording}>
-                        <StopCircle className="h-6 w-6 text-red-600" />
-                    </Button>
-                    <Button type="submit" size="icon" className="rounded-full ml-2">
-                        <Send className="h-5 w-5" />
-                    </Button>
-                </div>
+                <Button type="submit" size="icon" className="rounded-full">
+                    <Send className="h-5 w-5" />
+                </Button>
               </div>
             )}
           </form>
