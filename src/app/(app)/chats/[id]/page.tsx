@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
@@ -391,9 +391,18 @@ export default function ChatPage() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem>Starred Messages</DropdownMenuItem>
-                <DropdownMenuItem>Find</DropdownMenuItem>
-                <DropdownMenuItem>Mute Notifications</DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Star className="mr-2 h-4 w-4" />
+                  <span>Starred Messages</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Search className="mr-2 h-4 w-4" />
+                  <span>Find</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <BellOff className="mr-2 h-4 w-4" />
+                  <span>Mute Notifications</span>
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -536,3 +545,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
