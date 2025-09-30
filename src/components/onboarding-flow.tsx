@@ -126,7 +126,7 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                         <h3 className="font-bold text-foreground mb-2">8. Disclaimer of Liability</h3>
                         <p className="mb-4">Secure Talk is provided “as is” without warranties of any kind. While we make every effort to ensure security and privacy, no digital service can be 100% secure. You use this application at your own risk.</p>
                         
-                        <p className="font-semibold text-foreground">By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.</p>
+                        <p className="font-semibold text-foreground mt-6">By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.</p>
                     </ScrollArea>
                 </Card>
             </div>
@@ -367,4 +367,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
 );
 Card.displayName = "Card"
 
+    
     
