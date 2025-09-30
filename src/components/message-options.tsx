@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Reply, Copy, Trash2, Forward, Star, Pencil, MoreHorizontal } from 'lucide-react';
 import type { Message } from '@/lib/types';
@@ -11,6 +11,7 @@ import { differenceInMinutes } from 'date-fns';
 
 type MessageOptionsProps = {
   isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
   message: Message;
   onDelete: () => void;
   onEdit: () => void;
@@ -19,11 +20,25 @@ type MessageOptionsProps = {
   onClose: () => void;
 };
 
-export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onStar, onClose }: MessageOptionsProps) {
+export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, onReply, onStar, onClose }: MessageOptionsProps) {
   const { toast } = useToast();
   const [showMore, setShowMore] = useState(false);
 
-  if (!isOpen) return null;
+  useEffect(() => {
+    if (isOpen) {
+      setShowMore(false);
+    }
+  }, [isOpen]);
+
+
+  const handleClose = () => {
+    setIsOpen(false);
+    // Delay closing to allow animation to finish
+    setTimeout(() => {
+        onClose();
+        setShowMore(false);
+    }, 150);
+  };
 
   const canEdit = message.isSender && differenceInMinutes(new Date(), new Date(message.timestamp)) < 15;
 
@@ -34,32 +49,35 @@ export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onS
     } else {
       toast({ variant: 'destructive', title: 'Cannot copy media' });
     }
-    onClose();
+    handleClose();
+  };
+  
+  const handleActionWithClose = (action: () => void) => {
+    return () => {
+      action();
+      handleClose();
+    };
   };
 
   const handleAction = (actionName: string) => {
     toast({ title: `${actionName} not implemented yet.` });
-    onClose();
+    handleClose();
   };
   
   const handleDeleteClick = () => {
     onDelete();
   };
   
-  const handleClose = () => {
-      setShowMore(false);
-      onClose();
-  }
 
   const primaryItems = [
-    { label: 'Reply', icon: Reply, action: onReply, show: true },
+    { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: true },
     { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text },
     { label: 'Delete', icon: Trash2, action: handleDeleteClick, show: true, isDestructive: true },
   ];
 
   const secondaryItems = [
-    { label: 'Star', icon: Star, action: onStar, show: true },
-    { label: 'Edit', icon: Pencil, action: onEdit, show: canEdit },
+    { label: 'Star', icon: Star, action: handleActionWithClose(onStar), show: true },
+    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit },
     { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: true },
   ];
 
@@ -79,8 +97,13 @@ export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onS
   );
 
   return (
-    <>
-      <div
+    <AnimatePresence>
+    {isOpen && (
+      <>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
         className="fixed inset-0 z-40 bg-black/20"
         onClick={handleClose}
       />
@@ -127,5 +150,7 @@ export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onS
         </AnimatePresence>
       </motion.div>
     </>
+    )}
+    </AnimatePresence>
   );
 }

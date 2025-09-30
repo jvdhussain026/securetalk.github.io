@@ -1,6 +1,5 @@
 
 
-
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
@@ -480,25 +479,28 @@ export default function ChatPage() {
     setIsDeleteAlertOpen(true);
   }
 
-  const handleEdit = (message: Message) => {
-    setEditingMessage(message);
-    setNewMessage(message.text || '');
+  const handleEdit = () => {
+    if (!selectedMessage) return;
+    setEditingMessage(selectedMessage);
+    setNewMessage(selectedMessage.text || '');
     setIsMessageOptionsOpen(false);
     inputRef.current?.focus();
   }
 
-  const handleReply = (message: Message) => {
-    setReplyingTo(message);
+  const handleReply = () => {
+    if (!selectedMessage) return;
+    setReplyingTo(selectedMessage);
     setIsMessageOptionsOpen(false);
     inputRef.current?.focus();
   }
 
-  const handleToggleStar = async (message: Message) => {
-    const messageRef = doc(db, "chats", chatId, "messages", message.id);
+  const handleToggleStar = async () => {
+    if (!selectedMessage) return;
+    const messageRef = doc(db, "chats", chatId, "messages", selectedMessage.id);
     await updateDoc(messageRef, {
-        isStarred: !message.isStarred
+        isStarred: !selectedMessage.isStarred
     });
-    toast({ title: message.isStarred ? "Message unstarred" : "Message starred" });
+    toast({ title: selectedMessage.isStarred ? "Message unstarred" : "Message starred" });
     setIsMessageOptionsOpen(false);
   }
 
@@ -784,6 +786,7 @@ export default function ChatPage() {
                   placeholder="Type a message..."
                   className="flex-1 rounded-full bg-muted border-none focus-visible:ring-1 focus-visible:ring-ring"
                   autoComplete="off"
+                  disabled={!!editingMessage && !editingMessage.text}
                 />
                 {newMessage.trim() || attachmentsToSend.length > 0 ? (
                   <Button type="submit" size="icon" className="rounded-full">
@@ -823,11 +826,12 @@ export default function ChatPage() {
        {selectedMessage && (
         <MessageOptions
           isOpen={isMessageOptionsOpen}
+          setIsOpen={setIsMessageOptionsOpen}
           message={selectedMessage}
           onDelete={openDeleteDialog}
-          onEdit={() => handleEdit(selectedMessage)}
-          onReply={() => handleReply(selectedMessage)}
-          onStar={() => handleToggleStar(selectedMessage)}
+          onEdit={handleEdit}
+          onReply={handleReply}
+          onStar={handleToggleStar}
           onClose={() => {
             setIsMessageOptionsOpen(false);
             setSelectedMessage(null);
