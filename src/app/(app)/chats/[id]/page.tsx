@@ -196,7 +196,7 @@ export default function ChatPage() {
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(editingMessage);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
@@ -216,7 +216,7 @@ export default function ChatPage() {
   const [isLangSelectOpen, setIsLangSelectOpen] = useState(false);
   const [preferredLang, setPreferredLang] = useState<string | null>(null);
   const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
-  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState<string | null>(isTranslating);
   
   const [showOutboundTranslate, setShowOutboundTranslate] = useState(false);
   const [isOutboundTranslating, setIsOutboundTranslating] = useState(false);
@@ -974,67 +974,64 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
-              {!isRecording && (
-                <>
-                  <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                    <Plus className="h-6 w-6" />
-                    <span className="sr-only">Add media</span>
-                  </Button>
-
-                  {showOutboundTranslate && (
+            <div className="flex-1 flex items-center rounded-lg bg-muted">
+                {!isRecording && (
+                    <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                        <Plus className="h-6 w-6" />
+                        <span className="sr-only">Add media</span>
+                    </Button>
+                )}
+                
+                <div className="relative flex-1">
+                    {isRecording ? (
+                        <div className="flex items-center justify-between w-full h-10 px-4">
+                            <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                                <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+                            </div>
+                            <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
+                                <Trash2 className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    ) : (
+                        <div
+                            ref={contentEditableRef}
+                            contentEditable
+                            inputMode="text"
+                            onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                            onPaste={handlePaste}
+                            className="w-full bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none"
+                            data-placeholder="Type a message..."
+                        />
+                    )}
+                </div>
+                 {!isRecording && showOutboundTranslate && (
                     <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                       {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
                       <span className="sr-only">Translate</span>
                     </Button>
                   )}
-                </>
-              )}
-              
-              <div 
-                className="relative flex-1"
-                >
-                  {isRecording ? (
-                     <div className="flex items-center justify-between w-full h-10 px-4 bg-muted rounded-full">
-                        <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                            <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
-                        </div>
-                         <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
-                            <Trash2 className="h-5 w-5" />
-                        </Button>
-                     </div>
-                  ) : (
-                    <div
-                        ref={contentEditableRef}
-                        contentEditable
-                        inputMode="text"
-                        onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
-                        onPaste={handlePaste}
-                        className="w-full rounded-full bg-muted px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        data-placeholder="Type a message..."
-                    />
-                  )}
-                </div>
-                 <input
-                  type="file"
-                  ref={fileInputRef}
-                  className="hidden"
-                  onChange={handleFileChange}
-                  accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                  multiple
-                />
+            </div>
 
-                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating}>
-                    {newMessage.trim() || attachmentsToSend.length > 0 ? (
-                        <Send className="h-5 w-5" />
-                    ): isRecording ? (
-                        <Send className="h-5 w-5" />
-                    ) : (
-                        <Mic className="h-5 w-5" />
-                    )}
-                    <span className="sr-only">{newMessage.trim() || attachmentsToSend.length > 0 ? 'Send' : 'Record audio'}</span>
-                </Button>
+            <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileChange}
+                accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                multiple
+            />
 
+            <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating}>
+                {newMessage.trim() || attachmentsToSend.length > 0 ? (
+                    <Send className="h-5 w-5" />
+                ) : isRecording ? (
+                    <Send className="h-5 w-5" />
+                ) : (
+                    <Mic className="h-5 w-5" />
+                )}
+                <span className="sr-only">{newMessage.trim() || attachmentsToSend.length > 0 ? 'Send' : 'Record audio'}</span>
+            </Button>
           </form>
         </footer>
       </div>
