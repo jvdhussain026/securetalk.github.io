@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
@@ -29,6 +30,128 @@ import { AudioPlayer } from '@/components/audio-player'
 import { DeleteMessageDialog } from '@/components/delete-message-dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChatSearch } from '@/components/chat-search'
+
+
+type MessageContentProps = {
+  message: Message;
+  isSearchOpen: boolean;
+  searchQuery: string;
+  searchMatches: { messageId: string, index: number }[];
+  currentMatchIndex: number;
+  onMediaClick: (message: Message, clickedIndex: number) => void;
+};
+
+function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick }: MessageContentProps) {
+  const { attachments = [], text } = message;
+  const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
+  const docAttachments = attachments.filter(a => a.type === 'document');
+  const audioAttachments = attachments.filter(a => a.type === 'audio');
+
+  const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
+    const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
+
+    switch(attachment.type) {
+      case 'image':
+        return <Image src={attachment.url} alt="Sent media" width={250} height={250} className={commonClass} />;
+      case 'video':
+        return (
+          <div className="relative">
+            <video src={attachment.url} className={commonClass} />
+            <div className={cn("absolute inset-0 bg-black/30 flex items-center justify-center", isGrid ? "rounded-md" : "rounded-xl")}>
+              <PlayCircle className={cn("text-white", isGrid ? "w-8 h-8" : "w-10 h-10")} />
+            </div>
+          </div>
+        );
+      default:
+        return null;
+    }
+  }
+
+  const renderMediaGrid = () => {
+    if (mediaAttachments.length === 0) return null;
+
+    if (mediaAttachments.length === 1) {
+        const media = mediaAttachments[0];
+        return (
+            <button onClick={() => onMediaClick(message, 0)} className="w-full relative">
+                {renderAttachmentPreview(media, false)}
+            </button>
+        );
+    }
+
+    const itemsToShow = mediaAttachments.slice(0, 4);
+    const remainingItems = mediaAttachments.length - 4;
+
+    return (
+        <div className="grid grid-cols-2 gap-1">
+            {itemsToShow.map((media, index) => (
+                <button key={index} onClick={() => onMediaClick(message, index)} className="relative">
+                    {renderAttachmentPreview(media, true)}
+                     {remainingItems > 0 && index === 3 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                            <span className="text-white font-bold text-lg">+{remainingItems}</span>
+                        </div>
+                    )}
+                </button>
+            ))}
+        </div>
+    );
+  };
+
+  const renderDoc = (attachment: Attachment) => (
+    <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
+      <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
+      <div className="flex-1 overflow-hidden">
+        <p className="text-sm font-medium line-clamp-2" style={{ wordBreak: 'break-word' }}>{attachment.name}</p>
+        <p className="text-xs opacity-80">{attachment.size}</p>
+      </div>
+      <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
+    </div>
+  );
+  
+  const renderAudio = (attachment: Attachment) => (
+     <div key={attachment.url} className="mt-1 w-full max-w-xs">
+       <AudioPlayer src={attachment.url} isSender={message.isSender} />
+    </div>
+  );
+  
+  const highlightedText = useMemo(() => {
+    if (!text || !isSearchOpen || searchQuery.length <= 1) {
+      return <p className="text-sm break-words px-2 pt-1">{text}</p>;
+    }
+    const regex = new RegExp(`(${searchQuery})`, 'gi');
+    const parts = text.split(regex);
+    return (
+      <p className="text-sm break-words px-2 pt-1">
+        {parts.map((part, i) => {
+            const isMatch = part.toLowerCase() === searchQuery.toLowerCase();
+            const isCurrent = isMatch && searchMatches.some(m => m.messageId === message.id && m.index === text.indexOf(part, (i > 0 ? text.indexOf(parts[i-1]) + parts[i-1].length : 0))) && searchMatches[currentMatchIndex]?.messageId === message.id;
+            
+            return (
+              <span
+                key={i}
+                className={cn({
+                  'bg-yellow-300 text-black rounded': isMatch,
+                  'bg-yellow-500': isCurrent,
+                })}
+              >
+                {part}
+              </span>
+            );
+        })}
+      </p>
+    );
+  }, [text, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
+
+  return (
+      <div className="space-y-2">
+          {renderMediaGrid()}
+          {text && highlightedText}
+          {docAttachments.map(renderDoc)}
+          {audioAttachments.map(renderAudio)}
+      </div>
+  );
+}
 
 
 export default function ChatPage() {
@@ -285,119 +408,6 @@ export default function ChatPage() {
     }
   }
 
-
-  const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
-    const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
-
-    switch(attachment.type) {
-      case 'image':
-        return <Image src={attachment.url} alt="Sent media" width={250} height={250} className={commonClass} />;
-      case 'video':
-        return (
-          <div className="relative">
-            <video src={attachment.url} className={commonClass} />
-            <div className={cn("absolute inset-0 bg-black/30 flex items-center justify-center", isGrid ? "rounded-md" : "rounded-xl")}>
-              <PlayCircle className={cn("text-white", isGrid ? "w-8 h-8" : "w-10 h-10")} />
-            </div>
-          </div>
-        );
-      default:
-        return null;
-    }
-  }
-
-  const renderMessageContent = (message: Message) => {
-    const { attachments = [], text } = message;
-    const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
-    const docAttachments = attachments.filter(a => a.type === 'document');
-    const audioAttachments = attachments.filter(a => a.type === 'audio');
-
-    const renderMediaGrid = () => {
-        if (mediaAttachments.length === 0) return null;
-
-        if (mediaAttachments.length === 1) {
-            const media = mediaAttachments[0];
-            return (
-                <button onClick={() => handleMediaClick(message, 0)} className="w-full relative">
-                    {renderAttachmentPreview(media, false)}
-                </button>
-            );
-        }
-
-        const itemsToShow = mediaAttachments.slice(0, 4);
-        const remainingItems = mediaAttachments.length - 4;
-
-        return (
-            <div className="grid grid-cols-2 gap-1">
-                {itemsToShow.map((media, index) => (
-                    <button key={index} onClick={() => handleMediaClick(message, index)} className="relative">
-                        {renderAttachmentPreview(media, true)}
-                         {remainingItems > 0 && index === 3 && (
-                            <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
-                                <span className="text-white font-bold text-lg">+{remainingItems}</span>
-                            </div>
-                        )}
-                    </button>
-                ))}
-            </div>
-        );
-    };
-
-    const renderDoc = (attachment: Attachment) => (
-      <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
-        <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
-        <div className="flex-1 overflow-hidden">
-          <p className="text-sm font-medium line-clamp-2" style={{ wordBreak: 'break-word' }}>{attachment.name}</p>
-          <p className="text-xs opacity-80">{attachment.size}</p>
-        </div>
-        <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
-      </div>
-    );
-    
-    const renderAudio = (attachment: Attachment) => (
-       <div key={attachment.url} className="mt-1 w-full max-w-xs">
-         <AudioPlayer src={attachment.url} isSender={message.isSender} />
-      </div>
-    );
-    
-    const highlightedText = useMemo(() => {
-      if (!text || !isSearchOpen || searchQuery.length <= 1) {
-        return <p className="text-sm break-words px-2 pt-1">{text}</p>;
-      }
-      const regex = new RegExp(`(${searchQuery})`, 'gi');
-      const parts = text.split(regex);
-      return (
-        <p className="text-sm break-words px-2 pt-1">
-          {parts.map((part, i) => {
-              const isMatch = part.toLowerCase() === searchQuery.toLowerCase();
-              const isCurrent = isMatch && searchMatches.some(m => m.messageId === message.id && m.index === text.indexOf(part, (i > 0 ? text.indexOf(parts[i-1]) + parts[i-1].length : 0))) && searchMatches[currentMatchIndex]?.messageId === message.id;
-              
-              return (
-                <span
-                  key={i}
-                  className={cn({
-                    'bg-yellow-300 text-black rounded': isMatch,
-                    'bg-yellow-500': isCurrent,
-                  })}
-                >
-                  {part}
-                </span>
-              );
-          })}
-        </p>
-      );
-    }, [text, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
-
-    return (
-        <div className="space-y-2">
-            {renderMediaGrid()}
-            {text && highlightedText}
-            {docAttachments.map(renderDoc)}
-            {audioAttachments.map(renderAudio)}
-        </div>
-    );
-  };
-  
   const renderFooterAttachmentPreview = (attachment: Attachment) => {
     switch (attachment.type) {
       case 'image':
@@ -531,7 +541,14 @@ export default function ChatPage() {
                     message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
                      (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : ""
                   )}>
-                      {renderMessageContent(message)}
+                      <MessageContent
+                        message={message}
+                        isSearchOpen={isSearchOpen}
+                        searchQuery={searchQuery}
+                        searchMatches={searchMatches}
+                        currentMatchIndex={currentMatchIndex}
+                        onMediaClick={handleMediaClick}
+                      />
                       <ClientOnly>
                         <p className={cn("text-xs text-right mt-1 px-2", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
                           {format(new Date(message.timestamp), 'p')}
@@ -651,3 +668,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
