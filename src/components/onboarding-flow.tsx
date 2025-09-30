@@ -84,7 +84,7 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                 <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
                 <p className="text-muted-foreground">Please read and agree to continue.</p>
             </div>
-             <div className="flex-1 flex flex-col min-h-0">
+            <div className="flex-1 flex flex-col min-h-0">
                 <Card className="flex-1 flex flex-col">
                     <ScrollArea className="flex-1 p-6 text-sm text-muted-foreground">
                         <h3 className="font-bold text-foreground mb-2">Conditions of Use – Secure Talk</h3>
@@ -128,16 +128,18 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                     </ScrollArea>
                 </Card>
             </div>
-            <p className="text-xs text-muted-foreground text-center mt-4 mb-2 shrink-0">
-                By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.
-            </p>
-            <div className="grid grid-cols-2 gap-2 shrink-0">
-                 <Button size="lg" variant="outline" onClick={onBack}>
-                    <ArrowLeft className="mr-2" /> Decline
-                 </Button>
-                <Button size="lg" onClick={onNext}>
-                    Accept & Continue
-                </Button>
+            <div className="shrink-0 mt-4 space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                    <Button size="lg" variant="outline" onClick={onBack}>
+                        <ArrowLeft className="mr-2" /> Decline
+                    </Button>
+                    <Button size="lg" onClick={onNext}>
+                        Accept & Continue
+                    </Button>
+                </div>
+                 <p className="text-xs text-muted-foreground text-center pt-2">
+                    By tapping “Accept,” you confirm that you have read, understood, and agree to these Conditions of Use. If you do not agree, please tap “Decline” and uninstall the app.
+                </p>
             </div>
         </div>
     );
