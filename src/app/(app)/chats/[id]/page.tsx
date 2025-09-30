@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
@@ -239,6 +238,14 @@ export default function ChatPage() {
     const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
     
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
+      if (querySnapshot.empty) {
+          const contactData = allContacts.find(c => c.id === chatId);
+          if (contactData) {
+              setMessages(contactData.messages);
+          }
+          return;
+      }
+
       const newMessages: Message[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
@@ -1036,3 +1043,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
