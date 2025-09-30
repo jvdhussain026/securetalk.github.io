@@ -219,6 +219,7 @@ export default function ChatPage() {
   const [isTranslating, setIsTranslating] = useState<string | null>(null);
   
   const [showOutboundTranslate, setShowOutboundTranslate] = useState(false);
+  const [isOutboundTranslating, setIsOutboundTranslating] = useState(false);
   const [inputLang, setInputLang] = useState<string | null>(null);
   const debouncedNewMessage = useDebounce(newMessage, 500);
 
@@ -664,7 +665,7 @@ export default function ChatPage() {
   
   const handleOutboundTranslate = async () => {
     if (!newMessage.trim() || !contact) return;
-    
+    setIsOutboundTranslating(true);
     try {
       const result = await translateMessage({ text: newMessage, targetLanguage: contact.language });
       if (result.translatedText) {
@@ -678,6 +679,8 @@ export default function ChatPage() {
     } catch (error) {
       console.error("Outbound translation error:", error);
       toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
+    } finally {
+      setIsOutboundTranslating(false);
     }
   };
 
@@ -1000,14 +1003,14 @@ export default function ChatPage() {
                 </div>
 
                 {showOutboundTranslate && (
-                  <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={handleOutboundTranslate}>
-                    <Languages className="h-6 w-6" />
+                  <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
+                    {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
                     <span className="sr-only">Translate</span>
                   </Button>
                 )}
 
                 {newMessage.trim() || attachmentsToSend.length > 0 ? (
-                  <Button type="submit" size="icon" className="rounded-full">
+                  <Button type="submit" size="icon" className="rounded-full" disabled={isOutboundTranslating}>
                     <Send className="h-5 w-5" />
                     <span className="sr-only">Send</span>
                   </Button>
@@ -1094,3 +1097,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
