@@ -110,7 +110,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   );
   
   const renderAudio = (attachment: Attachment) => (
-     <div key={attachment.url} className="mt-1 w-full max-w-xs">
+     <div key={attachment.url} className="mt-1 w-full max-w-xs min-w-[250px]">
        <AudioPlayer src={attachment.url} isSender={message.isSender} />
     </div>
   );
