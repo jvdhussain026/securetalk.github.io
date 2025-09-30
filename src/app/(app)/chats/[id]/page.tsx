@@ -468,10 +468,10 @@ export default function ChatPage() {
                       <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </button>
-                  <button onClick={() => setIsUserDetailsOpen(true)} className="flex items-center gap-3 text-left flex-1 overflow-hidden">
-                    <div className="flex items-center gap-2">
+                  <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 text-left">
                       <h2 className="text-lg font-bold truncate">{contact.name}</h2>
-                      {contact.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
+                      {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
                     </div>
                   </button>
                   <div className="ml-auto flex items-center">
