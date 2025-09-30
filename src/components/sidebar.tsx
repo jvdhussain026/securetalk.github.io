@@ -52,30 +52,30 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="p-0 flex flex-col">
+      <SheetContent side="left" className="p-0 flex flex-col bg-card">
         <SheetHeader>
           <SheetTitle className="sr-only">User Menu</SheetTitle>
           <SheetDescription className="sr-only">A menu with user profile, settings, and other options.</SheetDescription>
         </SheetHeader>
-        <div className="p-6 text-center">
+        <div className="p-6 text-center bg-gradient-to-br from-blue-600 to-blue-800 text-white rounded-b-2xl shadow-lg">
             <button onClick={handleAvatarClick} className="mx-auto">
-                <Avatar className="h-20 w-20 mx-auto mb-4">
+                <Avatar className="h-20 w-20 mx-auto mb-4 border-2 border-white/50">
                     <AvatarImage src={userAvatar} alt="User" data-ai-hint="person portrait"/>
                     <AvatarFallback>JH</AvatarFallback>
                 </Avatar>
             </button>
              <div className="flex items-center justify-center gap-2">
-                <p className="font-bold text-xl">Javed Hussain</p>
-                <BadgeCheck className="h-6 w-6 text-primary" />
+                <p className="font-bold text-xl drop-shadow-sm">Javed Hussain</p>
+                <BadgeCheck className="h-6 w-6 text-white/90 drop-shadow-sm" />
               </div>
         </div>
-        <div className="flex-1 space-y-2 px-4">
+        <div className="flex-1 space-y-2 p-4">
           {menuItems.map((item, index) => (
             <div key={index}>
-              <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent/50 transition-colors text-foreground/80" onClick={() => {
+              <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => {
                 onOpenChange(false);
               }}>
-                <item.icon className="h-6 w-6 mr-4" />
+                <item.icon className="h-6 w-6 mr-4 text-primary" />
                 <span className="flex-1 font-medium">{item.label}</span>
               </Link>
             </div>
