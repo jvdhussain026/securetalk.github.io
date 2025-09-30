@@ -1,13 +1,14 @@
 
 
+
 'use client'
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, StopCircle, Trash2 } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, StopCircle, Trash2, Pencil, Reply } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { format } from 'date-fns'
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from "firebase/firestore";
+import { format, differenceInMinutes } from 'date-fns'
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import Image from 'next/image'
 
 import { contacts as allContacts } from '@/lib/dummy-data'
@@ -153,6 +154,23 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   );
 }
 
+function ReplyPreview({ message, isSender }: { message?: Message, isSender: boolean }) {
+    if (!message) return null;
+    return (
+        <div className={cn(
+            "p-2 rounded-t-lg text-xs border-b",
+            isSender ? "bg-black/10 border-white/20" : "bg-muted border-border"
+        )}>
+            <p className={cn("font-bold", isSender ? "text-primary-foreground/80" : "text-primary")}>
+                {message.isSender ? "You" : allContacts.find(c => c.id === useParams().id)?.name}
+            </p>
+            <p className={cn("truncate", isSender ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                {message.text || "Media"}
+            </p>
+        </div>
+    )
+}
+
 
 export default function ChatPage() {
   const params = useParams()
@@ -163,6 +181,8 @@ export default function ChatPage() {
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
@@ -182,6 +202,7 @@ export default function ChatPage() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const chatId = params.id as string;
 
@@ -200,6 +221,9 @@ export default function ChatPage() {
           attachments: data.attachments || [],
           timestamp: data.timestamp?.toDate() || new Date(),
           isSender: data.senderId === 'currentUser', // Replace with actual current user ID
+          isStarred: data.isStarred,
+          isEdited: data.isEdited,
+          replyTo: data.replyTo,
         });
       });
       setMessages(newMessages);
@@ -278,17 +302,29 @@ export default function ChatPage() {
 
     const textToSend = newMessage;
     const attachmentsToUpload = attachmentsToSend;
-
+    
     setNewMessage('')
     setAttachmentsToSend([])
 
     try {
-        await addDoc(collection(db, "chats", chatId, "messages"), {
-            text: textToSend,
-            attachments: attachmentsToUpload,
-            senderId: 'currentUser', // Replace with actual current user ID
-            timestamp: serverTimestamp(),
-        });
+        if (editingMessage) {
+            const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
+            await updateDoc(messageRef, {
+                text: textToSend,
+                isEdited: true,
+            });
+            setEditingMessage(null);
+            toast({ title: "Message updated" });
+        } else {
+            await addDoc(collection(db, "chats", chatId, "messages"), {
+                text: textToSend,
+                attachments: attachmentsToUpload,
+                senderId: 'currentUser', // Replace with actual current user ID
+                timestamp: serverTimestamp(),
+                replyTo: replyingTo?.id || null,
+            });
+            setReplyingTo(null);
+        }
     } catch (error) {
         console.error("Error sending message: ", error);
         toast({
@@ -444,6 +480,28 @@ export default function ChatPage() {
     setIsDeleteAlertOpen(true);
   }
 
+  const handleEdit = (message: Message) => {
+    setEditingMessage(message);
+    setNewMessage(message.text || '');
+    setIsMessageOptionsOpen(false);
+    inputRef.current?.focus();
+  }
+
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
+    setIsMessageOptionsOpen(false);
+    inputRef.current?.focus();
+  }
+
+  const handleToggleStar = async (message: Message) => {
+    const messageRef = doc(db, "chats", chatId, "messages", message.id);
+    await updateDoc(messageRef, {
+        isStarred: !message.isStarred
+    });
+    toast({ title: message.isStarred ? "Message unstarred" : "Message starred" });
+    setIsMessageOptionsOpen(false);
+  }
+
   const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
     if (!selectedMessage) return;
 
@@ -503,6 +561,17 @@ export default function ChatPage() {
         <Link href="/chats" className="text-primary hover:underline">Go back to chats</Link>
       </div>
     )
+  }
+
+  const replyingToMessage = messages.find(m => m.id === replyingTo?.id);
+  
+  const cancelEdit = () => {
+    setEditingMessage(null);
+    setNewMessage('');
+  }
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   }
 
   return (
@@ -598,42 +667,76 @@ export default function ChatPage() {
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-1">
-              {messages.map((message, messageIndex) => (
-                <div 
-                  key={message.id} 
-                  ref={el => { if(el) messageRefs.current[message.id] = el }}
-                  className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
-                  onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
-                  onTouchStart={() => handleTouchStart(message)}
-                  onTouchEnd={handleTouchEnd}
-                  onTouchMove={handleTouchEnd} // Cancel on scroll
-                >
-                  <div className={cn(
-                    "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2", 
-                    message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                     (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : ""
-                  )}>
-                      <MessageContent
-                        message={message}
-                        isSearchOpen={isSearchOpen}
-                        searchQuery={searchQuery}
-                        searchMatches={searchMatches}
-                        currentMatchIndex={currentMatchIndex}
-                        onMediaClick={handleMediaClick}
-                      />
-                      <ClientOnly>
-                        <p className={cn("text-xs text-right mt-1 px-2", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                          {format(new Date(message.timestamp), 'p')}
-                        </p>
-                      </ClientOnly>
+              {messages.map((message, messageIndex) => {
+                const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
+                
+                return (
+                  <div 
+                    key={message.id} 
+                    ref={el => { if(el) messageRefs.current[message.id] = el }}
+                    className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
+                    onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
+                    onTouchStart={() => handleTouchStart(message)}
+                    onTouchEnd={handleTouchEnd}
+                    onTouchMove={handleTouchEnd} // Cancel on scroll
+                  >
+                    <div className={cn(
+                      "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
+                      message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
+                       (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
+                    )}>
+                        <ReplyPreview message={repliedToMessage} isSender={message.isSender} />
+                        <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
+                          <MessageContent
+                            message={message}
+                            isSearchOpen={isSearchOpen}
+                            searchQuery={searchQuery}
+                            searchMatches={searchMatches}
+                            currentMatchIndex={currentMatchIndex}
+                            onMediaClick={handleMediaClick}
+                          />
+                          <ClientOnly>
+                            <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                              {message.isEdited && <Pencil className="h-3 w-3" />}
+                              <span>{format(new Date(message.timestamp), 'p')}</span>
+                              {message.isStarred && !message.isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
+                            </div>
+                          </ClientOnly>
+                        </div>
+                         {message.isStarred && message.isSender && (
+                            <div className="absolute -bottom-1 -left-2 text-yellow-400">
+                                <Star className="h-3.5 w-3.5 fill-yellow-400" />
+                            </div>
+                        )}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </ScrollArea>
         </main>
 
         <footer className="p-2 border-t shrink-0 bg-card">
+          <AnimatePresence>
+            {editingMessage && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-2 pb-2 text-sm flex justify-between items-center text-muted-foreground">
+                  <div className="flex items-center gap-2 text-primary">
+                    <Pencil className="h-4 w-4" />
+                    <p className="font-semibold">Editing message</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelEdit}><X className="h-4 w-4"/></Button>
+              </motion.div>
+            )}
+             {replyingTo && (
+              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
+                  <div className="overflow-hidden">
+                    <p className="font-bold text-sm text-primary">Replying to {replyingTo.isSender ? "yourself" : contact?.name}</p>
+                    <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
+              </motion.div>
+            )}
+          </AnimatePresence>
           {attachmentsToSend.length > 0 && (
             <div className="p-2">
               <p className="text-sm font-medium mb-2">Attachment Preview</p>
@@ -675,6 +778,7 @@ export default function ChatPage() {
                   multiple
                 />
                 <Input
+                  ref={inputRef}
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Type a message..."
@@ -721,6 +825,9 @@ export default function ChatPage() {
           isOpen={isMessageOptionsOpen}
           message={selectedMessage}
           onDelete={openDeleteDialog}
+          onEdit={() => handleEdit(selectedMessage)}
+          onReply={() => handleReply(selectedMessage)}
+          onStar={() => handleToggleStar(selectedMessage)}
           onClose={() => {
             setIsMessageOptionsOpen(false);
             setSelectedMessage(null);

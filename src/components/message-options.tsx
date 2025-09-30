@@ -1,22 +1,29 @@
 
+
 'use client';
 
 import { motion } from 'framer-motion';
-import { Reply, Copy, Trash2, Forward, Star } from 'lucide-react';
+import { Reply, Copy, Trash2, Forward, Star, Pencil } from 'lucide-react';
 import type { Message } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { differenceInMinutes } from 'date-fns';
 
 type MessageOptionsProps = {
   isOpen: boolean;
   message: Message;
   onDelete: () => void;
+  onEdit: () => void;
+  onReply: () => void;
+  onStar: () => void;
   onClose: () => void;
 };
 
-export function MessageOptions({ isOpen, message, onDelete, onClose }: MessageOptionsProps) {
+export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onStar, onClose }: MessageOptionsProps) {
   const { toast } = useToast();
 
   if (!isOpen) return null;
+
+  const canEdit = message.isSender && differenceInMinutes(new Date(), new Date(message.timestamp)) < 15;
 
   const handleCopy = () => {
     if (message.text) {
@@ -37,6 +44,15 @@ export function MessageOptions({ isOpen, message, onDelete, onClose }: MessageOp
     onDelete();
   }
 
+  const menuItems = [
+    { label: 'Reply', icon: Reply, action: onReply, show: true },
+    { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text },
+    { label: 'Star', icon: Star, action: onStar, show: true },
+    { label: 'Edit', icon: Pencil, action: onEdit, show: canEdit },
+    { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: true },
+    { label: 'Delete', icon: Trash2, action: handleDeleteClick, show: true, isDestructive: true },
+  ];
+
   return (
     <>
       <div
@@ -55,26 +71,18 @@ export function MessageOptions({ isOpen, message, onDelete, onClose }: MessageOp
           <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Media message'}</p>
         </div>
         <div className="grid grid-cols-5 gap-2 text-center">
-          <button onClick={() => handleAction('Reply')} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary">
-            <Reply className="h-6 w-6" />
-            <span className="text-xs">Reply</span>
-          </button>
-          <button onClick={handleCopy} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary disabled:opacity-50" disabled={!message.text}>
-            <Copy className="h-6 w-6" />
-            <span className="text-xs">Copy</span>
-          </button>
-          <button onClick={() => handleAction('Forward')} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary">
-            <Forward className="h-6 w-6" />
-            <span className="text-xs">Forward</span>
-          </button>
-          <button onClick={() => handleAction('Star')} className="flex flex-col items-center gap-1 text-muted-foreground hover:text-primary">
-            <Star className="h-6 w-6" />
-            <span className="text-xs">Star</span>
-          </button>
-          <button onClick={handleDeleteClick} className="flex flex-col items-center gap-1 text-destructive">
-            <Trash2 className="h-6 w-6" />
-            <span className="text-xs">Delete</span>
-          </button>
+            {menuItems.map((item) => (
+                item.show ? (
+                    <button 
+                        key={item.label} 
+                        onClick={item.action} 
+                        className={`flex flex-col items-center gap-1 ${item.isDestructive ? 'text-destructive' : 'text-muted-foreground hover:text-primary'}`}
+                    >
+                        <item.icon className="h-6 w-6" />
+                        <span className="text-xs">{item.label}</span>
+                    </button>
+                ) : null
+            ))}
         </div>
       </motion.div>
     </>

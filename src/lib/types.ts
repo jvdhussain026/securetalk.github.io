@@ -1,4 +1,5 @@
 
+
 export type Attachment = {
   type: 'image' | 'video' | 'audio' | 'document';
   url: string;
@@ -12,6 +13,9 @@ export type Message = {
   attachments?: Attachment[];
   timestamp: Date;
   isSender: boolean;
+  isStarred?: boolean;
+  isEdited?: boolean;
+  replyTo?: string; // ID of the message being replied to
 };
 
 export type Contact = {
