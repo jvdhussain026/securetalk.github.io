@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -19,6 +19,13 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { OnboardingFlow, TourStep } from '@/components/onboarding-flow'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -70,6 +77,11 @@ export default function ChatsPage() {
   const handleAvatarClick = (contact: typeof contacts[0]) => {
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });
   };
+  
+  const handleMenuClick = (action: 'newGroup' | 'newBroadcast') => {
+    setIsModalOpen(true);
+  };
+
 
   if (!isOnboardingComplete) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
@@ -95,10 +107,29 @@ export default function ChatsPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
             />
           </div>
-          <Button variant="ghost" size="icon" className="h-11 w-11">
-            <MoreVertical className="h-6 w-6" />
-            <span className="sr-only">More options</span>
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="h-11 w-11">
+                <MoreVertical className="h-6 w-6" />
+                <span className="sr-only">More options</span>
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onSelect={() => handleMenuClick('newGroup')}>
+                <Users className="mr-2" /> New Group
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleMenuClick('newBroadcast')}>
+                <Radio className="mr-2" /> New Broadcast
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/connections"><UserPlus className="mr-2" /> Connections</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/settings"><Settings className="mr-2" /> Settings</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </header>
         <main className="flex-1 overflow-y-auto">
           <div>
