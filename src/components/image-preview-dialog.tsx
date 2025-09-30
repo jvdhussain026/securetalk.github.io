@@ -41,9 +41,9 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
             <Button
                 variant="ghost"
                 size="icon"
-                className="absolute top-4 left-4 z-50 text-white bg-black/30 hover:bg-black/50 hover:text-white rounded-full h-12 w-12"
+                className="absolute top-6 left-6 z-50 text-white bg-black/30 hover:bg-black/50 hover:text-white rounded-full h-12 w-12"
                 >
-                <ArrowLeft className="h-8 w-8" />
+                <ArrowLeft className="h-9 w-9" />
                 <span className="sr-only">Close</span>
             </Button>
         </DialogClose>
