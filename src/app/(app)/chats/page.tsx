@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
-import { OnboardingDialog } from '@/components/onboarding-dialog'
+import { OnboardingFlow } from '@/components/onboarding-flow'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -26,18 +26,20 @@ export default function ChatsPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
+
   const { toast } = useToast()
 
   useEffect(() => {
-    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
-    if (hasSeenOnboarding !== 'true') {
-      setShowOnboarding(true);
+    const hasCompletedOnboarding = localStorage.getItem('hasCompletedOnboarding');
+    if (hasCompletedOnboarding !== 'true') {
+      setIsOnboardingComplete(false);
     }
   }, []);
 
   const handleOnboardingComplete = () => {
-    localStorage.setItem('hasSeenOnboarding', 'true');
-    setShowOnboarding(false);
+    localStorage.setItem('hasCompletedOnboarding', 'true');
+    setIsOnboardingComplete(true);
   };
 
 
@@ -63,14 +65,17 @@ export default function ChatsPage() {
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });
   };
 
+  if (!isOnboardingComplete) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
 
   return (
     <>
-      <OnboardingDialog isOpen={showOnboarding} onComplete={handleOnboardingComplete} />
       <Sidebar open={isSidebarOpen} onOpenChange={setIsSidebarOpen} />
       <div className="flex flex-col h-full">
-        <header className="flex items-center gap-2 p-4 border-b shrink-0">
-          <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => setIsSidebarOpen(true)}>
+        <header id="header" className="flex items-center gap-2 p-4 border-b shrink-0">
+          <Button id="sidebar-button" variant="ghost" size="icon" className="h-11 w-11" onClick={() => setIsSidebarOpen(true)}>
             <User className="h-7 w-7" />
             <span className="sr-only">Open sidebar</span>
           </Button>
@@ -122,7 +127,7 @@ export default function ChatsPage() {
             })}
           </div>
         </main>
-         <footer className="border-t shrink-0 bg-card">
+         <footer id="footer-nav" className="border-t shrink-0 bg-card">
           <nav className="grid grid-cols-3 items-center p-2">
             {navItems.map((item, index) => (
               <NavLink key={index} href={item.href} icon={item.icon} label={item.label} />
@@ -130,7 +135,7 @@ export default function ChatsPage() {
           </nav>
         </footer>
         
-        <Button asChild size="icon" className="fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg z-10 md:right-[calc(50%_-_200px)]">
+        <Button id="connect-button" asChild size="icon" className="fixed bottom-20 right-6 h-14 w-14 rounded-full shadow-lg z-10 md:right-[calc(50%_-_200px)]">
             <Link href="/connections">
               <UserPlus className="h-7 w-7" />
               <span className="sr-only">Add Connection</span>

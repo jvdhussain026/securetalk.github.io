@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
-import { QrCode, Wifi, UserCircle, Shield, X } from 'lucide-react';
+import { QrCode, Wifi, UserCircle, Shield, X, ArrowUp } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 type OnboardingDialogProps = {
@@ -40,6 +40,87 @@ const tips: Tip[] = [
     description: 'Make your profile your own. Add an avatar and a bio by tapping the user icon in the top-left to open the sidebar and find your profile.',
   },
 ];
+
+type TourStep = {
+  elementId: string;
+  title: string;
+  description: string;
+  arrowPosition?: 'top' | 'bottom' | 'left' | 'right';
+};
+
+const tourSteps: TourStep[] = [
+  {
+    elementId: 'sidebar-button',
+    title: 'Your Profile & Settings',
+    description: 'Tap here to view your profile, manage connections, and access settings.',
+    arrowPosition: 'bottom',
+  },
+  {
+    elementId: 'connect-button',
+    title: 'Add Connections',
+    description: 'Quickly add new friends by tapping this button to share or scan a QR code.',
+    arrowPosition: 'top',
+  },
+  {
+    elementId: 'footer-nav',
+    title: 'Navigate the App',
+    description: 'Switch between your chats, calls, and the nearby discovery feature.',
+    arrowPosition: 'top',
+  },
+];
+
+
+const TourTooltip = ({ step, onNext, onSkip }: { step: TourStep; onNext: () => void; onSkip: () => void; }) => {
+    const [element, setElement] = useState<HTMLElement | null>(null);
+
+    useState(() => {
+        const el = document.getElementById(step.elementId);
+        setElement(el);
+    }, [step.elementId]);
+
+    if (!element) return null;
+
+    const rect = element.getBoundingClientRect();
+    const isBottomHalf = rect.top > window.innerHeight / 2;
+
+    const tooltipStyle: React.CSSProperties = {
+        position: 'fixed',
+        top: isBottomHalf ? rect.top - 10 : rect.bottom + 10,
+        left: rect.left + rect.width / 2,
+        transform: isBottomHalf ? 'translate(-50%, -100%)' : 'translateX(-50%)',
+    };
+
+    const arrowStyle: React.CSSProperties = {
+        position: 'absolute',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        ...(isBottomHalf ? { bottom: '-8px', transform: 'translateX(-50%) rotate(180deg)' } : { top: '-8px' }),
+    };
+
+    return (
+        <div className="fixed inset-0 bg-black/50 z-50 animate-in fade-in-0">
+             <div style={{
+                position: 'fixed',
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.5)',
+                borderRadius: '8px',
+             }} />
+             <div style={tooltipStyle} className="z-10 bg-card p-4 rounded-lg shadow-2xl w-64 animate-in fade-in-50 slide-in-from-bottom-5">
+                <div style={arrowStyle} className="w-0 h-0 border-l-8 border-r-8 border-t-8 border-l-transparent border-r-transparent border-t-card" />
+                 <h3 className="font-bold mb-2">{step.title}</h3>
+                 <p className="text-sm text-muted-foreground mb-4">{step.description}</p>
+                 <div className="flex justify-between items-center">
+                     <Button variant="ghost" size="sm" onClick={onSkip}>Skip</Button>
+                     <Button size="sm" onClick={onNext}>Next</Button>
+                 </div>
+             </div>
+        </div>
+    );
+};
+
 
 export function OnboardingDialog({ isOpen, onComplete }: OnboardingDialogProps) {
   const [currentStep, setCurrentStep] = useState(0);
