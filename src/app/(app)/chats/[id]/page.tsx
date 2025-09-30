@@ -973,14 +973,49 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-center gap-2">
-            {!isRecording ? (
-              <>
-                <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={handleMediaButtonClick}>
-                  <Plus className="h-6 w-6" />
-                  <span className="sr-only">Add media</span>
-                </Button>
-                <input
+          <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
+              {!isRecording && (
+                <>
+                  <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                    <Plus className="h-6 w-6" />
+                    <span className="sr-only">Add media</span>
+                  </Button>
+
+                  {showOutboundTranslate && (
+                    <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
+                      {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
+                      <span className="sr-only">Translate</span>
+                    </Button>
+                  )}
+                </>
+              )}
+              
+              <div 
+                className="relative flex-1"
+                >
+                  {isRecording ? (
+                     <div className="flex items-center justify-between w-full h-10 px-4 bg-muted rounded-full">
+                        <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                            <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+                        </div>
+                         <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                     </div>
+                  ) : (
+                    <div
+                        ref={contentEditableRef}
+                        contentEditable
+                        inputMode="text"
+                        onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                        onPaste={handlePaste}
+                        className="w-full rounded-full bg-muted px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        data-placeholder="Type a message..."
+                    />
+                  )}
+                </div>
+                 <input
                   type="file"
                   ref={fileInputRef}
                   className="hidden"
@@ -988,53 +1023,18 @@ export default function ChatPage() {
                   accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                   multiple
                 />
-                <div 
-                    className="relative flex-1"
-                >
-                    <div
-                        ref={contentEditableRef}
-                        contentEditable
-                        inputMode="text"
-                        onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
-                        onPaste={handlePaste}
-                        className="w-full rounded-full bg-muted px-4 py-2 text-base min-h-[40px] flex items-center focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                        data-placeholder="Type a message..."
-                    />
-                </div>
 
-                {showOutboundTranslate && (
-                  <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
-                    {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
-                    <span className="sr-only">Translate</span>
-                  </Button>
-                )}
+                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating}>
+                    {newMessage.trim() || attachmentsToSend.length > 0 ? (
+                        <Send className="h-5 w-5" />
+                    ): isRecording ? (
+                        <Send className="h-5 w-5" />
+                    ) : (
+                        <Mic className="h-5 w-5" />
+                    )}
+                    <span className="sr-only">{newMessage.trim() || attachmentsToSend.length > 0 ? 'Send' : 'Record audio'}</span>
+                </Button>
 
-                {newMessage.trim() || attachmentsToSend.length > 0 ? (
-                  <Button type="submit" size="icon" className="rounded-full" disabled={isOutboundTranslating}>
-                    <Send className="h-5 w-5" />
-                    <span className="sr-only">Send</span>
-                  </Button>
-                ) : (
-                  <Button type="button" size="icon" variant="ghost" className="bg-muted rounded-full h-10 w-10" onClick={startRecording}>
-                    <Mic className="h-6 w-6" />
-                    <span className="sr-only">Record audio</span>
-                  </Button>
-                )}
-              </>
-            ) : (
-              <div className="flex items-center justify-between w-full h-10 px-2 bg-muted rounded-full">
-                <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive">
-                  <Trash2 className="h-5 w-5" />
-                </Button>
-                <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                    <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                    <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
-                </div>
-                <Button type="submit" size="icon" className="rounded-full">
-                    <Send className="h-5 w-5" />
-                </Button>
-              </div>
-            )}
           </form>
         </footer>
       </div>
