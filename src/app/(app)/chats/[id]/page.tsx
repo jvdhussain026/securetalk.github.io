@@ -196,7 +196,7 @@ export default function ChatPage() {
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
-  const [editingMessage, setEditingMessage] = useState<Message | null>(editingMessage);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
@@ -216,7 +216,7 @@ export default function ChatPage() {
   const [isLangSelectOpen, setIsLangSelectOpen] = useState(false);
   const [preferredLang, setPreferredLang] = useState<string | null>(null);
   const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
-  const [isTranslating, setIsTranslating] = useState<string | null>(isTranslating);
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
   
   const [showOutboundTranslate, setShowOutboundTranslate] = useState(false);
   const [isOutboundTranslating, setIsOutboundTranslating] = useState(false);
@@ -1094,5 +1094,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
