@@ -823,7 +823,7 @@ export default function ChatPage() {
                           <Phone className="mr-2 h-4 w-4" />
                           <span>Voice Call</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => toast({ title: "Starting video call..." })}>
+                        <DropdownMenuItem onSelect={() => toast({ title: "Starting video call...".toUpperCase() })}>
                           <Video className="mr-2 h-4 w-4" />
                           <span>Video Call</span>
                         </DropdownMenuItem>
@@ -974,14 +974,13 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
+            {!isRecording && (
+                <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                    <Plus className="h-6 w-6" />
+                    <span className="sr-only">Add media</span>
+                </Button>
+            )}
             <div className="flex-1 flex items-center rounded-lg bg-muted">
-                {!isRecording && (
-                    <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                        <Plus className="h-6 w-6" />
-                        <span className="sr-only">Add media</span>
-                    </Button>
-                )}
-                
                 <div className="relative flex-1">
                     {isRecording ? (
                         <div className="flex items-center justify-between w-full h-10 px-4">
