@@ -974,14 +974,16 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
-            {!isRecording && (
-                <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                    <Plus className="h-6 w-6" />
-                    <span className="sr-only">Add media</span>
-                </Button>
-            )}
-            <div className="flex-1 flex items-center rounded-lg bg-muted">
-                <div className="relative flex-1">
+            <div className="flex items-center gap-2">
+              {!isRecording && (
+                  <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                      <Plus className="h-6 w-6" />
+                      <span className="sr-only">Add media</span>
+                  </Button>
+              )}
+            </div>
+            <div className="flex-1 rounded-lg bg-muted flex items-center">
+                 <div className="relative flex-1">
                     {isRecording ? (
                         <div className="flex items-center justify-between w-full h-10 px-4">
                             <div className="flex items-center gap-2 text-red-600 animate-pulse">
@@ -993,7 +995,7 @@ export default function ChatPage() {
                             </Button>
                         </div>
                     ) : (
-                        <div
+                         <div
                             ref={contentEditableRef}
                             contentEditable
                             inputMode="text"
@@ -1020,16 +1022,16 @@ export default function ChatPage() {
                 accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 multiple
             />
-
-            <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating}>
-                {newMessage.trim() || attachmentsToSend.length > 0 ? (
+            
+            <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording}>
+                {(newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
                     <Send className="h-5 w-5" />
                 ) : isRecording ? (
                     <Send className="h-5 w-5" />
                 ) : (
                     <Mic className="h-5 w-5" />
                 )}
-                <span className="sr-only">{newMessage.trim() || attachmentsToSend.length > 0 ? 'Send' : 'Record audio'}</span>
+                <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
             </Button>
           </form>
         </footer>
