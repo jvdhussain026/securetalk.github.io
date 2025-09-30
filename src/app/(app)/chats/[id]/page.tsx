@@ -723,7 +723,7 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-background">
+      <div className="flex flex-col h-full bg-chat">
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px]">
           <AnimatePresence>
             {isSearchOpen ? (
@@ -1043,5 +1043,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
