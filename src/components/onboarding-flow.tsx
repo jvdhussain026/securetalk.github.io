@@ -84,7 +84,7 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                 <h2 className="text-2xl font-bold mb-2 font-headline">Conditions of Use</h2>
                 <p className="text-muted-foreground mb-4">Please read and agree to continue.</p>
             </div>
-            <Card className="flex-1 overflow-hidden">
+            <Card className="flex-1 min-h-0">
                 <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
                     <h3 className="font-bold text-foreground mb-2">1. Your Privacy is Paramount</h3>
                     <p className="mb-4">Secure Talk is designed with privacy at its core. All communications are end-to-end encrypted. We, the developers, have no ability to read your messages, listen to your calls, or see your shared media.</p>
@@ -180,7 +180,7 @@ const TourStep = ({ onComplete }: { onComplete: () => void }) => {
     
     const [element, setElement] = useState<HTMLElement | null>(null);
 
-    useState(() => {
+    React.useEffect(() => {
         // This is a workaround to wait for the main app to render
         setTimeout(() => {
              const el = document.getElementById(currentStep.elementId);
@@ -275,6 +275,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     }
 
     const handleNotificationsNext = () => {
+        setStep(s => s + 1); // Move past the last step
         setShowTour(true);
     };
 
@@ -292,16 +293,18 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     return (
         <div className="h-full w-full fixed inset-0 z-50 bg-background">
             <AnimatePresence mode="wait">
-                <motion.div
-                    key={step}
-                    initial={{ opacity: 0, x: 50 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.3, ease: 'easeInOut' }}
-                    className="h-full w-full"
-                >
-                    {steps[step]}
-                </motion.div>
+                {step < steps.length && (
+                    <motion.div
+                        key={step}
+                        initial={{ opacity: 0, x: 50 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        exit={{ opacity: 0, x: -50 }}
+                        transition={{ duration: 0.3, ease: 'easeInOut' }}
+                        className="h-full w-full"
+                    >
+                        {steps[step]}
+                    </motion.div>
+                )}
             </AnimatePresence>
             {showTour && <TourStep onComplete={handleTourComplete} />}
         </div>
@@ -321,3 +324,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
+
+    
