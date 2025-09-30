@@ -306,16 +306,17 @@ export default function ChatPage() {
     setNewMessage('')
     setAttachmentsToSend([])
     
-    try {
-        if (editingMessage) {
-            const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
-            await updateDoc(messageRef, {
-                text: textToSend,
-                isEdited: true,
-            });
-            setEditingMessage(null);
-            toast({ title: "Message updated" });
-        } else {
+    if (editingMessage) {
+        const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
+        await updateDoc(messageRef, {
+            text: textToSend,
+            isEdited: true,
+        });
+        setEditingMessage(null);
+        setNewMessage('');
+        toast({ title: "Message updated" });
+    } else {
+        try {
             await addDoc(collection(db, "chats", chatId, "messages"), {
                 text: textToSend,
                 attachments: attachmentsToUpload,
@@ -324,16 +325,17 @@ export default function ChatPage() {
                 replyTo: replyingTo?.id || null,
             });
             setReplyingTo(null);
+        } catch (error) {
+            console.error("Error sending message: ", error);
+            toast({
+                variant: "destructive",
+                title: "Error",
+                description: "Failed to send message.",
+            });
+            // Restore on error
+            setNewMessage(textToSend);
+            setAttachmentsToSend(attachmentsToUpload);
         }
-    } catch (error) {
-        console.error("Error sending message: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to send message.",
-        });
-        setNewMessage(textToSend); // Restore on error
-        setAttachmentsToSend(attachmentsToUpload);
     }
   }
   
@@ -792,7 +794,7 @@ export default function ChatPage() {
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-center gap-2">
             {!isRecording ? (
               <>
-                <Button type="button" size="icon" variant="secondary" className="rounded-full" onClick={handleMediaButtonClick}>
+                <Button type="button" size="icon" variant="ghost" className="rounded-full bg-muted" onClick={handleMediaButtonClick}>
                   <Plus className="h-6 w-6" />
                   <span className="sr-only">Add media</span>
                 </Button>
@@ -819,7 +821,7 @@ export default function ChatPage() {
                     <span className="sr-only">Send</span>
                   </Button>
                 ) : (
-                  <Button type="button" size="icon" variant="secondary" className="rounded-full" onClick={startRecording}>
+                  <Button type="button" size="icon" variant="ghost" className="rounded-full bg-muted" onClick={startRecording}>
                     <Mic className="h-6 w-6" />
                     <span className="sr-only">Record audio</span>
                   </Button>
@@ -843,21 +845,22 @@ export default function ChatPage() {
         </footer>
       </div>
       {contact && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={contact} />}
-       {selectedMessage && (
-        <MessageOptions
-          isOpen={isMessageOptionsOpen}
-          setIsOpen={setIsMessageOptionsOpen}
-          message={selectedMessage}
-          onDelete={openDeleteDialog}
-          onEdit={handleEdit}
-          onReply={handleReply}
-          onStar={handleToggleStar}
-          onClose={() => {
-            setIsMessageOptionsOpen(false);
-            setSelectedMessage(null);
-          }}
-        />
-      )}
+       <AnimatePresence>
+        {selectedMessage && (
+            <MessageOptions
+            isOpen={isMessageOptionsOpen}
+            setIsOpen={setIsMessageOptionsOpen}
+            message={selectedMessage}
+            onDelete={openDeleteDialog}
+            onEdit={handleEdit}
+            onReply={handleReply}
+            onStar={handleToggleStar}
+            onClose={() => {
+                setSelectedMessage(null);
+            }}
+            />
+        )}
+       </AnimatePresence>
       {selectedMessage && contact && (
         <DeleteMessageDialog
           open={isDeleteAlertOpen}
