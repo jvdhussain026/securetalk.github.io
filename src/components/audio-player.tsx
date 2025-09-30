@@ -64,42 +64,6 @@ export function AudioPlayer({ src, isSender }: AudioPlayerProps) {
     const seconds = Math.floor(time % 60)
     return `${minutes}:${seconds.toString().padStart(2, '0')}`
   }
-  
-  const WaveformBar = ({ height }: { height: number }) => (
-    <div
-      className="w-0.5 rounded-full bg-current"
-      style={{ height: `${height}px` }}
-    />
-  );
-
-  const Waveform = () => (
-    <div className="flex items-center gap-px h-full w-full">
-      <WaveformBar height={4} />
-      <WaveformBar height={6} />
-      <WaveformBar height={8} />
-      <WaveformBar height={10} />
-      <WaveformBar height={12} />
-      <WaveformBar height={14} />
-      <WaveformBar height={12} />
-      <WaveformBar height={10} />
-      <WaveformBar height={12} />
-      <WaveformBar height={14} />
-      <WaveformBar height={16} />
-      <WaveformBar height={18} />
-      <WaveformBar height={16} />
-      <WaveformBar height={14} />
-      <WaveformBar height={12} />
-      <WaveformBar height={10} />
-      <WaveformBar height={12} />
-      <WaveformBar height={14} />
-      <WaveformBar height={12} />
-      <WaveformBar height={10} />
-      <WaveformBar height={8} />
-      <WaveformBar height={6} />
-      <WaveformBar height={4} />
-    </div>
-  );
-
 
   return (
     <div className={cn("flex items-center gap-3 w-full p-2 rounded-lg", isSender ? "bg-black/10" : "bg-muted")}>
@@ -122,24 +86,17 @@ export function AudioPlayer({ src, isSender }: AudioPlayerProps) {
       >
         {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
       </Button>
-      <div className="flex-grow flex flex-col gap-1">
-        <div className="relative w-full h-5 flex items-center">
-            <div className="absolute w-full h-full left-0 top-0 flex items-center opacity-30 overflow-hidden">
-                 <Waveform /><Waveform /><Waveform /><Waveform /><Waveform /><Waveform /><Waveform />
-            </div>
-            <Slider
-              value={[currentTime]}
-              max={duration || 100}
-              step={0.1}
-              onValueChange={handleSliderChange}
-              className={cn(
-                  "[&>span:first-child]:h-0.5",
-                  "[&>span:first-child>span]:h-0.5",
-                  isSender ? "[&>span>span]:bg-white" : "",
-                  "[&>span:last-child]:h-3 [&>span:last-child]:w-3"
-              )}
-            />
-        </div>
+      <div className="flex-grow flex flex-col gap-1.5 overflow-hidden">
+         <Slider
+          value={[currentTime]}
+          max={duration || 100}
+          step={0.1}
+          onValueChange={handleSliderChange}
+          className={cn(
+              isSender ? "[&>span>span]:bg-white" : "",
+              "[&>span:last-child]:h-3 [&>span:last-child]:w-3"
+          )}
+        />
         <div className="flex justify-between items-center">
           <span className={cn("text-xs w-10", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
             {formatTime(currentTime)}
