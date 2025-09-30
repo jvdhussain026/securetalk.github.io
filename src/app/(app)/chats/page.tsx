@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus } from 'lucide-react'
 import { format } from 'date-fns'
@@ -18,13 +18,28 @@ import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
+import { OnboardingDialog } from '@/components/onboarding-dialog'
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { toast } = useToast()
+
+  useEffect(() => {
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    if (hasSeenOnboarding !== 'true') {
+      setShowOnboarding(true);
+    }
+  }, []);
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+    setShowOnboarding(false);
+  };
+
 
   const navItems = [
     { href: '/chats', icon: MessageSquare, label: 'Chats' },
@@ -51,6 +66,7 @@ export default function ChatsPage() {
 
   return (
     <>
+      <OnboardingDialog isOpen={showOnboarding} onComplete={handleOnboardingComplete} />
       <Sidebar open={isSidebarOpen} onOpenChange={setIsSidebarOpen} />
       <div className="flex flex-col h-full">
         <header className="flex items-center gap-2 p-4 border-b shrink-0">
