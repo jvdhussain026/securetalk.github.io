@@ -11,7 +11,8 @@ export const contacts: Contact[] = [
     name: 'Zehra',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
     messages: [
-      { id: 'm1', text: 'آپ جلد ہی ملیں گے', timestamp: subHours(now, 1), isSender: false },
+      { id: 'm1a', text: 'آپ کہاں ہیں؟', timestamp: subHours(now, 1), isSender: false },
+      { id: 'm1b', text: 'میں بس پہنچ رہا ہوں۔', timestamp: subMinutes(now, 59), isSender: true },
     ],
   },
   {
@@ -19,7 +20,8 @@ export const contacts: Contact[] = [
     name: 'Rehan',
     avatar: 'https://picsum.photos/seed/avatar2/200/200',
     messages: [
-      { id: 'm2', text: 'मैं रास्ते में हूँ', timestamp: subHours(now, 1) , isSender: false },
+      { id: 'm2a', text: 'मैं रास्ते में हूँ', timestamp: subHours(now, 1) , isSender: false },
+      { id: 'm2b', text: 'ठीक है, मैं इंतजार कर रहा हूं।', timestamp: subMinutes(now, 58), isSender: true },
     ],
   },
   {
@@ -27,7 +29,8 @@ export const contacts: Contact[] = [
     name: 'Kaish',
     avatar: 'https://picsum.photos/seed/avatar3/200/200',
     messages: [
-      { id: 'm3', text: 'Nos vemos en el lugar de siempre', timestamp: subHours(now, 2), isSender: false },
+      { id: 'm3a', text: 'Nos vemos en el lugar de siempre', timestamp: subHours(now, 2), isSender: false },
+       { id: 'm3b', text: 'Perfecto, estaré allí en 15 minutos.', timestamp: subMinutes(now, 115), isSender: true },
     ],
   },
     {
@@ -43,7 +46,8 @@ export const contacts: Contact[] = [
     name: 'Ava',
     avatar: 'https://picsum.photos/seed/avatar5/200/200',
     messages: [
-        { id: 'm5', text: 'Hast du den neuen Film gesehen?', timestamp: subDays(now, 1), isSender: true },
+        { id: 'm5a', text: 'Hast du den neuen Film gesehen?', timestamp: subDays(now, 1), isSender: true },
+        { id: 'm5b', text: 'Ja, habe ich! Er war unglaublich.', timestamp: subDays(now, 1), isSender: false },
     ],
   },
   {
