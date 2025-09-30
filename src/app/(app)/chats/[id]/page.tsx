@@ -4,7 +4,7 @@
 
 import { useState, useRef, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
@@ -14,6 +14,7 @@ import { contacts as allContacts } from '@/lib/dummy-data'
 import type { Message, Attachment } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { db } from '@/lib/firebase'
+import { translateMessage } from '@/ai/flows/translate-message-flow'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -30,6 +31,7 @@ import { AudioPlayer } from '@/components/audio-player'
 import { DeleteMessageDialog } from '@/components/delete-message-dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChatSearch } from '@/components/chat-search'
+import { LanguageSelectDialog } from '@/components/language-select-dialog'
 
 
 type MessageContentProps = {
@@ -39,13 +41,17 @@ type MessageContentProps = {
   searchMatches: { messageId: string, index: number }[];
   currentMatchIndex: number;
   onMediaClick: (message: Message, clickedIndex: number) => void;
+  translatedText?: string;
+  onShowOriginal: () => void;
 };
 
-function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick }: MessageContentProps) {
+function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
   const { attachments = [], text } = message;
   const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
   const docAttachments = attachments.filter(a => a.type === 'document');
   const audioAttachments = attachments.filter(a => a.type === 'audio');
+  
+  const currentText = translatedText || text;
 
   const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
     const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
@@ -116,16 +122,23 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   );
   
   const highlightedText = useMemo(() => {
-    if (!text || !isSearchOpen || searchQuery.length <= 1) {
-      return <p className="text-sm break-words px-2 pt-1">{text}</p>;
+    if (!currentText || !isSearchOpen || searchQuery.length <= 1) {
+      return (
+        <p className="text-sm break-words px-2 pt-1 whitespace-pre-wrap">
+          {currentText}
+          {translatedText && (
+            <button onClick={onShowOriginal} className="text-xs ml-2 text-primary/80 hover:underline">(Show Original)</button>
+          )}
+        </p>
+      );
     }
     const regex = new RegExp(`(${searchQuery})`, 'gi');
-    const parts = text.split(regex);
+    const parts = currentText.split(regex);
     return (
       <p className="text-sm break-words px-2 pt-1">
         {parts.map((part, i) => {
             const isMatch = part.toLowerCase() === searchQuery.toLowerCase();
-            const isCurrent = isMatch && searchMatches.some(m => m.messageId === message.id && m.index === text.indexOf(part, (i > 0 ? text.indexOf(parts[i-1]) + parts[i-1].length : 0))) && searchMatches[currentMatchIndex]?.messageId === message.id;
+            const isCurrent = isMatch && searchMatches.some(m => m.messageId === message.id && m.index === currentText.indexOf(part, (i > 0 ? currentText.indexOf(parts[i-1]) + parts[i-1].length : 0))) && searchMatches[currentMatchIndex]?.messageId === message.id;
             
             return (
               <span
@@ -139,14 +152,17 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
               </span>
             );
         })}
+        {translatedText && (
+          <button onClick={onShowOriginal} className="text-xs ml-2 text-primary/80 hover:underline">(Show Original)</button>
+        )}
       </p>
     );
-  }, [text, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
+  }, [currentText, text, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id, translatedText, onShowOriginal]);
 
   return (
       <div className="space-y-2">
           {renderMediaGrid()}
-          {text && highlightedText}
+          {currentText && highlightedText}
           {docAttachments.map(renderDoc)}
           {audioAttachments.map(renderAudio)}
       </div>
@@ -197,6 +213,11 @@ export default function ChatPage() {
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
+  const [isLangSelectOpen, setIsLangSelectOpen] = useState(false);
+  const [preferredLang, setPreferredLang] = useState<string | null>(null);
+  const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
+  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -205,6 +226,13 @@ export default function ChatPage() {
   const inputRef = useRef<HTMLInputElement>(null);
 
   const chatId = params.id as string;
+
+  useEffect(() => {
+    const lang = localStorage.getItem('preferredLang');
+    if (lang) {
+      setPreferredLang(lang);
+    }
+  }, []);
 
   useEffect(() => {
     if (!chatId) return;
@@ -429,7 +457,6 @@ export default function ChatPage() {
               size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
             };
             
-            // Set attachments and send immediately
             try {
                 await addDoc(collection(db, "chats", chatId, "messages"), {
                     text: '',
@@ -450,7 +477,6 @@ export default function ChatPage() {
         }
         reader.readAsDataURL(audioBlob);
         
-        // Clean up stream
         mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
       };
       
@@ -466,7 +492,7 @@ export default function ChatPage() {
   const cancelRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
         mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
-        mediaRecorderRef.current.onstop = null; // prevent onstop from firing
+        mediaRecorderRef.current.onstop = null;
         mediaRecorderRef.current.stop();
     }
     setIsRecording(false);
@@ -486,7 +512,7 @@ export default function ChatPage() {
   const handleTouchStart = (message: Message) => {
     longPressTimerRef.current = setTimeout(() => {
         handleMessageLongPress(message);
-    }, 500); // 500ms for a long press
+    }, 500);
   };
 
   const handleTouchEnd = () => {
@@ -533,16 +559,12 @@ export default function ChatPage() {
 
   const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
     if (!selectedMessage) return;
-
-    // Note: Firestore deletion logic would go here.
-    // This is just a UI update for now.
+    // Firestore deletion logic would go here.
     setMessages(messages.filter(msg => msg.id !== selectedMessage.id));
-    
     toast({
       title: "Message Deleted",
       description: `The message has been deleted ${forEveryone ? 'for everyone' : 'for you'}. (UI only)`,
     });
-
     setSelectedMessage(null);
     setIsDeleteAlertOpen(false);
   }
@@ -566,6 +588,54 @@ export default function ChatPage() {
       toast({ title: `Feature coming soon!`, description: `The "${action}" feature is not yet implemented.`});
     }
   }
+
+  const handleTranslate = async () => {
+    if (!selectedMessage || !selectedMessage.text) {
+      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
+      return;
+    }
+    setIsMessageOptionsOpen(false);
+    
+    if (!preferredLang) {
+      setIsLangSelectOpen(true);
+      return;
+    }
+
+    // If already translated, show original
+    if (translatedMessages[selectedMessage.id]) {
+      setTranslatedMessages(prev => {
+        const newTranslations = { ...prev };
+        delete newTranslations[selectedMessage.id];
+        return newTranslations;
+      });
+      return;
+    }
+
+    setIsTranslating(selectedMessage.id);
+    try {
+      const result = await translateMessage({ text: selectedMessage.text, targetLanguage: preferredLang });
+      if (result.translatedText) {
+        setTranslatedMessages(prev => ({...prev, [selectedMessage.id!]: result.translatedText }));
+      }
+    } catch (error) {
+      console.error("Translation error:", error);
+      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
+    } finally {
+      setIsTranslating(null);
+    }
+  };
+
+  const handleLanguageSelected = (lang: string) => {
+    setPreferredLang(lang);
+    localStorage.setItem('preferredLang', lang);
+    setIsLangSelectOpen(false);
+    // After selection, trigger translation for the message that was originally selected
+    if (selectedMessage) {
+        // A small delay to allow the dialog to close before starting translation
+        setTimeout(() => handleTranslate(), 100);
+    }
+  };
+
 
   const renderFooterAttachmentPreview = (attachment: Attachment) => {
     switch (attachment.type) {
@@ -698,6 +768,7 @@ export default function ChatPage() {
             <div className="p-4 space-y-1">
               {messages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
+                const translatedText = translatedMessages[message.id];
                 
                 return (
                   <div 
@@ -716,14 +787,29 @@ export default function ChatPage() {
                     )}>
                         <ReplyPreview message={repliedToMessage} isSender={message.isSender} />
                         <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
-                          <MessageContent
-                            message={message}
-                            isSearchOpen={isSearchOpen}
-                            searchQuery={searchQuery}
-                            searchMatches={searchMatches}
-                            currentMatchIndex={currentMatchIndex}
-                            onMediaClick={handleMediaClick}
-                          />
+                          {isTranslating === message.id ? (
+                            <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
+                              <Languages className="h-4 w-4 animate-spin"/>
+                              <span>Translating...</span>
+                            </div>
+                          ) : (
+                            <MessageContent
+                              message={message}
+                              isSearchOpen={isSearchOpen}
+                              searchQuery={searchQuery}
+                              searchMatches={searchMatches}
+                              currentMatchIndex={currentMatchIndex}
+                              onMediaClick={handleMediaClick}
+                              translatedText={translatedText}
+                              onShowOriginal={() => {
+                                setTranslatedMessages(prev => {
+                                  const newTranslations = {...prev};
+                                  delete newTranslations[message.id];
+                                  return newTranslations;
+                                });
+                              }}
+                            />
+                          )}
                           <ClientOnly>
                             <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
                               {message.isEdited && <Pencil className="h-3 w-3" />}
@@ -855,6 +941,8 @@ export default function ChatPage() {
             onEdit={handleEdit}
             onReply={handleReply}
             onStar={handleToggleStar}
+            onTranslate={handleTranslate}
+            isTranslated={!!translatedMessages[selectedMessage.id]}
             onClose={() => {
                 setSelectedMessage(null);
             }}
@@ -892,6 +980,11 @@ export default function ChatPage() {
                 fileInputRef.current.click();
             }
         }}
+      />
+      <LanguageSelectDialog
+        open={isLangSelectOpen}
+        onOpenChange={setIsLangSelectOpen}
+        onSelectLanguage={handleLanguageSelected}
       />
     </>
   )
