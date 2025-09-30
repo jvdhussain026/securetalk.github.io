@@ -2,8 +2,9 @@
 
 'use client';
 
-import { motion } from 'framer-motion';
-import { Reply, Copy, Trash2, Forward, Star, Pencil } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Reply, Copy, Trash2, Forward, Star, Pencil, MoreHorizontal } from 'lucide-react';
 import type { Message } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { differenceInMinutes } from 'date-fns';
@@ -20,6 +21,7 @@ type MessageOptionsProps = {
 
 export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onStar, onClose }: MessageOptionsProps) {
   const { toast } = useToast();
+  const [showMore, setShowMore] = useState(false);
 
   if (!isOpen) return null;
 
@@ -42,22 +44,45 @@ export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onS
   
   const handleDeleteClick = () => {
     onDelete();
+  };
+  
+  const handleClose = () => {
+      setShowMore(false);
+      onClose();
   }
 
-  const menuItems = [
+  const primaryItems = [
     { label: 'Reply', icon: Reply, action: onReply, show: true },
     { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text },
+    { label: 'Delete', icon: Trash2, action: handleDeleteClick, show: true, isDestructive: true },
+  ];
+
+  const secondaryItems = [
     { label: 'Star', icon: Star, action: onStar, show: true },
     { label: 'Edit', icon: Pencil, action: onEdit, show: canEdit },
     { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: true },
-    { label: 'Delete', icon: Trash2, action: handleDeleteClick, show: true, isDestructive: true },
   ];
+
+  const renderItem = (item: typeof primaryItems[0]) => (
+    item.show ? (
+        <button 
+            key={item.label} 
+            onClick={item.action} 
+            className={`flex flex-col items-center justify-start text-center w-16 gap-1 ${item.isDestructive ? 'text-destructive' : 'text-muted-foreground hover:text-primary'}`}
+        >
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-muted/60">
+               <item.icon className="h-6 w-6" />
+            </div>
+            <span className="text-xs line-clamp-1">{item.label}</span>
+        </button>
+    ) : null
+  );
 
   return (
     <>
       <div
         className="fixed inset-0 z-40 bg-black/20"
-        onClick={onClose}
+        onClick={handleClose}
       />
       <motion.div
         initial={{ y: '100%' }}
@@ -70,20 +95,36 @@ export function MessageOptions({ isOpen, message, onDelete, onEdit, onReply, onS
         <div className="p-2 bg-muted rounded-lg mb-4">
           <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Media message'}</p>
         </div>
-        <div className="grid grid-cols-5 gap-2 text-center">
-            {menuItems.map((item) => (
-                item.show ? (
-                    <button 
-                        key={item.label} 
-                        onClick={item.action} 
-                        className={`flex flex-col items-center gap-1 ${item.isDestructive ? 'text-destructive' : 'text-muted-foreground hover:text-primary'}`}
-                    >
-                        <item.icon className="h-6 w-6" />
-                        <span className="text-xs">{item.label}</span>
-                    </button>
-                ) : null
-            ))}
+        <div className="flex justify-around items-start text-center">
+            {primaryItems.map(renderItem)}
+             <button 
+                onClick={() => setShowMore(!showMore)} 
+                className="flex flex-col items-center justify-start text-center w-16 gap-1 text-muted-foreground hover:text-primary"
+            >
+                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-muted/60">
+                   <MoreHorizontal className="h-6 w-6" />
+                </div>
+                <span className="text-xs">More</span>
+            </button>
         </div>
+        <AnimatePresence>
+            {showMore && (
+                <motion.div
+                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
+                    animate={{ height: 'auto', opacity: 1, marginTop: '1rem' }}
+                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
+                    className="overflow-hidden"
+                >
+                    <div className="flex justify-around items-start text-center">
+                        {secondaryItems.map(renderItem)}
+                        {/* Add spacer divs to align items if count is less than primary */}
+                        {Array.from({ length: Math.max(0, (primaryItems.length + 1) - secondaryItems.filter(i => i.show).length) }).map((_, i) => (
+                          <div key={`spacer-${i}`} className="w-16" />
+                        ))}
+                    </div>
+                </motion.div>
+            )}
+        </AnimatePresence>
       </motion.div>
     </>
   );
