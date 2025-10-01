@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -78,7 +78,7 @@ export default function ChatsPage() {
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });
   };
   
-  const handleMenuClick = (action: 'newGroup' | 'newBroadcast') => {
+  const handleMenuClick = (action: 'newGroup' | 'newBroadcast' | 'sharedMedia' | 'chatTheme') => {
     setIsModalOpen(true);
   };
 
@@ -122,6 +122,19 @@ export default function ChatsPage() {
                 <Radio className="mr-2" /> New Broadcast
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuItem asChild>
+                <Link href="/profile"><User className="mr-2" /> View Profile</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleMenuClick('sharedMedia')}>
+                <ImageIcon className="mr-2" /> Shared Media
+              </DropdownMenuItem>
+               <DropdownMenuItem onSelect={() => handleMenuClick('chatTheme')}>
+                <Palette className="mr-2" /> Chat Theme
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+               <DropdownMenuItem asChild>
+                <Link href="/settings/translation"><Languages className="mr-2" /> Translation</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/connections"><UserPlus className="mr-2" /> Connections</Link>
               </DropdownMenuItem>

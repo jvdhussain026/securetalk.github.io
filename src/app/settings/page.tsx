@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, RefreshCw } from 'lucide-react'
+import { ArrowLeft, ChevronRight, RefreshCw, Languages } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
@@ -31,6 +31,7 @@ export default function SettingsPage() {
     { text: "Notifications", href: "#" },
     { text: "Chat Customization", href: "#" },
     { text: "Data & Storage", href: "#" },
+    { text: "Translation", href: "/settings/translation", icon: Languages },
     { text: "Developer", href: "/readme" },
   ]
   
@@ -67,7 +68,10 @@ export default function SettingsPage() {
             {settingsItems.map((item, index) => (
               <div key={index}>
                 <Link href={item.href} onClick={handleItemClick(item.href)} className="flex items-center justify-between px-6 py-4 hover:bg-accent/50 transition-colors">
-                  <span className="text-base font-medium">{item.text}</span>
+                  <div className="flex items-center gap-3">
+                    {item.icon && <item.icon className="h-5 w-5 text-muted-foreground" />}
+                    <span className="text-base font-medium">{item.text}</span>
+                  </div>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </Link>
                 {index < settingsItems.length - 1 && <Separator className="ml-6" />}
