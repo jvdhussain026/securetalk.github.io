@@ -542,6 +542,15 @@ export default function ChatPage() {
       });
     }
   };
+  
+  const handleButtonAction = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (newMessage.trim() === '' && attachmentsToSend.length === 0) {
+      e.preventDefault();
+      startRecording();
+    }
+    // Otherwise, the default 'submit' behavior will trigger handleSendMessage
+  };
+
 
   const stopRecordingAndSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -1057,24 +1066,24 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
-             <div className="flex items-center">
-                 <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                     <Plus className="h-6 w-6" />
-                     <span className="sr-only">Add media</span>
-                 </Button>
-             </div>
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted transition-shadow">
+            <div className="flex items-end gap-2">
+              <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                  <Plus className="h-6 w-6" />
+                  <span className="sr-only">Add media</span>
+              </Button>
+            </div>
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted focus-within:ring-2 focus-within:ring-primary/50 transition-shadow">
                 <div
                     ref={contentEditableRef}
                     contentEditable
                     inputMode="text"
                     onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
                     onPaste={handlePaste}
-                    className="flex-1 bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap"
+                    className="flex-1 bg-transparent px-4 pr-20 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap"
                     data-placeholder="Type a message..."
                 />
                  {isRecording && (
-                    <div className="flex items-center justify-between w-full h-10 px-4">
+                    <div className="absolute inset-0 flex items-center justify-between w-full h-10 px-4 bg-muted rounded-lg">
                         <div className="flex items-center gap-2 text-red-600 animate-pulse">
                             <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
                             <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
@@ -1084,7 +1093,7 @@ export default function ChatPage() {
                         </Button>
                     </div>
                 )}
-                 <div className="flex items-center self-end p-1">
+                 <div className="absolute right-1 flex items-center self-end p-1">
                     {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
                         <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                         {isOutboundTranslating ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Languages className="h-5 w-5" />}
@@ -1101,7 +1110,7 @@ export default function ChatPage() {
             </div>
             
             <div className="flex items-center self-end">
-                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={startRecording}>
+                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={handleButtonAction}>
                     {isOutboundTranslating ? (
                          <LoaderCircle className="h-5 w-5 animate-spin" />
                     ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
