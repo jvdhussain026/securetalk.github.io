@@ -1057,14 +1057,13 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
-            <div className="flex items-center">
-                <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                    <Plus className="h-6 w-6" />
-                    <span className="sr-only">Add media</span>
-                </Button>
-            </div>
-
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted focus-within:ring-2 focus-within:ring-primary/50 transition-shadow">
+             <div className="flex items-center">
+                 <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                     <Plus className="h-6 w-6" />
+                     <span className="sr-only">Add media</span>
+                 </Button>
+             </div>
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted transition-shadow">
                 <div
                     ref={contentEditableRef}
                     contentEditable
@@ -1202,5 +1201,7 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
 
     
