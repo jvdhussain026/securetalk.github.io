@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { User, Search, Wifi, MessageSquare, Phone, Users } from 'lucide-react'
 import { nearbyUsers as initialNearbyUsers } from '@/lib/dummy-nearby-data'
 import type { NearbyUser } from '@/lib/types'
@@ -52,9 +52,11 @@ export default function NearbyPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
   
-  const filteredNearbyUsers = nearbyUsers.filter(user =>
-    user.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredNearbyUsers = useMemo(() => {
+    return nearbyUsers.filter(user =>
+      user.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [nearbyUsers, searchQuery]);
 
   return (
     <>

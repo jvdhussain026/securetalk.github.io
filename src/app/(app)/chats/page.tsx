@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages } from 'lucide-react'
 import { format } from 'date-fns'
@@ -62,17 +62,21 @@ export default function ChatsPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
 
-  const sortedContacts = [...contacts].sort((a, b) => {
-    const lastMessageA = a.messages[a.messages.length - 1]
-    const lastMessageB = b.messages[b.messages.length - 1]
-    if (!lastMessageA) return 1
-    if (!lastMessageB) return -1
-    return lastMessageB.timestamp.getTime() - lastMessageA.timestamp.getTime()
-  })
+  const sortedContacts = useMemo(() => {
+    return [...contacts].sort((a, b) => {
+      const lastMessageA = a.messages[a.messages.length - 1]
+      const lastMessageB = b.messages[b.messages.length - 1]
+      if (!lastMessageA) return 1
+      if (!lastMessageB) return -1
+      return lastMessageB.timestamp.getTime() - lastMessageA.timestamp.getTime()
+    })
+  }, []);
 
-  const filteredContacts = sortedContacts.filter(contact =>
-    contact.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredContacts = useMemo(() => {
+    return sortedContacts.filter(contact =>
+      contact.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [sortedContacts, searchQuery]);
   
   const handleAvatarClick = (contact: typeof contacts[0]) => {
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });

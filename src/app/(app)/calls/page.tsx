@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 
@@ -79,9 +79,11 @@ export default function CallsPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
   
-  const filteredCallHistory = callHistory.filter(call =>
-    call.name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredCallHistory = useMemo(() => {
+    return callHistory.filter(call =>
+      call.name.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [searchQuery]);
 
   const renderCallList = (calls: CallRecord[]) => (
     <div>
