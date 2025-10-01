@@ -400,20 +400,53 @@ export default function ChatPage() {
   };
 
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !chatId || !contact) return
+  const handleSendMessage = async (textToSend: string, attachmentsToUpload: Attachment[]) => {
+      if ((textToSend.trim() === '' && attachmentsToUpload.length === 0) || !chatId) return;
 
-    let textToSend = newMessage.trim();
-    const attachmentsToUpload = attachmentsToSend;
+      // Clear inputs
+      setNewMessage('');
+      setAttachmentsToSend([]);
+      if (contentEditableRef.current) {
+          contentEditableRef.current.textContent = '';
+      }
+      setReplyingTo(null);
+
+      if (editingMessage) {
+          const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
+          await updateDoc(messageRef, {
+              text: textToSend,
+              isEdited: true,
+          });
+          setEditingMessage(null);
+          toast({ title: "Message updated" });
+      } else {
+          try {
+              await addDoc(collection(db, "chats", chatId, "messages"), {
+                  text: textToSend,
+                  attachments: attachmentsToUpload,
+                  senderId: 'currentUser',
+                  timestamp: serverTimestamp(),
+                  replyTo: replyingTo?.id || null,
+              });
+          } catch (error) {
+              console.error("Error sending message: ", error);
+              toast({
+                  variant: "destructive",
+                  title: "Error",
+                  description: "Failed to send message.",
+              });
+              // Restore on error
+              setNewMessage(textToSend);
+              setAttachmentsToSend(attachmentsToUpload);
+          }
+      }
+  };
+
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !contact) return;
     
-    // Clear inputs immediately
-    setNewMessage('')
-    setAttachmentsToSend([])
-    if (contentEditableRef.current) {
-        contentEditableRef.current.textContent = '';
-    }
-    setReplyingTo(null);
+    let textToSend = newMessage.trim();
 
     // Outgoing live translation
     if (contact.liveTranslationEnabled && textToSend) {
@@ -433,36 +466,8 @@ export default function ChatPage() {
         }
     }
     
-    if (editingMessage) {
-        const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
-        await updateDoc(messageRef, {
-            text: textToSend,
-            isEdited: true,
-        });
-        setEditingMessage(null);
-        toast({ title: "Message updated" });
-    } else {
-        try {
-            await addDoc(collection(db, "chats", chatId, "messages"), {
-                text: textToSend,
-                attachments: attachmentsToUpload,
-                senderId: 'currentUser', // Replace with actual user ID
-                timestamp: serverTimestamp(),
-                replyTo: replyingTo?.id || null,
-            });
-        } catch (error) {
-            console.error("Error sending message: ", error);
-            toast({
-                variant: "destructive",
-                title: "Error",
-                description: "Failed to send message.",
-            });
-            // Restore on error
-            setNewMessage(textToSend);
-            setAttachmentsToSend(attachmentsToUpload);
-        }
-    }
-  }
+    await handleSendMessage(textToSend, attachmentsToSend);
+  };
   
   const handleMediaButtonClick = () => {
     setIsAttachmentSheetOpen(true);
@@ -548,7 +553,7 @@ export default function ChatPage() {
       e.preventDefault();
       startRecording();
     }
-    // Otherwise, the default 'submit' behavior will trigger handleSendMessage
+    // Otherwise, the default 'submit' behavior will trigger handleSend
   };
 
 
@@ -849,7 +854,7 @@ export default function ChatPage() {
     <>
       <div className="flex flex-col h-full bg-chat">
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
-          <div className="flex items-center gap-2 w-full" style={{ display: isSearchOpen ? 'none' : 'flex' }}>
+          <div style={{ display: isSearchOpen ? 'none' : 'flex' }} className="flex items-center gap-2 w-full">
             <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
               <Link href="/chats">
                 <ArrowLeft className="h-6 w-6" />
@@ -1057,7 +1062,7 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
+          <form onSubmit={isRecording ? stopRecordingAndSend : handleSend} className="flex items-end gap-2">
             <div className="flex items-end gap-2">
               <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
                   <Plus className="h-6 w-6" />
@@ -1202,3 +1207,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
