@@ -1,3 +1,4 @@
+
 "use client"
 
 import { motion } from 'framer-motion'
@@ -7,6 +8,7 @@ import { Phone, Video } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import type { Contact } from "@/lib/types"
 import { cn } from '@/lib/utils'
+import Link from 'next/link'
 
 type CallDetailsSheetProps = {
   open: boolean;
@@ -18,11 +20,6 @@ export function CallDetailsSheet({ open, onOpenChange, contact }: CallDetailsShe
   const { toast } = useToast()
 
   if (!open) return null;
-
-  const handleCall = (type: 'voice' | 'video') => {
-    toast({ title: `Starting ${type} call with ${contact.name}...` })
-    onOpenChange(false)
-  }
 
   return (
     <>
@@ -57,13 +54,17 @@ export function CallDetailsSheet({ open, onOpenChange, contact }: CallDetailsShe
           </div>
         </div>
         <div className="mt-6 grid grid-cols-2 gap-3">
-          <Button size="lg" variant="outline" onClick={() => handleCall('voice')}>
-            <Phone className="mr-2" />
-            Voice Call
+          <Button size="lg" variant="outline" asChild>
+            <Link href={`/call?contactId=${contact.id}&type=voice&status=outgoing`}>
+                <Phone className="mr-2" />
+                Voice Call
+            </Link>
           </Button>
-          <Button size="lg" onClick={() => handleCall('video')}>
-            <Video className="mr-2" />
-            Video Call
+          <Button size="lg" asChild>
+             <Link href={`/call?contactId=${contact.id}&type=video&status=outgoing`}>
+                <Video className="mr-2" />
+                Video Call
+            </Link>
           </Button>
         </div>
       </motion.div>

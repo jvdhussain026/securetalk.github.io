@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming } from 'lucide-react'
 import { format } from 'date-fns'
 
 import { contacts } from '@/lib/dummy-data'
@@ -136,6 +136,16 @@ export default function ChatsPage() {
           </DropdownMenu>
         </header>
         <main className="flex-1 overflow-y-auto">
+          {/* TEMP: Button to test incoming call */}
+           <div className="p-4 border-b">
+                <Button asChild className="w-full">
+                    <Link href="/call?contactId=2&type=video&status=incoming">
+                        <PhoneIncoming className="mr-2" />
+                        Simulate Incoming Call
+                    </Link>
+                </Button>
+                <p className="text-xs text-muted-foreground text-center mt-2">This is for development purposes.</p>
+           </div>
           <div>
             {filteredContacts.map((contact) => {
               const lastMessage = contact.messages[contact.messages.length - 1]

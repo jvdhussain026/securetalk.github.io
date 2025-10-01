@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -399,27 +398,44 @@ export default function ChatPage() {
     }
   };
 
-  const handleSendMessage = async (text?: string, attachments?: Attachment[]) => {
-    const textToSend = text || newMessage.trim();
-    const attachmentsToUpload = attachments || attachmentsToSend;
+  const handleSendMessage = async () => {
+    const textToSend = newMessage.trim();
+    const attachmentsToUpload = attachmentsToSend;
 
     if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId) return;
 
-    // Clear inputs immediately if not using passed-in values
-    if (!text && !attachments) {
-        setNewMessage('');
-        setAttachmentsToSend([]);
-        if (contentEditableRef.current) {
-            contentEditableRef.current.textContent = '';
+    setNewMessage('');
+    setAttachmentsToSend([]);
+    if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = '';
+    }
+    setReplyingTo(null);
+    setShowOutboundTranslate(false);
+
+    let finalText = textToSend;
+
+    // Handle outbound translation if enabled
+    if (contact.liveTranslationEnabled && textToSend) {
+        setIsOutboundTranslating(true);
+        try {
+            const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
+            finalText = result.translatedText || textToSend;
+        } catch (error) {
+            console.error("Live outbound translation error:", error);
+            toast({
+                variant: "destructive",
+                title: "Translation Failed",
+                description: "Message was not translated. Sending original.",
+            });
+        } finally {
+            setIsOutboundTranslating(false);
         }
-        setReplyingTo(null);
-        setShowOutboundTranslate(false);
     }
 
     if (editingMessage) {
         const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
         await updateDoc(messageRef, {
-            text: textToSend,
+            text: finalText,
             isEdited: true,
         });
         setEditingMessage(null);
@@ -430,7 +446,7 @@ export default function ChatPage() {
     // Add message to Firestore
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
-            text: textToSend,
+            text: finalText,
             attachments: attachmentsToUpload,
             senderId: 'currentUser',
             timestamp: serverTimestamp(),
@@ -451,45 +467,7 @@ export default function ChatPage() {
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !contact) return;
-    
-    let textToSend = newMessage.trim();
-    const attachmentsToUpload = [...attachmentsToSend];
-
-    // Clear inputs immediately
-    setNewMessage('');
-    setAttachmentsToSend([]);
-    if (contentEditableRef.current) {
-        contentEditableRef.current.textContent = '';
-    }
-    setReplyingTo(null);
-    setShowOutboundTranslate(false);
-
-    if (editingMessage) {
-        // If editing, skip translation and just send
-        handleSendMessage(textToSend, attachmentsToUpload);
-        return;
-    }
-
-    // Handle outbound translation if enabled
-    if (contact.liveTranslationEnabled && textToSend) {
-        setIsOutboundTranslating(true);
-        try {
-            const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
-            textToSend = result.translatedText || textToSend;
-        } catch (error) {
-            console.error("Live outbound translation error:", error);
-            toast({
-                variant: "destructive",
-                title: "Translation Failed",
-                description: "Message was not translated. Sending original.",
-            });
-        } finally {
-            setIsOutboundTranslating(false);
-        }
-    }
-    
-    handleSendMessage(textToSend, attachmentsToUpload);
+    handleSendMessage();
   };
 
 
@@ -879,84 +857,88 @@ export default function ChatPage() {
     <>
       <div className="flex flex-col h-full bg-chat">
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
-          <div className="flex items-center gap-2 w-full" style={{ display: isSearchOpen ? 'none' : 'flex' }}>
-            <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
-              <Link href="/chats">
-                <ArrowLeft className="h-6 w-6" />
-                <span className="sr-only">Back</span>
-              </Link>
-            </Button>
-            <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
-              <Avatar className="h-10 w-10">
-                <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </button>
-            <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 text-left">
-                <h2 className="text-lg font-bold truncate">{contact.name}</h2>
-                {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
-              </div>
-            </button>
-            <div className="ml-auto flex items-center">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground">
-                    <Phone className="h-5 w-5" />
-                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                    <span className="sr-only">Call</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => toast({ title: "Starting voice call..." })}>
-                    <Phone className="mr-2 h-4 w-4" />
-                    <span>Voice Call</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => toast({ title: "Starting video call...".toUpperCase() })}>
-                    <Video className="mr-2 h-4 w-4" />
-                    <span>Video Call</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+            <div className="flex items-center gap-2 w-full">
+                <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
+                <Link href="/chats">
+                    <ArrowLeft className="h-6 w-6" />
+                    <span className="sr-only">Back</span>
+                </Link>
+                </Button>
+                <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
+                <Avatar className="h-10 w-10">
+                    <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+                </button>
+                <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 text-left">
+                    <h2 className="text-lg font-bold truncate">{contact.name}</h2>
+                    {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
+                </div>
+                </button>
+                <div className="ml-auto flex items-center">
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground">
+                        <Phone className="h-5 w-5" />
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        <span className="sr-only">Call</span>
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/call?contactId=${contact.id}&type=voice&status=outgoing`}>
+                            <Phone className="mr-2 h-4 w-4" />
+                            <span>Voice Call</span>
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href={`/call?contactId=${contact.id}&type=video&status=outgoing`}>
+                            <Video className="mr-2 h-4 w-4" />
+                            <span>Video Call</span>
+                        </Link>
+                    </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
 
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground">
-                    <MoreVertical className="h-5 w-5" />
-                    <span className="sr-only">More options</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
-                    <User className="mr-2 h-4 w-4" />
-                    <span>View Profile</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
-                    <ImageIcon className="mr-2 h-4 w-4" />
-                    <span>Shared Media</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => handleAction('find')}>
-                    <Search className="mr-2 h-4 w-4" />
-                    <span>Find</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onSelect={() => handleAction('theme')}>
-                    <Palette className="mr-2 h-4 w-4" />
-                    <span>Chat Theme</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/settings/translation">
-                      <Languages className="mr-2 h-4 w-4" />
-                      <span>Translation</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => handleAction('mute')}>
-                    <BellOff className="mr-2 h-4 w-4" />
-                    <span>Mute Notifications</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground">
+                        <MoreVertical className="h-5 w-5" />
+                        <span className="sr-only">More options</span>
+                    </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                    <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                        <User className="mr-2 h-4 w-4" />
+                        <span>View Profile</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                        <ImageIcon className="mr-2 h-4 w-4" />
+                        <span>Shared Media</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleAction('find')}>
+                        <Search className="mr-2 h-4 w-4" />
+                        <span>Find</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onSelect={() => handleAction('theme')}>
+                        <Palette className="mr-2 h-4 w-4" />
+                        <span>Chat Theme</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                        <Link href="/settings/translation">
+                        <Languages className="mr-2 h-4 w-4" />
+                        <span>Translation</span>
+                        </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleAction('mute')}>
+                        <BellOff className="mr-2 h-4 w-4" />
+                        <span>Mute Notifications</span>
+                    </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
+                </div>
           </div>
           <AnimatePresence>
             {isSearchOpen && (

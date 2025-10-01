@@ -1,0 +1,48 @@
+
+'use client';
+
+import { Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { contacts } from '@/lib/dummy-data';
+import type { Contact } from '@/lib/types';
+import { IncomingCall } from '@/components/call/incoming-call';
+import { ActiveCall } from '@/components/call/active-call';
+import { Loader2 } from 'lucide-react';
+
+function CallPageContent() {
+  const searchParams = useSearchParams();
+  const contactId = searchParams.get('contactId');
+  const type = searchParams.get('type') as 'voice' | 'video';
+  const status = searchParams.get('status') as 'incoming' | 'outgoing';
+
+  const contact = contacts.find(c => c.id === contactId);
+
+  if (!contact || !type || !status) {
+    return (
+      <div className="h-full flex flex-col items-center justify-center bg-background text-foreground">
+        <Loader2 className="h-8 w-8 animate-spin mb-4" />
+        <p className="text-lg">Loading call...</p>
+        <p className="text-sm text-muted-foreground">Invalid call parameters.</p>
+      </div>
+    );
+  }
+
+  if (status === 'incoming') {
+    return <IncomingCall contact={contact} callType={type} />;
+  }
+
+  return <ActiveCall contact={contact} callType={type} />;
+}
+
+
+export default function CallPage() {
+    return (
+        <Suspense fallback={
+            <div className="h-full flex items-center justify-center bg-background">
+                <Loader2 className="h-10 w-10 animate-spin"/>
+            </div>
+        }>
+            <CallPageContent />
+        </Suspense>
+    )
+}
