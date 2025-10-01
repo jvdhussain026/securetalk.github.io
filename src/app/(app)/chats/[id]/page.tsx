@@ -400,55 +400,34 @@ export default function ChatPage() {
   };
 
 
-  const handleSendMessage = async (textToSend: string, attachmentsToUpload: Attachment[]) => {
-      if ((textToSend.trim() === '' && attachmentsToUpload.length === 0) || !chatId) return;
-
-      // Clear inputs
-      setNewMessage('');
-      setAttachmentsToSend([]);
-      if (contentEditableRef.current) {
-          contentEditableRef.current.textContent = '';
-      }
-      setReplyingTo(null);
-
-      if (editingMessage) {
-          const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
-          await updateDoc(messageRef, {
-              text: textToSend,
-              isEdited: true,
-          });
-          setEditingMessage(null);
-          toast({ title: "Message updated" });
-      } else {
-          try {
-              await addDoc(collection(db, "chats", chatId, "messages"), {
-                  text: textToSend,
-                  attachments: attachmentsToUpload,
-                  senderId: 'currentUser',
-                  timestamp: serverTimestamp(),
-                  replyTo: replyingTo?.id || null,
-              });
-          } catch (error) {
-              console.error("Error sending message: ", error);
-              toast({
-                  variant: "destructive",
-                  title: "Error",
-                  description: "Failed to send message.",
-              });
-              // Restore on error
-              setNewMessage(textToSend);
-              setAttachmentsToSend(attachmentsToUpload);
-          }
-      }
-  };
-
-  const handleSend = async (e?: React.FormEvent) => {
+  const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !contact) return;
-    
-    let textToSend = newMessage.trim();
+    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !contact || !chatId) return;
 
-    // Outgoing live translation
+    let textToSend = newMessage.trim();
+    const attachmentsToUpload = [...attachmentsToSend];
+
+    // Clear inputs immediately
+    setNewMessage('');
+    setAttachmentsToSend([]);
+    if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = '';
+    }
+    setReplyingTo(null);
+    setShowOutboundTranslate(false);
+
+    if (editingMessage) {
+        const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
+        await updateDoc(messageRef, {
+            text: textToSend,
+            isEdited: true,
+        });
+        setEditingMessage(null);
+        toast({ title: "Message updated" });
+        return;
+    }
+
+    // Handle outbound translation if enabled
     if (contact.liveTranslationEnabled && textToSend) {
         setIsOutboundTranslating(true);
         try {
@@ -466,9 +445,28 @@ export default function ChatPage() {
         }
     }
     
-    await handleSendMessage(textToSend, attachmentsToSend);
+    // Add message to Firestore
+    try {
+        await addDoc(collection(db, "chats", chatId, "messages"), {
+            text: textToSend,
+            attachments: attachmentsToUpload,
+            senderId: 'currentUser',
+            timestamp: serverTimestamp(),
+            replyTo: replyingTo?.id || null,
+        });
+    } catch (error) {
+        console.error("Error sending message: ", error);
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Failed to send message.",
+        });
+        // Restore on error
+        setNewMessage(textToSend);
+        setAttachmentsToSend(attachmentsToUpload);
+    }
   };
-  
+
   const handleMediaButtonClick = () => {
     setIsAttachmentSheetOpen(true);
   }
@@ -550,10 +548,10 @@ export default function ChatPage() {
   
   const handleButtonAction = (e: React.MouseEvent<HTMLButtonElement>) => {
     if (newMessage.trim() === '' && attachmentsToSend.length === 0) {
-      e.preventDefault();
+      e.preventDefault(); // Prevent form submission
       startRecording();
     }
-    // Otherwise, the default 'submit' behavior will trigger handleSend
+    // Otherwise, the default 'submit' behavior will trigger handleSendMessage
   };
 
 
@@ -1062,7 +1060,7 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          <form onSubmit={isRecording ? stopRecordingAndSend : handleSend} className="flex items-end gap-2">
+          <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
             <div className="flex items-end gap-2">
               <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
                   <Plus className="h-6 w-6" />
