@@ -848,7 +848,7 @@ export default function ChatPage() {
   return (
     <>
       <div className="flex flex-col h-full bg-chat">
-        <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card">
+        <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-blue-500 text-white">
           <AnimatePresence>
             {isSearchOpen ? (
                <ChatSearch 
@@ -868,7 +868,7 @@ export default function ChatPage() {
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-2 w-full"
               >
-                  <Button variant="ghost" size="icon" asChild>
+                  <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20 hover:text-white">
                     <Link href="/chats">
                       <ArrowLeft className="h-6 w-6" />
                       <span className="sr-only">Back</span>
@@ -889,7 +889,7 @@ export default function ChatPage() {
                   <div className="ml-auto flex items-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="flex items-center gap-1">
+                        <Button variant="ghost" size="icon" className="flex items-center gap-1 text-white hover:bg-white/20 hover:text-white">
                           <Phone className="h-5 w-5" />
                           <ChevronDown className="h-4 w-4 text-muted-foreground" />
                           <span className="sr-only">Call</span>
@@ -909,7 +909,7 @@ export default function ChatPage() {
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
+                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
                           <MoreVertical className="h-5 w-5" />
                           <span className="sr-only">More options</span>
                         </Button>
