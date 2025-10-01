@@ -399,22 +399,22 @@ export default function ChatPage() {
     }
   };
 
+  const handleSendMessage = async (text?: string, attachments?: Attachment[]) => {
+    const textToSend = text || newMessage.trim();
+    const attachmentsToUpload = attachments || attachmentsToSend;
 
-  const handleSendMessage = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !contact || !chatId) return;
+    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId) return;
 
-    let textToSend = newMessage.trim();
-    const attachmentsToUpload = [...attachmentsToSend];
-
-    // Clear inputs immediately
-    setNewMessage('');
-    setAttachmentsToSend([]);
-    if (contentEditableRef.current) {
-        contentEditableRef.current.textContent = '';
+    // Clear inputs immediately if not using passed-in values
+    if (!text && !attachments) {
+        setNewMessage('');
+        setAttachmentsToSend([]);
+        if (contentEditableRef.current) {
+            contentEditableRef.current.textContent = '';
+        }
+        setReplyingTo(null);
+        setShowOutboundTranslate(false);
     }
-    setReplyingTo(null);
-    setShowOutboundTranslate(false);
 
     if (editingMessage) {
         const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
@@ -427,24 +427,6 @@ export default function ChatPage() {
         return;
     }
 
-    // Handle outbound translation if enabled
-    if (contact.liveTranslationEnabled && textToSend) {
-        setIsOutboundTranslating(true);
-        try {
-            const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
-            textToSend = result.translatedText || textToSend;
-        } catch (error) {
-            console.error("Live outbound translation error:", error);
-            toast({
-                variant: "destructive",
-                title: "Translation Failed",
-                description: "Message was not translated. Sending original.",
-            });
-        } finally {
-            setIsOutboundTranslating(false);
-        }
-    }
-    
     // Add message to Firestore
     try {
         await addDoc(collection(db, "chats", chatId, "messages"), {
@@ -466,6 +448,50 @@ export default function ChatPage() {
         setAttachmentsToSend(attachmentsToUpload);
     }
   };
+
+  const handleSend = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !contact) return;
+    
+    let textToSend = newMessage.trim();
+    const attachmentsToUpload = [...attachmentsToSend];
+
+    // Clear inputs immediately
+    setNewMessage('');
+    setAttachmentsToSend([]);
+    if (contentEditableRef.current) {
+        contentEditableRef.current.textContent = '';
+    }
+    setReplyingTo(null);
+    setShowOutboundTranslate(false);
+
+    if (editingMessage) {
+        // If editing, skip translation and just send
+        handleSendMessage(textToSend, attachmentsToUpload);
+        return;
+    }
+
+    // Handle outbound translation if enabled
+    if (contact.liveTranslationEnabled && textToSend) {
+        setIsOutboundTranslating(true);
+        try {
+            const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
+            textToSend = result.translatedText || textToSend;
+        } catch (error) {
+            console.error("Live outbound translation error:", error);
+            toast({
+                variant: "destructive",
+                title: "Translation Failed",
+                description: "Message was not translated. Sending original.",
+            });
+        } finally {
+            setIsOutboundTranslating(false);
+        }
+    }
+    
+    handleSendMessage(textToSend, attachmentsToUpload);
+  };
+
 
   const handleMediaButtonClick = () => {
     setIsAttachmentSheetOpen(true);
@@ -550,8 +576,9 @@ export default function ChatPage() {
     if (newMessage.trim() === '' && attachmentsToSend.length === 0) {
       e.preventDefault(); // Prevent form submission
       startRecording();
+    } else {
+        handleSend(e)
     }
-    // Otherwise, the default 'submit' behavior will trigger handleSendMessage
   };
 
 
@@ -852,7 +879,7 @@ export default function ChatPage() {
     <>
       <div className="flex flex-col h-full bg-chat">
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
-          <div style={{ display: isSearchOpen ? 'none' : 'flex' }} className="flex items-center gap-2 w-full">
+          <div className="flex items-center gap-2 w-full" style={{ display: isSearchOpen ? 'none' : 'flex' }}>
             <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
               <Link href="/chats">
                 <ArrowLeft className="h-6 w-6" />
@@ -933,14 +960,23 @@ export default function ChatPage() {
           </div>
           <AnimatePresence>
             {isSearchOpen && (
-              <ChatSearch
-                onClose={() => setIsSearchOpen(false)}
-                searchQuery={searchQuery}
-                setSearchQuery={setSearchQuery}
-                matches={searchMatches}
-                currentMatchIndex={currentMatchIndex}
-                onNavigate={handleNavigateMatch}
-              />
+              <motion.div
+                key="search-bar"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2 w-full"
+                >
+                <ChatSearch
+                    onClose={() => setIsSearchOpen(false)}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    matches={searchMatches}
+                    currentMatchIndex={currentMatchIndex}
+                    onNavigate={handleNavigateMatch}
+                />
+              </motion.div>
             )}
           </AnimatePresence>
         </header>
@@ -1060,21 +1096,21 @@ export default function ChatPage() {
               </div>
             </div>
           )}
-          <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
+          <form onSubmit={isRecording ? stopRecordingAndSend : handleSend} className="flex items-end gap-2">
             <div className="flex items-end gap-2">
               <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
                   <Plus className="h-6 w-6" />
                   <span className="sr-only">Add media</span>
               </Button>
             </div>
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted">
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted overflow-hidden">
                 <div
                     ref={contentEditableRef}
                     contentEditable
                     inputMode="text"
                     onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
                     onPaste={handlePaste}
-                    className="flex-1 bg-transparent px-4 pr-20 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap"
+                    className="flex-1 bg-transparent px-4 pr-20 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap break-words"
                     data-placeholder="Type a message..."
                 />
                  {isRecording && (
@@ -1205,5 +1241,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
