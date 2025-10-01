@@ -20,6 +20,7 @@ import { cn } from '@/lib/utils'
 import { NavLink } from '@/components/nav-link'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
+import { ClientOnly } from '@/components/client-only'
 
 function formatCallTimestamp(timestamp: Date): string {
   if (isToday(timestamp)) {
@@ -98,7 +99,9 @@ export default function CallsPage() {
             </button>
             <button onClick={() => handleContactSelect(call)} className="flex-1 overflow-hidden text-left">
               <p className="font-bold truncate text-base">{call.name}</p>
-              <p className="text-sm text-muted-foreground whitespace-nowrap">{formatCallTimestamp(call.timestamp)}</p>
+              <ClientOnly>
+                <p className="text-sm text-muted-foreground whitespace-nowrap">{formatCallTimestamp(call.timestamp)}</p>
+              </ClientOnly>
             </button>
             <CallIcon type={call.type} direction={call.direction} />
           </div>

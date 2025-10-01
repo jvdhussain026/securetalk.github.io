@@ -170,7 +170,7 @@ export default function ChatsPage() {
                           </ClientOnly>
                         )}
                       </div>
-                      {lastMessage && <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text}</p>}
+                      {lastMessage && <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text || 'Media'}</p>}
                     </Link>
                   </div>
                 </div>
