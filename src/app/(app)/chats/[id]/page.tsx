@@ -197,7 +197,7 @@ function ReplyPreview({ message, isSender }: { message?: Message, isSender: bool
     )
 }
 
-const getLanguageName = (langCode: string | null) => {
+function getLanguageName(langCode: string | null) {
   if (!langCode) return "Not Set";
   try {
     return new Intl.DisplayNames(['en'], { type: 'language' }).of(langCode);
@@ -1066,32 +1066,27 @@ export default function ChatPage() {
                  )}
              </div>
 
-            <div className="flex-1 relative">
-                <div className="rounded-lg bg-muted flex items-center">
-                    <div
-                        ref={contentEditableRef}
-                        contentEditable
-                        inputMode="text"
-                        onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
-                        onPaste={handlePaste}
-                        className="flex-1 bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none whitespace-nowrap overflow-x-auto"
-                        data-placeholder="Type a message..."
-                    />
-                     {isRecording && (
-                        <div className="flex items-center justify-between w-full h-10 px-4">
-                            <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                                <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                                <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
-                            </div>
-                            <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
-                                <Trash2 className="h-5 w-5" />
-                            </Button>
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted">
+                <div
+                    ref={contentEditableRef}
+                    contentEditable
+                    inputMode="text"
+                    onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                    onPaste={handlePaste}
+                    className="flex-1 bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-nowrap overflow-x-auto"
+                    data-placeholder="Type a message..."
+                />
+                 {isRecording && (
+                    <div className="flex items-center justify-between w-full h-10 px-4">
+                        <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                            <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
                         </div>
-                    )}
-                </div>
-            </div>
-            
-            <div className="flex items-center gap-1">
+                        <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                    </div>
+                )}
                  {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
                     <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                       {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
@@ -1104,8 +1099,10 @@ export default function ChatPage() {
                       <span className="sr-only">Live Translation Enabled</span>
                     </Button>
                 )}
+            </div>
             
-                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording}>
+            <div className="flex items-center gap-1">
+                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={startRecording}>
                     {isOutboundTranslating ? (
                          <LoaderCircle className="h-5 w-5 animate-spin" />
                     ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
