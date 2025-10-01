@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -34,6 +35,15 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { ChatSearch } from '@/components/chat-search'
 import { LanguageSelectDialog } from '@/components/language-select-dialog'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 
 type MessageContentProps = {
@@ -187,6 +197,14 @@ function ReplyPreview({ message, isSender }: { message?: Message, isSender: bool
     )
 }
 
+const getLanguageName = (langCode: string | null) => {
+  if (!langCode) return "Not Set";
+  try {
+    return new Intl.DisplayNames(['en'], { type: 'language' }).of(langCode);
+  } catch (e) {
+    return langCode;
+  }
+}
 
 export default function ChatPage() {
   const params = useParams()
@@ -225,6 +243,7 @@ export default function ChatPage() {
   const debouncedNewMessage = useDebounce(newMessage, 500);
 
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
+  const [isLiveTranslateInfoOpen, setIsLiveTranslateInfoOpen] = useState(false);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -241,10 +260,31 @@ export default function ChatPage() {
       setPreferredLang(lang);
     }
   }, []);
+
+  const handleAutoTranslate = useCallback(async (messageToTranslate: Message) => {
+    if (!preferredLang || !contact?.liveTranslationEnabled || translatedMessages[messageToTranslate.id] || isTranslating === messageToTranslate.id) {
+      return;
+    }
+    
+    if (!messageToTranslate.isSender && messageToTranslate.text) {
+      setIsTranslating(messageToTranslate.id);
+      try {
+        const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: preferredLang });
+        if (result.translatedText) {
+          setTranslatedMessages(prev => ({ ...prev, [messageToTranslate.id!]: result.translatedText }));
+        }
+      } catch (error) {
+        console.error("Auto-translation error:", error);
+      } finally {
+        setIsTranslating(null);
+      }
+    }
+  }, [preferredLang, contact?.liveTranslationEnabled, translatedMessages, isTranslating]);
+
   
   useEffect(() => {
     async function checkLanguage() {
-      if (debouncedNewMessage.trim().length > 5 && contact) {
+      if (debouncedNewMessage.trim().length > 5 && contact && !contact.liveTranslationEnabled) {
         const { languageCode } = await detectLanguage({ text: debouncedNewMessage });
         setInputLang(languageCode);
         if (languageCode !== contact.language && languageCode !== 'und') {
@@ -277,7 +317,7 @@ export default function ChatPage() {
       const newMessages: Message[] = [];
       querySnapshot.forEach((doc) => {
         const data = doc.data();
-        newMessages.push({
+        const msg: Message = {
           id: doc.id,
           text: data.text,
           attachments: data.attachments || [],
@@ -286,13 +326,15 @@ export default function ChatPage() {
           isStarred: data.isStarred,
           isEdited: data.isEdited,
           replyTo: data.replyTo,
-        });
+        };
+        newMessages.push(msg);
+        handleAutoTranslate(msg);
       });
       setMessages(newMessages);
     });
 
     return () => unsubscribe();
-  }, [chatId]);
+  }, [chatId, handleAutoTranslate]);
 
   useEffect(() => {
     try {
@@ -360,15 +402,35 @@ export default function ChatPage() {
 
   const handleSendMessage = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !chatId) return
+    if ((newMessage.trim() === '' && attachmentsToSend.length === 0) || !chatId || !contact) return
 
-    const textToSend = newMessage;
+    let textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
     
+    // Clear inputs immediately
     setNewMessage('')
     setAttachmentsToSend([])
     if (contentEditableRef.current) {
         contentEditableRef.current.textContent = '';
+    }
+    setReplyingTo(null);
+
+    // Outgoing live translation
+    if (contact.liveTranslationEnabled && textToSend) {
+        setIsOutboundTranslating(true);
+        try {
+            const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
+            textToSend = result.translatedText || textToSend;
+        } catch (error) {
+            console.error("Live outbound translation error:", error);
+            toast({
+                variant: "destructive",
+                title: "Translation Failed",
+                description: "Message was not translated. Sending original.",
+            });
+        } finally {
+            setIsOutboundTranslating(false);
+        }
     }
     
     if (editingMessage) {
@@ -378,18 +440,16 @@ export default function ChatPage() {
             isEdited: true,
         });
         setEditingMessage(null);
-        setNewMessage('');
         toast({ title: "Message updated" });
     } else {
         try {
             await addDoc(collection(db, "chats", chatId, "messages"), {
                 text: textToSend,
                 attachments: attachmentsToUpload,
-                senderId: 'currentUser', // Replace with actual current user ID
+                senderId: 'currentUser', // Replace with actual user ID
                 timestamp: serverTimestamp(),
                 replyTo: replyingTo?.id || null,
             });
-            setReplyingTo(null);
         } catch (error) {
             console.error("Error sending message: ", error);
             toast({
@@ -997,45 +1057,67 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
-            <div className="flex items-center gap-2">
-              {!isRecording && (
-                <div className="flex items-center gap-1">
-                  <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                      <Plus className="h-6 w-6" />
-                      <span className="sr-only">Add media</span>
-                  </Button>
+             <div className="flex items-center gap-1">
+                 {!isRecording && (
+                     <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                         <Plus className="h-6 w-6" />
+                         <span className="sr-only">Add media</span>
+                     </Button>
+                 )}
+             </div>
+
+            <div className="flex-1 relative">
+                <div className="rounded-lg bg-muted flex items-center">
+                    <div
+                        ref={contentEditableRef}
+                        contentEditable
+                        inputMode="text"
+                        onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                        onPaste={handlePaste}
+                        className="flex-1 bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none whitespace-nowrap overflow-x-auto"
+                        data-placeholder="Type a message..."
+                    />
+                     {isRecording && (
+                        <div className="flex items-center justify-between w-full h-10 px-4">
+                            <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                                <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+                            </div>
+                            <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
+                                <Trash2 className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    )}
                 </div>
-              )}
             </div>
-            <div className="flex-1 rounded-lg bg-muted flex items-center relative">
-                 <div
-                    ref={contentEditableRef}
-                    contentEditable
-                    inputMode="text"
-                    onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
-                    onPaste={handlePaste}
-                    className="w-full bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none"
-                    data-placeholder="Type a message..."
-                />
-                {!isRecording && showOutboundTranslate && (
+            
+            <div className="flex items-center gap-1">
+                 {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
                     <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                       {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
                       <span className="sr-only">Translate</span>
                     </Button>
                 )}
-                 {isRecording && (
-                    <div className="flex items-center justify-between w-full h-10 px-4">
-                        <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                            <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
-                        </div>
-                        <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
-                            <Trash2 className="h-5 w-5" />
-                        </Button>
-                    </div>
+                 {!isRecording && contact?.liveTranslationEnabled && (
+                    <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={() => setIsLiveTranslateInfoOpen(true)}>
+                      <Languages className="h-6 w-6 text-primary" />
+                      <span className="sr-only">Live Translation Enabled</span>
+                    </Button>
                 )}
+            
+                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording}>
+                    {isOutboundTranslating ? (
+                         <LoaderCircle className="h-5 w-5 animate-spin" />
+                    ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
+                        <Send className="h-5 w-5" />
+                    ) : isRecording ? (
+                        <Send className="h-5 w-5" />
+                    ) : (
+                        <Mic className="h-5 w-5" />
+                    )}
+                    <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
+                </Button>
             </div>
-
             <input
                 type="file"
                 ref={fileInputRef}
@@ -1044,17 +1126,6 @@ export default function ChatPage() {
                 accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 multiple
             />
-            
-            <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording}>
-                {(newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
-                    <Send className="h-5 w-5" />
-                ) : isRecording ? (
-                    <Send className="h-5 w-5" />
-                ) : (
-                    <Mic className="h-5 w-5" />
-                )}
-                <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
-            </Button>
           </form>
         </footer>
       </div>
@@ -1115,6 +1186,22 @@ export default function ChatPage() {
         onSelectLanguage={handleLanguageSelected}
       />
        <ComingSoonDialog open={isComingSoonOpen} onOpenChange={setIsComingSoonOpen} />
+       <AlertDialog open={isLiveTranslateInfoOpen} onOpenChange={setIsLiveTranslateInfoOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <div className="flex items-center gap-2">
+                <Languages className="h-6 w-6 text-primary" />
+                <AlertDialogTitle>Live Translation is Active</AlertDialogTitle>
+              </div>
+              <AlertDialogDescription className="pt-2">
+                For this chat, all incoming messages will be automatically translated to your preferred language ({getLanguageName(preferredLang)}). When you send a message, it will be automatically translated to {contact?.name}'s language ({getLanguageName(contact?.language)}). You can disable this feature in the future from chat settings.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogAction>Got it</AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+       </AlertDialog>
     </>
   )
 }

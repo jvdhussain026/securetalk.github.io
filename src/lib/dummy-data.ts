@@ -11,6 +11,7 @@ export const contacts: Contact[] = [
     name: 'Zehra',
     language: 'ur',
     avatar: 'https://picsum.photos/seed/avatar1/200/200',
+    liveTranslationEnabled: true,
     messages: [
       { id: 'm1a', text: 'آپ کہاں ہیں؟', timestamp: subHours(now, 1), isSender: false },
       { id: 'm1b', text: 'میں بس پہنچ رہا ہوں۔', timestamp: subMinutes(now, 59), isSender: true },

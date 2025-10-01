@@ -19,7 +19,7 @@ export type Message = {
 };
 
 export type Contact = {
-  id: string;
+  id:string;
   name: string;
   avatar: string;
   messages: Message[];
@@ -27,6 +27,7 @@ export type Contact = {
   status?: 'online' | 'offline';
   bio?: string;
   verified?: boolean;
+  liveTranslationEnabled?: boolean;
 };
 
 export type User = {
