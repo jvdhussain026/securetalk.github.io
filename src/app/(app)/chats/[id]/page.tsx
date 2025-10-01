@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientOnly } from '@/components/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
@@ -33,6 +33,7 @@ import { DeleteMessageDialog } from '@/components/delete-message-dialog'
 import { AnimatePresence, motion } from 'framer-motion'
 import { ChatSearch } from '@/components/chat-search'
 import { LanguageSelectDialog } from '@/components/language-select-dialog'
+import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 
 
 type MessageContentProps = {
@@ -222,6 +223,8 @@ export default function ChatPage() {
   const [isOutboundTranslating, setIsOutboundTranslating] = useState(false);
   const [inputLang, setInputLang] = useState<string | null>(null);
   const debouncedNewMessage = useDebounce(newMessage, 500);
+
+  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -448,6 +451,11 @@ export default function ChatPage() {
   }
 
   const startRecording = async () => {
+    if (isRecording) {
+      stopRecordingAndSend();
+      return;
+    }
+    
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
@@ -619,11 +627,11 @@ export default function ChatPage() {
       setImagePreview({ urls: [avatarUrl], startIndex: 0 });
   };
   
-  const handleAction = (action: 'star' | 'find' | 'mute') => {
+  const handleAction = (action: 'find' | 'mute' | 'theme') => {
     if (action === 'find') {
       setIsSearchOpen(true);
     } else {
-      toast({ title: `Feature coming soon!`, description: `The "${action}" feature is not yet implemented.`});
+      setIsComingSoonOpen(true);
     }
   }
 
@@ -838,15 +846,30 @@ export default function ChatPage() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleAction('star')}>
-                          <Star className="mr-2 h-4 w-4" />
-                          <span>Starred Messages</span>
+                        <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                          <User className="mr-2 h-4 w-4" />
+                          <span>View Profile</span>
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                          <ImageIcon className="mr-2 h-4 w-4" />
+                          <span>Shared Media</span>
                         </DropdownMenuItem>
                         <DropdownMenuItem onSelect={() => handleAction('find')}>
                           <Search className="mr-2 h-4 w-4" />
                           <span>Find</span>
                         </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleAction('mute')}>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => handleAction('theme')}>
+                          <Palette className="mr-2 h-4 w-4" />
+                          <span>Chat Theme</span>
+                        </DropdownMenuItem>
+                         <DropdownMenuItem asChild>
+                           <Link href="/settings/translation">
+                            <Languages className="mr-2 h-4 w-4" />
+                            <span>Translation</span>
+                           </Link>
+                        </DropdownMenuItem>
+                         <DropdownMenuItem onSelect={() => handleAction('mute')}>
                           <BellOff className="mr-2 h-4 w-4" />
                           <span>Mute Notifications</span>
                         </DropdownMenuItem>
@@ -976,42 +999,41 @@ export default function ChatPage() {
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
             <div className="flex items-center gap-2">
               {!isRecording && (
+                <div className="flex items-center gap-1">
                   <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
                       <Plus className="h-6 w-6" />
                       <span className="sr-only">Add media</span>
                   </Button>
+                </div>
               )}
             </div>
-            <div className="flex-1 rounded-lg bg-muted flex items-center">
-                 <div className="relative flex-1">
-                    {isRecording ? (
-                        <div className="flex items-center justify-between w-full h-10 px-4">
-                            <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                                <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                                <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
-                            </div>
-                            <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
-                                <Trash2 className="h-5 w-5" />
-                            </Button>
-                        </div>
-                    ) : (
-                         <div
-                            ref={contentEditableRef}
-                            contentEditable
-                            inputMode="text"
-                            onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
-                            onPaste={handlePaste}
-                            className="w-full bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none"
-                            data-placeholder="Type a message..."
-                        />
-                    )}
-                </div>
-                 {!isRecording && showOutboundTranslate && (
+            <div className="flex-1 rounded-lg bg-muted flex items-center relative">
+                 <div
+                    ref={contentEditableRef}
+                    contentEditable
+                    inputMode="text"
+                    onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                    onPaste={handlePaste}
+                    className="w-full bg-transparent px-4 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto focus-visible:outline-none"
+                    data-placeholder="Type a message..."
+                />
+                {!isRecording && showOutboundTranslate && (
                     <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                       {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
                       <span className="sr-only">Translate</span>
                     </Button>
-                  )}
+                )}
+                 {isRecording && (
+                    <div className="flex items-center justify-between w-full h-10 px-4">
+                        <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                            <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+                        </div>
+                        <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <input
@@ -1092,6 +1114,7 @@ export default function ChatPage() {
         onOpenChange={setIsLangSelectOpen}
         onSelectLanguage={handleLanguageSelected}
       />
+       <ComingSoonDialog open={isComingSoonOpen} onOpenChange={setIsComingSoonOpen} />
     </>
   )
 }

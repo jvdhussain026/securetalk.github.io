@@ -78,7 +78,7 @@ export default function ChatsPage() {
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });
   };
   
-  const handleMenuClick = (action: 'newGroup' | 'newBroadcast' | 'sharedMedia' | 'chatTheme') => {
+  const handleMenuClick = (action: 'newGroup' | 'newBroadcast' ) => {
     setIsModalOpen(true);
   };
 
@@ -122,19 +122,6 @@ export default function ChatsPage() {
                 <Radio className="mr-2" /> New Broadcast
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link href="/profile"><User className="mr-2" /> View Profile</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem onSelect={() => handleMenuClick('sharedMedia')}>
-                <ImageIcon className="mr-2" /> Shared Media
-              </DropdownMenuItem>
-               <DropdownMenuItem onSelect={() => handleMenuClick('chatTheme')}>
-                <Palette className="mr-2" /> Chat Theme
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-               <DropdownMenuItem asChild>
-                <Link href="/settings/translation"><Languages className="mr-2" /> Translation</Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link href="/connections"><UserPlus className="mr-2" /> Connections</Link>
               </DropdownMenuItem>
