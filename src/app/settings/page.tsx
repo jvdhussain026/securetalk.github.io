@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, RefreshCw, Languages } from 'lucide-react'
+import { ArrowLeft, ChevronRight, RefreshCw, Languages, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
@@ -23,6 +23,7 @@ import {
 export default function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
+  const [isResetAlertOpen, setIsResetAlertOpen] = useState(false)
   const router = useRouter()
 
   const settingsItems = [
@@ -46,6 +47,11 @@ export default function SettingsPage() {
     localStorage.removeItem('hasCompletedOnboarding');
     // A full page reload is better to ensure all state is reset
     window.location.href = '/chats';
+  }
+
+  const handleResetData = () => {
+    localStorage.clear();
+    window.location.href = '/';
   }
 
   return (
@@ -80,24 +86,44 @@ export default function SettingsPage() {
           </div>
         </main>
 
-        <footer className="p-4 border-t">
+        <footer className="p-4 border-t space-y-2">
             <AlertDialog open={isAlertOpen} onOpenChange={setIsAlertOpen}>
                 <AlertDialogTrigger asChild>
                     <Button variant="outline" className="w-full">
                         <RefreshCw className="mr-2" />
-                        Reset Onboarding
+                        Reset Onboarding Tour
                     </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
-                        This will restart the app's initial introduction and tour. Are you sure you want to continue?
+                        This will restart the app's interactive tour. Are you sure you want to continue?
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
                         <AlertDialogAction onClick={handleResetOnboarding}>Yes, Reset</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+            <AlertDialog open={isResetAlertOpen} onOpenChange={setIsResetAlertOpen}>
+                <AlertDialogTrigger asChild>
+                    <Button variant="destructive" className="w-full">
+                        <Trash2 className="mr-2" />
+                        Reset All App Data
+                    </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete all application data from your browser, including your profile, onboarding status, and translation preferences.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleResetData}>Yes, Reset Everything</AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
