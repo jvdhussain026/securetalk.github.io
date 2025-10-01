@@ -848,7 +848,7 @@ export default function ChatPage() {
   return (
     <>
       <div className="flex flex-col h-full bg-chat">
-        <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-blue-500 text-white">
+        <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
           <AnimatePresence>
             {isSearchOpen ? (
                <ChatSearch 
@@ -868,7 +868,7 @@ export default function ChatPage() {
                 transition={{ duration: 0.2 }}
                 className="flex items-center gap-2 w-full"
               >
-                  <Button variant="ghost" size="icon" asChild className="text-white hover:bg-white/20 hover:text-white">
+                  <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
                     <Link href="/chats">
                       <ArrowLeft className="h-6 w-6" />
                       <span className="sr-only">Back</span>
@@ -889,7 +889,7 @@ export default function ChatPage() {
                   <div className="ml-auto flex items-center">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="flex items-center gap-1 text-white hover:bg-white/20 hover:text-white">
+                        <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground">
                           <Phone className="h-5 w-5" />
                           <ChevronDown className="h-4 w-4 text-muted-foreground" />
                           <span className="sr-only">Call</span>
@@ -909,7 +909,7 @@ export default function ChatPage() {
 
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-white hover:bg-white/20 hover:text-white">
+                        <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground">
                           <MoreVertical className="h-5 w-5" />
                           <span className="sr-only">More options</span>
                         </Button>
@@ -1072,7 +1072,7 @@ export default function ChatPage() {
                   <span className="sr-only">Add media</span>
               </Button>
             </div>
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted focus-within:ring-2 focus-within:ring-primary/50 transition-shadow">
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted">
                 <div
                     ref={contentEditableRef}
                     contentEditable
@@ -1210,7 +1210,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
-
-    
