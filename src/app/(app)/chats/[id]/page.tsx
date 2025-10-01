@@ -849,103 +849,95 @@ export default function ChatPage() {
     <>
       <div className="flex flex-col h-full bg-chat">
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
+          <div className="flex items-center gap-2 w-full" style={{ display: isSearchOpen ? 'none' : 'flex' }}>
+            <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
+              <Link href="/chats">
+                <ArrowLeft className="h-6 w-6" />
+                <span className="sr-only">Back</span>
+              </Link>
+            </Button>
+            <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
+              <Avatar className="h-10 w-10">
+                <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+              </Avatar>
+            </button>
+            <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 text-left">
+                <h2 className="text-lg font-bold truncate">{contact.name}</h2>
+                {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
+              </div>
+            </button>
+            <div className="ml-auto flex items-center">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground">
+                    <Phone className="h-5 w-5" />
+                    <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                    <span className="sr-only">Call</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => toast({ title: "Starting voice call..." })}>
+                    <Phone className="mr-2 h-4 w-4" />
+                    <span>Voice Call</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => toast({ title: "Starting video call...".toUpperCase() })}>
+                    <Video className="mr-2 h-4 w-4" />
+                    <span>Video Call</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground">
+                    <MoreVertical className="h-5 w-5" />
+                    <span className="sr-only">More options</span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                    <User className="mr-2 h-4 w-4" />
+                    <span>View Profile</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                    <ImageIcon className="mr-2 h-4 w-4" />
+                    <span>Shared Media</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleAction('find')}>
+                    <Search className="mr-2 h-4 w-4" />
+                    <span>Find</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onSelect={() => handleAction('theme')}>
+                    <Palette className="mr-2 h-4 w-4" />
+                    <span>Chat Theme</span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/settings/translation">
+                      <Languages className="mr-2 h-4 w-4" />
+                      <span>Translation</span>
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => handleAction('mute')}>
+                    <BellOff className="mr-2 h-4 w-4" />
+                    <span>Mute Notifications</span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          </div>
           <AnimatePresence>
-            {isSearchOpen ? (
-               <ChatSearch 
+            {isSearchOpen && (
+              <ChatSearch
                 onClose={() => setIsSearchOpen(false)}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
                 matches={searchMatches}
                 currentMatchIndex={currentMatchIndex}
                 onNavigate={handleNavigateMatch}
-               />
-            ) : (
-             <motion.div 
-                key="header-content"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2 w-full"
-              >
-                  <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
-                    <Link href="/chats">
-                      <ArrowLeft className="h-6 w-6" />
-                      <span className="sr-only">Back</span>
-                    </Link>
-                  </Button>
-                  <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
-                    <Avatar className="h-10 w-10">
-                      <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-                    </Avatar>
-                  </button>
-                  <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 text-left">
-                      <h2 className="text-lg font-bold truncate">{contact.name}</h2>
-                      {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
-                    </div>
-                  </button>
-                  <div className="ml-auto flex items-center">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground">
-                          <Phone className="h-5 w-5" />
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                          <span className="sr-only">Call</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => toast({ title: "Starting voice call..." })}>
-                          <Phone className="mr-2 h-4 w-4" />
-                          <span>Voice Call</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => toast({ title: "Starting video call...".toUpperCase() })}>
-                          <Video className="mr-2 h-4 w-4" />
-                          <span>Video Call</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground">
-                          <MoreVertical className="h-5 w-5" />
-                          <span className="sr-only">More options</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
-                          <User className="mr-2 h-4 w-4" />
-                          <span>View Profile</span>
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
-                          <ImageIcon className="mr-2 h-4 w-4" />
-                          <span>Shared Media</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleAction('find')}>
-                          <Search className="mr-2 h-4 w-4" />
-                          <span>Find</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem onSelect={() => handleAction('theme')}>
-                          <Palette className="mr-2 h-4 w-4" />
-                          <span>Chat Theme</span>
-                        </DropdownMenuItem>
-                         <DropdownMenuItem asChild>
-                           <Link href="/settings/translation">
-                            <Languages className="mr-2 h-4 w-4" />
-                            <span>Translation</span>
-                           </Link>
-                        </DropdownMenuItem>
-                         <DropdownMenuItem onSelect={() => handleAction('mute')}>
-                          <BellOff className="mr-2 h-4 w-4" />
-                          <span>Mute Notifications</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-              </motion.div>
+              />
             )}
           </AnimatePresence>
         </header>
@@ -999,7 +991,7 @@ export default function ChatPage() {
                           )}
                           <ClientOnly>
                             <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                              {translatedText && <Languages className="h-3 w-3" />}
+                              {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
                               {message.isEdited && <Pencil className="h-3 w-3" />}
                               <span>{format(new Date(message.timestamp), 'p')}</span>
                               {message.isStarred && !message.isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
