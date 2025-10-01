@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -1056,14 +1057,14 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSendMessage} className="flex items-end gap-2">
-             <div className="flex items-center gap-1">
+            <div className="flex items-center">
                 <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
                     <Plus className="h-6 w-6" />
                     <span className="sr-only">Add media</span>
                 </Button>
-             </div>
+            </div>
 
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted">
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted focus-within:ring-2 focus-within:ring-primary/50 transition-shadow">
                 <div
                     ref={contentEditableRef}
                     contentEditable
@@ -1084,21 +1085,23 @@ export default function ChatPage() {
                         </Button>
                     </div>
                 )}
+                 <div className="flex items-center self-end p-1">
+                    {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
+                        <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
+                        {isOutboundTranslating ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Languages className="h-5 w-5" />}
+                        <span className="sr-only">Translate</span>
+                        </Button>
+                    )}
+                    {!isRecording && contact?.liveTranslationEnabled && (
+                        <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={() => setIsLiveTranslateInfoOpen(true)}>
+                        <Languages className="h-5 w-5 text-primary" />
+                        <span className="sr-only">Live Translation Enabled</span>
+                        </Button>
+                    )}
+                </div>
             </div>
             
-            <div className="flex items-center gap-1">
-                 {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
-                    <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
-                      {isOutboundTranslating ? <LoaderCircle className="h-6 w-6 animate-spin" /> : <Languages className="h-6 w-6" />}
-                      <span className="sr-only">Translate</span>
-                    </Button>
-                )}
-                 {!isRecording && contact?.liveTranslationEnabled && (
-                    <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={() => setIsLiveTranslateInfoOpen(true)}>
-                      <Languages className="h-6 w-6 text-primary" />
-                      <span className="sr-only">Live Translation Enabled</span>
-                    </Button>
-                )}
+            <div className="flex items-center self-end">
                 <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={startRecording}>
                     {isOutboundTranslating ? (
                          <LoaderCircle className="h-5 w-5 animate-spin" />
