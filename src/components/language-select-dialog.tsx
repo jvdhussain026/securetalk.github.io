@@ -51,12 +51,6 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
     onSelectLanguage(selectedLanguage);
   };
   
-  // Use `value` from languages array instead of hardcoded labels
-  const languageMap: { [key: string]: string } = languages.reduce((acc, lang) => {
-    acc[lang.value] = lang.label;
-    return acc;
-  }, {} as { [key: string]: string });
-
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -77,12 +71,10 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
                     <CommandItem
                       key={language.value}
                       value={language.label} // Use label for filtering
-                      asChild
+                      onSelect={() => {
+                        setSelectedLanguage(language.value)
+                      }}
                     >
-                      <button
-                         onClick={() => setSelectedLanguage(language.value)}
-                         className="w-full text-left flex items-center"
-                      >
                          <Check
                             className={cn(
                             "mr-2 h-4 w-4",
@@ -90,7 +82,6 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
                             )}
                         />
                         {language.label}
-                      </button>
                     </CommandItem>
                 ))}
                 </CommandGroup>
