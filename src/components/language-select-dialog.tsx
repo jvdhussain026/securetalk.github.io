@@ -77,10 +77,9 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
                 {languages.map((language) => (
                     <CommandItem
                       key={language.value}
-                      value={language.label}
-                      onSelect={(e) => { e.preventDefault()}} // Prevent CMDK default behavior
-                      onClick={() => {
-                        setSelectedLanguage(language.value)
+                      value={language.value}
+                      onSelect={(currentValue) => {
+                        setSelectedLanguage(currentValue === selectedLanguage ? null : currentValue)
                       }}
                       className="cursor-pointer"
                     >
