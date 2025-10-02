@@ -244,6 +244,8 @@ export default function ChatPage() {
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
   const [isLiveTranslateInfoOpen, setIsLiveTranslateInfoOpen] = useState(false);
 
+  const [enterToSend, setEnterToSend] = useState(false);
+
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -258,6 +260,8 @@ export default function ChatPage() {
     if (lang) {
       setPreferredLang(lang);
     }
+    const enterSetting = localStorage.getItem('enterToSend') === 'true';
+    setEnterToSend(enterSetting);
   }, []);
 
   const handleAutoTranslate = useCallback(async (messageToTranslate: Message) => {
@@ -462,6 +466,13 @@ export default function ChatPage() {
         // Restore on error
         setNewMessage(textToSend);
         setAttachmentsToSend(attachmentsToUpload);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey && enterToSend) {
+      e.preventDefault();
+      handleSendMessage();
     }
   };
 
@@ -712,14 +723,16 @@ export default function ChatPage() {
     }
   }
 
-  const handleInboundTranslate = async () => {
+  const handleInboundTranslate = async (targetLang?: string) => {
     if (!selectedMessage || !selectedMessage.text) {
       toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
       return;
     }
     setIsMessageOptionsOpen(false);
     
-    if (!preferredLang) {
+    const langToUse = targetLang || preferredLang;
+
+    if (!langToUse) {
       setIsLangSelectOpen(true);
       return;
     }
@@ -736,7 +749,7 @@ export default function ChatPage() {
 
     setIsTranslating(selectedMessage.id);
     try {
-      const result = await translateMessage({ text: selectedMessage.text, targetLanguage: preferredLang });
+      const result = await translateMessage({ text: selectedMessage.text, targetLanguage: langToUse });
       if (result.translatedText) {
         setTranslatedMessages(prev => ({...prev, [selectedMessage.id!]: result.translatedText }));
       }
@@ -774,10 +787,8 @@ export default function ChatPage() {
     setPreferredLang(lang);
     localStorage.setItem('preferredLang', lang);
     setIsLangSelectOpen(false);
-    // After selection, trigger translation for the message that was originally selected
     if (selectedMessage) {
-        // A small delay to allow the dialog to close before starting translation
-        setTimeout(() => handleInboundTranslate(), 100);
+        setTimeout(() => handleInboundTranslate(lang), 100);
     }
   };
   
@@ -1091,6 +1102,7 @@ export default function ChatPage() {
                     contentEditable
                     inputMode="text"
                     onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                    onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
                     className="flex-1 bg-transparent px-4 pr-20 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap break-words"
                     data-placeholder="Type a message..."

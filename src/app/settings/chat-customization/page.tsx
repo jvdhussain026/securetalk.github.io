@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useTheme } from 'next-themes';
 import { ArrowLeft, ChevronRight, Palette, Wallpaper, Send, Sun, Moon, Laptop } from 'lucide-react';
@@ -29,6 +29,12 @@ export default function ChatCustomizationPage() {
   const { theme, setTheme } = useTheme();
   const [isThemeDialogOpen, setIsThemeDialogOpen] = useState(false);
   const [selectedTheme, setSelectedTheme] = useState(theme);
+  const [enterToSend, setEnterToSend] = useState(false);
+
+  useEffect(() => {
+    const storedEnterToSend = localStorage.getItem('enterToSend') === 'true';
+    setEnterToSend(storedEnterToSend);
+  }, []);
 
   const handleThemeChange = () => {
     setTheme(selectedTheme || 'system');
@@ -37,6 +43,12 @@ export default function ChatCustomizationPage() {
       title: "Theme updated!",
       description: `App theme changed to ${selectedTheme}.`,
     });
+  };
+  
+  const handleEnterToSendChange = (checked: boolean) => {
+    setEnterToSend(checked);
+    localStorage.setItem('enterToSend', String(checked));
+    toast({ title: `Enter to Send ${checked ? 'Enabled' : 'Disabled'}` });
   };
   
   const getThemeName = (themeValue?: string) => {
@@ -140,7 +152,7 @@ export default function ChatCustomizationPage() {
                                 <p className="text-xs text-muted-foreground">Pressing Enter will send your message.</p>
                             </Label>
                         </div>
-                        <Switch id="enter-to-send" onCheckedChange={(checked) => toast({ title: `Enter to Send ${checked ? 'Enabled' : 'Disabled'}`})} />
+                        <Switch id="enter-to-send" checked={enterToSend} onCheckedChange={handleEnterToSendChange} />
                     </div>
                 </CardContent>
             </Card>
