@@ -2,7 +2,7 @@
 "use client"
 
 import * as React from "react"
-import { Check, Languages } from "lucide-react"
+import { Check } from "lucide-react"
 
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -55,7 +55,12 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
   
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={(isOpen) => {
+        onOpenChange(isOpen);
+        if (!isOpen) {
+            setSelectedLanguage(null);
+        }
+    }}>
       <DialogContent className="max-w-md p-0">
         <DialogHeader className="p-6 pb-4">
           <DialogTitle>Select Preferred Language</DialogTitle>
@@ -72,10 +77,12 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
                 {languages.map((language) => (
                     <CommandItem
                       key={language.value}
-                      value={language.value}
-                      onSelect={(currentValue) => {
-                        setSelectedLanguage(currentValue === selectedLanguage ? null : currentValue)
+                      value={language.label}
+                      onSelect={(e) => { e.preventDefault()}} // Prevent CMDK default behavior
+                      onClick={() => {
+                        setSelectedLanguage(language.value)
                       }}
+                      className="cursor-pointer"
                     >
                          <Check
                             className={cn(
