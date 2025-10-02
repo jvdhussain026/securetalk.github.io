@@ -24,17 +24,17 @@ import {
 import { ScrollArea } from "./ui/scroll-area"
 
 const languages = [
-  { value: "english", label: "English" },
-  { value: "hinglish", label: "Hinglish" },
-  { value: "hindi", label: "Hindi" },
-  { value: "spanish", label: "Spanish" },
-  { value: "french", label: "French" },
-  { value: "german", label: "German" },
-  { value: "chinese", label: "Chinese" },
-  { value: "japanese", label: "Japanese" },
-  { value: "russian", label: "Russian" },
-  { value: "arabic", label: "Arabic" },
-  { value: "portuguese", label: "Portuguese" },
+  { value: "en", label: "English" },
+  { value: "en-IN", label: "Hinglish" },
+  { value: "hi", label: "Hindi" },
+  { value: "es", label: "Spanish" },
+  { value: "fr", label: "French" },
+  { value: "de", label: "German" },
+  { value: "zh", label: "Chinese" },
+  { value: "ja", label: "Japanese" },
+  { value: "ru", label: "Russian" },
+  { value: "ar", label: "Arabic" },
+  { value: "pt", label: "Portuguese" },
 ];
 
 
@@ -45,11 +45,18 @@ type LanguageSelectDialogProps = {
 }
 
 export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: LanguageSelectDialogProps) {
-  const [selectedLanguage, setSelectedLanguage] = React.useState("hinglish")
+  const [selectedLanguage, setSelectedLanguage] = React.useState("en-IN")
 
   const handleSelect = () => {
     onSelectLanguage(selectedLanguage);
   };
+  
+  // Use `value` from languages array instead of hardcoded labels
+  const languageMap: { [key: string]: string } = languages.reduce((acc, lang) => {
+    acc[lang.value] = lang.label;
+    return acc;
+  }, {} as { [key: string]: string });
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -68,19 +75,22 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
                 <CommandGroup>
                 {languages.map((language) => (
                     <CommandItem
-                    key={language.value}
-                    value={language.value}
-                    onSelect={(currentValue) => {
-                        setSelectedLanguage(currentValue === selectedLanguage ? "" : currentValue)
-                    }}
+                      key={language.value}
+                      value={language.label} // Use label for filtering
+                      asChild
                     >
-                    <Check
-                        className={cn(
-                        "mr-2 h-4 w-4",
-                        selectedLanguage === language.value ? "opacity-100" : "opacity-0"
-                        )}
-                    />
-                    {language.label}
+                      <button
+                         onClick={() => setSelectedLanguage(language.value)}
+                         className="w-full text-left flex items-center"
+                      >
+                         <Check
+                            className={cn(
+                            "mr-2 h-4 w-4",
+                            selectedLanguage === language.value ? "opacity-100" : "opacity-0"
+                            )}
+                        />
+                        {language.label}
+                      </button>
                     </CommandItem>
                 ))}
                 </CommandGroup>
