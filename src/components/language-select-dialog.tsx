@@ -45,10 +45,12 @@ type LanguageSelectDialogProps = {
 }
 
 export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: LanguageSelectDialogProps) {
-  const [selectedLanguage, setSelectedLanguage] = React.useState("en-IN")
+  const [selectedLanguage, setSelectedLanguage] = React.useState<string | null>(null);
 
   const handleSelect = () => {
-    onSelectLanguage(selectedLanguage);
+    if (selectedLanguage) {
+      onSelectLanguage(selectedLanguage);
+    }
   };
   
 
@@ -70,9 +72,9 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
                 {languages.map((language) => (
                     <CommandItem
                       key={language.value}
-                      value={language.label} // Use label for filtering
-                      onSelect={() => {
-                        setSelectedLanguage(language.value)
+                      value={language.value}
+                      onSelect={(currentValue) => {
+                        setSelectedLanguage(currentValue === selectedLanguage ? null : currentValue)
                       }}
                     >
                          <Check
