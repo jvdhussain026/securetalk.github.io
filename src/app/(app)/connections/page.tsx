@@ -21,20 +21,27 @@ export default function ConnectionsPage() {
   
   const connectionLink = "https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8";
   
+  const stopScan = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+  };
+
+  // Stop camera stream when component unmounts
+  useEffect(() => {
+    return () => {
+      stopScan();
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  
   useEffect(() => {
     if (stream && videoRef.current) {
       videoRef.current.srcObject = stream;
     }
   }, [stream]);
 
-  // Stop camera stream when component unmounts or tab becomes inactive
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
 
   const handleScanClick = async () => {
     if (typeof navigator.mediaDevices === 'undefined' || !navigator.mediaDevices.getUserMedia) {
@@ -60,14 +67,6 @@ export default function ConnectionsPage() {
       });
     }
   };
-
-  const stopScan = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-    }
-    setStream(null);
-  };
-
 
   const handleCopyLink = () => {
     navigator.clipboard.writeText(connectionLink);

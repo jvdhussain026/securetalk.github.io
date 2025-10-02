@@ -22,8 +22,17 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(callType === 'video');
+  const [stream, setStream] = useState<MediaStream | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+
+  const stopStream = (streamToStop: MediaStream | null) => {
+    if (streamToStop) {
+      streamToStop.getTracks().forEach(track => track.stop());
+    }
+  };
 
   useEffect(() => {
     // Simulate call connection
@@ -51,7 +60,39 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
     };
   }, [status]);
 
+  useEffect(() => {
+    const setupCamera = async () => {
+      stopStream(stream); // Stop any previous stream
+      if (isVideoEnabled) {
+        try {
+          const newStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+          setStream(newStream);
+          if (localVideoRef.current) localVideoRef.current.srcObject = newStream;
+          if (remoteVideoRef.current) remoteVideoRef.current.srcObject = newStream; // Simulate remote stream
+        } catch (error) {
+          console.error("Error accessing camera:", error);
+          setIsVideoEnabled(false); // Fallback to voice call
+        }
+      } else {
+        setStream(null);
+        if (localVideoRef.current) localVideoRef.current.srcObject = null;
+        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
+      }
+    };
+    setupCamera();
+
+    return () => {
+      // This cleanup runs when isVideoEnabled changes or component unmounts
+      if(stream){
+        stopStream(stream);
+      }
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isVideoEnabled]);
+
+
   const handleEndCall = () => {
+    stopStream(stream);
     setStatus('ended');
     setTimeout(() => {
       router.back();
@@ -76,25 +117,6 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
         return null;
     }
   };
-
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const setupCamera = async () => {
-        if(isVideoEnabled) {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-                if (localVideoRef.current) localVideoRef.current.srcObject = stream;
-                if (remoteVideoRef.current) remoteVideoRef.current.srcObject = stream; // Simulate remote stream
-            } catch (error) {
-                console.error("Error accessing camera:", error);
-                setIsVideoEnabled(false); // Fallback to voice call
-            }
-        }
-    }
-    setupCamera();
-  }, [isVideoEnabled]);
 
   const controlButtons = [
     {

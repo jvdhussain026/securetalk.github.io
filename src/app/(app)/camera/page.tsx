@@ -37,11 +37,14 @@ export default function CameraPage() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const [isDiscardDialogOpen, setIsDiscardDialogOpen] = useState(false);
   
-  const setupCamera = async (mode: FacingMode) => {
-    // Stop any existing stream
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
+  const stopStream = (streamToStop: MediaStream | null) => {
+    if (streamToStop) {
+      streamToStop.getTracks().forEach(track => track.stop());
     }
+  };
+
+  const setupCamera = async (mode: FacingMode) => {
+    stopStream(stream);
 
     try {
       const newStream = await navigator.mediaDevices.getUserMedia({ 
@@ -68,9 +71,7 @@ export default function CameraPage() {
 
     return () => {
       // Cleanup stream on component unmount
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
+      stopStream(stream);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [facingMode]);
@@ -97,10 +98,8 @@ export default function CameraPage() {
         setCapturedImage(dataUrl);
 
         // Stop the camera stream
-        if (stream) {
-          stream.getTracks().forEach(track => track.stop());
-          setStream(null);
-        }
+        stopStream(stream);
+        setStream(null);
       }
     }
   };
