@@ -62,7 +62,6 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
 
   useEffect(() => {
     const setupCamera = async () => {
-      stopStream(stream); // Stop any previous stream
       if (isVideoEnabled) {
         try {
           const newStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -74,18 +73,15 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
           setIsVideoEnabled(false); // Fallback to voice call
         }
       } else {
+        stopStream(stream);
         setStream(null);
-        if (localVideoRef.current) localVideoRef.current.srcObject = null;
-        if (remoteVideoRef.current) remoteVideoRef.current.srcObject = null;
       }
     };
     setupCamera();
 
     return () => {
       // This cleanup runs when isVideoEnabled changes or component unmounts
-      if(stream){
-        stopStream(stream);
-      }
+      stopStream(stream);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVideoEnabled]);
