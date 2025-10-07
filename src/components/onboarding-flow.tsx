@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 
 // Step 1: Welcome Screen
@@ -336,7 +337,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         }
     };
 
-    const handleNameNext = async (name: string) => {
+    const handleNameNext = (name: string) => {
         if (name.trim().length < 2) {
              toast({ variant: "destructive", title: "Please enter a valid name."});
              return;
@@ -346,23 +347,22 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             return;
         }
         setIsSavingProfile(true);
-        try {
-            const userRef = doc(firestore, 'users', user.uid);
-            await setDoc(userRef, {
-                id: user.uid,
-                name: name,
-                email: user.email, // Can be null for anonymous
-                username: name.replace(/\s+/g, '').toLowerCase(), // basic username
-                profilePictureUrl: `https://picsum.photos/seed/${user.uid}/200/200`,
-                bio: ''
-            });
-            nextStep();
-        } catch (error) {
-            console.error("Failed to save user profile:", error);
-            toast({ variant: "destructive", title: "Profile creation failed."});
-        } finally {
-            setIsSavingProfile(false);
-        }
+        const userRef = doc(firestore, 'users', user.uid);
+        const profileData = {
+            id: user.uid,
+            name: name,
+            email: user.email, // Can be null for anonymous
+            username: name.replace(/\s+/g, '').toLowerCase(), // basic username
+            profilePictureUrl: `https://picsum.photos/seed/${user.uid}/200/200`,
+            bio: ''
+        };
+
+        setDocumentNonBlocking(userRef, profileData, { merge: true });
+
+        // This is an optimistic update. We proceed to the next step.
+        // The error will be caught by the global error handler if it fails.
+        setIsSavingProfile(false);
+        nextStep();
     }
     
     const handleTermsNext = () => {
@@ -374,27 +374,25 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     };
 
     const steps = [
-        <WelcomeStep onNext={nextStep} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} />,
-        <NameStep onNext={handleNameNext} isSaving={isSavingProfile} />,
-        <TermsStep onNext={handleTermsNext} onBack={prevStep} />,
-        <NotificationsStep onNext={handleNotificationsNext} onBack={prevStep} />,
+        <WelcomeStep key="welcome" onNext={nextStep} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} />,
+        <NameStep key="name" onNext={handleNameNext} isSaving={isSavingProfile} />,
+        <TermsStep key="terms" onNext={handleTermsNext} onBack={prevStep} />,
+        <NotificationsStep key="notifs" onNext={handleNotificationsNext} onBack={prevStep} />,
     ];
 
     return (
         <div className="h-full w-full fixed inset-0 z-[60] bg-background">
             <AnimatePresence mode="wait">
-                {step < steps.length && (
-                    <motion.div
-                        key={step}
-                        initial={{ opacity: 0, x: 50 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        exit={{ opacity: 0, x: -50 }}
-                        transition={{ duration: 0.3, ease: 'easeInOut' }}
-                        className="h-full w-full"
-                    >
-                        {steps[step]}
-                    </motion.div>
-                )}
+                <motion.div
+                    key={step}
+                    initial={{ opacity: 0, x: 50 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -50 }}
+                    transition={{ duration: 0.3, ease: 'easeInOut' }}
+                    className="h-full w-full"
+                >
+                    {steps[step]}
+                </motion.div>
             </AnimatePresence>
         </div>
     );
@@ -413,3 +411,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
+
+    
