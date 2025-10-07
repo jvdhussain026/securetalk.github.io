@@ -232,24 +232,24 @@ export default function ChatPage() {
   }, [currentUserId, contactId]);
 
   useEffect(() => {
-    const ensureChatDocument = async () => {
-        if (!firestore || !chatId || !currentUserId || !contactId) return;
-
-        const chatDocRef = doc(firestore, 'chats', chatId);
-        const chatDoc = await getDocumentNonBlocking(chatDocRef);
-
+    const ensureChatDocument = () => {
+      if (!firestore || !chatId || !currentUserId || !contactId) return;
+  
+      const chatDocRef = doc(firestore, 'chats', chatId);
+      getDocumentNonBlocking(chatDocRef).then(chatDoc => {
         if (!chatDoc?.exists()) {
-            const chatData = {
-                participants: {
-                  [currentUserId]: true,
-                  [contactId]: true,
-                },
-                createdAt: serverTimestamp(),
-            };
-            await setDocumentNonBlocking(chatDocRef, chatData, { merge: true });
+          const chatData = {
+            participants: {
+              [currentUserId]: true,
+              [contactId]: true,
+            },
+            createdAt: serverTimestamp(),
+          };
+          setDocumentNonBlocking(chatDocRef, chatData, { merge: true });
         }
+      });
     };
-
+  
     ensureChatDocument();
   }, [firestore, chatId, currentUserId, contactId]);
 
@@ -1245,3 +1245,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
