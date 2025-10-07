@@ -49,17 +49,16 @@ export default function ChatsPage() {
   const { toast } = useToast()
 
   useEffect(() => {
-    if (!isUserLoading && user) {
-        // A simple check in localStorage. A more robust solution might use Firestore.
-        const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.uid}`);
-        if (hasCompletedOnboarding !== 'true') {
-            setIsOnboardingComplete(false);
-        }
-    } else if (!isUserLoading && !user) {
-        // If there's no user and loading is finished, they need to go through onboarding.
+    if (typeof window !== 'undefined') {
+      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user?.uid}`);
+      if (hasCompletedOnboarding !== 'true') {
         setIsOnboardingComplete(false);
+      } else {
+        setIsOnboardingComplete(true);
+      }
     }
-  }, [user, isUserLoading]);
+  }, [user]);
+
 
   const handleOnboardingComplete = () => {
     if (user) {
@@ -98,7 +97,7 @@ export default function ChatsPage() {
 
   const isLoading = isUserLoading || areContactsLoading;
 
-  if (isLoading) {
+  if (isLoading && isOnboardingComplete) {
       return (
           <div className="h-full flex items-center justify-center">
               <LoaderCircle className="animate-spin h-8 w-8 text-primary" />

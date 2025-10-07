@@ -324,23 +324,17 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         if (!auth) return;
         setIsSigningIn(true);
         try {
-            await signInAnonymously(auth);
-            // The onAuthStateChanged listener in FirebaseProvider will handle the user state change
-            // and the UI will proceed once the user object is available.
+            const userCredential = await signInAnonymously(auth);
+            if (userCredential.user) {
+              setIsSigningIn(false);
+              nextStep();
+            }
         } catch (error) {
             console.error("Anonymous sign-in failed:", error);
             toast({ variant: 'destructive', title: "Authentication Failed", description: "Could not start a secure session."});
             setIsSigningIn(false);
         }
     };
-    
-    // This effect will trigger when the user is successfully signed in and move to the next step
-    useEffect(() => {
-        if(user && step === 0) {
-            setIsSigningIn(false);
-            nextStep();
-        }
-    }, [user, step]);
 
     const handleNameNext = async (name: string) => {
         if (name.trim().length < 2) {
