@@ -3,12 +3,14 @@
 
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { getDoc, doc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
 import type { Contact } from '@/lib/types';
 import { setDocumentNonBlocking } from '@/firebase';
+import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
+
 
 function Connect() {
     const router = useRouter();
@@ -21,8 +23,8 @@ function Connect() {
             const newContactId = searchParams.get('userId');
 
             if (!firestore || !currentUser) {
-                toast({ variant: 'destructive', title: 'You must be logged in to add connections.' });
-                router.push('/chats');
+                // This might happen if the user isn't fully authenticated yet.
+                // We'll let the user state listener handle redirects.
                 return;
             }
 
@@ -38,53 +40,56 @@ function Connect() {
                 return;
             }
 
-            try {
-                // Get the new contact's user data
-                const newContactDocRef = doc(firestore, 'users', newContactId);
-                const newContactDoc = await getDoc(newContactDocRef);
+            // Get the new contact's user data
+            const newContactDocRef = doc(firestore, 'users', newContactId);
+            const newContactDoc = await getDocumentNonBlocking(newContactDocRef);
 
-                if (!newContactDoc.exists()) {
-                    toast({ variant: 'destructive', title: 'User not found.' });
-                    router.push('/chats');
-                    return;
-                }
-                const newContactData = newContactDoc.data() as Contact;
-
-                // Add the new contact to the current user's contact list
-                const currentUserContactsRef = doc(firestore, 'users', currentUser.uid, 'contacts', newContactId);
-                setDocumentNonBlocking(currentUserContactsRef, {
-                    id: newContactData.id,
-                    name: newContactData.name,
-                    avatar: newContactData.profilePictureUrl,
-                    bio: newContactData.bio,
-                    language: newContactData.language || 'en',
-                }, {});
-
-                // Now, add the current user to the new contact's contact list
-                const currentUserData = (await getDoc(doc(firestore, 'users', currentUser.uid))).data() as Contact;
-                const newContactUserContactsRef = doc(firestore, 'users', newContactId, 'contacts', currentUser.uid);
-                setDocumentNonBlocking(newContactUserContactsRef, {
-                    id: currentUser.uid,
-                    name: currentUserData.name,
-                    avatar: currentUserData.profilePictureUrl,
-                    bio: currentUserData.bio,
-                    language: currentUserData.language || 'en',
-                }, {});
-
-
-                toast({
-                    title: 'Connection added!',
-                    description: `You are now connected with ${newContactData.name}.`,
-                });
-
-                // Redirect to the new chat
-                router.push(`/chats/${newContactId}`);
-
-            } catch (error) {
-                console.error("Error connecting users:", error);
-                toast({ variant: 'destructive', title: 'Failed to add connection.', description: 'Please try again.' });
+            if (!newContactDoc || !newContactDoc.exists()) {
+                toast({ variant: 'destructive', title: 'User not found.' });
                 router.push('/chats');
+                return;
             }
+            const newContactData = newContactDoc.data() as Contact;
+
+            // Add the new contact to the current user's contact list
+            const currentUserContactsRef = doc(firestore, 'users', currentUser.uid, 'contacts', newContactId);
+            setDocumentNonBlocking(currentUserContactsRef, {
+                id: newContactData.id,
+                name: newContactData.name,
+                avatar: newContactData.avatar,
+                bio: newContactData.bio,
+                language: newContactData.language || 'en',
+            }, { merge: true });
+
+            // Now, get the current user's data to add to the other user's list
+            const currentUserDocRef = doc(firestore, 'users', currentUser.uid);
+            const currentUserDoc = await getDocumentNonBlocking(currentUserDocRef);
+            
+            if (!currentUserDoc || !currentUserDoc.exists()) {
+                 toast({ variant: 'destructive', title: 'Could not find your profile.' });
+                 router.push('/chats');
+                 return;
+            }
+            const currentUserData = currentUserDoc.data() as Contact;
+
+            // Add the current user to the new contact's contact list
+            const newContactUserContactsRef = doc(firestore, 'users', newContactId, 'contacts', currentUser.uid);
+            setDocumentNonBlocking(newContactUserContactsRef, {
+                id: currentUser.uid,
+                name: currentUserData.name,
+                avatar: currentUserData.avatar,
+                bio: currentUserData.bio,
+                language: currentUserData.language || 'en',
+            }, { merge: true });
+
+
+            toast({
+                title: 'Connection added!',
+                description: `You are now connected with ${newContactData.name}.`,
+            });
+
+            // Redirect to the new chat
+            router.push(`/chats/${newContactId}`);
         };
 
         connectUsers();
