@@ -56,7 +56,7 @@ function Connect() {
             setDocumentNonBlocking(currentUserContactsRef, {
                 id: newContactData.id,
                 name: newContactData.name,
-                avatar: newContactData.avatar,
+                avatar: newContactData.profilePictureUrl,
                 bio: newContactData.bio,
                 language: newContactData.language || 'en',
             }, { merge: true });
@@ -77,7 +77,7 @@ function Connect() {
             setDocumentNonBlocking(newContactUserContactsRef, {
                 id: currentUser.uid,
                 name: currentUserData.name,
-                avatar: currentUserData.avatar,
+                avatar: currentUserData.profilePictureUrl,
                 bio: currentUserData.bio,
                 language: currentUserData.language || 'en',
             }, { merge: true });
