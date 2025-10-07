@@ -3,7 +3,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Camera, QrCode, ScanLine, Link as LinkIcon, Share2, RefreshCw, Copy } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ArrowLeft, Camera, QrCode, ScanLine, Link as LinkIcon, Share2, RefreshCw, Copy, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -11,15 +12,19 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
+import { useFirebase } from '@/firebase';
 
 export default function ConnectionsPage() {
   const { toast } = useToast();
+  const { user } = useFirebase();
+  const router = useRouter();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const [stream, setStream] = useState<MediaStream | null>(null);
   const [showQr, setShowQr] = useState(false);
-  
-  const connectionLink = "https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8";
+  const [connectionLink, setConnectionLink] = useState('');
+  const [qrCodeUrl, setQrCodeUrl] = useState('');
+  const [pastedLink, setPastedLink] = useState('');
   
   const stopScan = () => {
     if (stream) {
@@ -27,6 +32,14 @@ export default function ConnectionsPage() {
       setStream(null);
     }
   };
+
+  useEffect(() => {
+    if (user?.uid) {
+        const link = `${window.location.origin}/connect?userId=${user.uid}`;
+        setConnectionLink(link);
+        setQrCodeUrl(`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(link)}`);
+    }
+  }, [user]);
 
   // Stop camera stream when component unmounts
   useEffect(() => {
@@ -57,6 +70,9 @@ export default function ConnectionsPage() {
       const newStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
       setStream(newStream);
       setHasCameraPermission(true);
+      // Add QR scanning logic here in a real app
+      toast({ title: 'QR scanning not implemented.', description: 'Please use the connection link for now.' });
+
     } catch (error) {
       console.error('Error accessing camera:', error);
       setHasCameraPermission(false);
@@ -88,12 +104,33 @@ export default function ConnectionsPage() {
   }
 
   const handleGenerateNew = () => {
-    toast({ title: 'New Code Generated', description: 'Your one-time QR code and link have been updated.' });
+    // In a real app, this would invalidate the old link and generate a new one-time token.
+    toast({ title: 'New Code Generated', description: 'Your QR code and link have been updated.' });
     setShowQr(false); // Hide the new QR until user taps again
   }
   
-  const handlePasteLink = () => {
-      toast({ title: "Connecting...", description: "Feature to connect via link is not implemented yet." });
+  const handlePasteLink = async () => {
+      try {
+        const link = await navigator.clipboard.readText();
+        setPastedLink(link);
+        handleConnectWithLink(link);
+      } catch (error) {
+        toast({ variant: "destructive", title: "Could not read clipboard", description: "Please paste the link manually."})
+      }
+  }
+
+  const handleConnectWithLink = (link: string) => {
+    try {
+        const url = new URL(link);
+        const userId = url.searchParams.get('userId');
+        if (userId) {
+            router.push(`/connect?userId=${userId}`);
+        } else {
+            throw new Error("Invalid link");
+        }
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Invalid Connection Link', description: 'The link you are trying to use is not valid.' });
+    }
   }
 
   return (
@@ -147,9 +184,10 @@ export default function ConnectionsPage() {
                     )}
                  </div>
                  <div className="flex items-center gap-2">
-                    <Input placeholder="Or paste connection link..." />
-                    <Button onClick={handlePasteLink}>Connect</Button>
+                    <Input placeholder="Or paste connection link..." value={pastedLink} onChange={e => setPastedLink(e.target.value)} />
+                    <Button onClick={() => handleConnectWithLink(pastedLink)}>Connect</Button>
                  </div>
+                 <Button variant="outline" className="w-full" onClick={handlePasteLink}>Paste from clipboard</Button>
               </CardContent>
             </Card>
           </TabsContent>
@@ -164,10 +202,11 @@ export default function ConnectionsPage() {
                   className="relative aspect-square w-full bg-muted rounded-lg flex items-center justify-center cursor-pointer"
                   onClick={() => setShowQr(!showQr)}
                 >
-                  {showQr ? (
+                  {!user ? (
+                      <LoaderCircle className="h-8 w-8 animate-spin" />
+                  ) : showQr ? (
                     <div className="text-center p-4">
-                        <Image src="https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=https://secure.talk/connect/a1b2-c3d4-e5f6-g7h8" alt="Your QR Code" width={400} height={400} className="p-4" data-ai-hint="qr code"/>
-                        <p className="text-xs text-muted-foreground mt-2">This is a dummy QR code for UI purposes only.</p>
+                        <Image src={qrCodeUrl} alt="Your QR Code" width={400} height={400} className="p-4" data-ai-hint="qr code"/>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -179,9 +218,9 @@ export default function ConnectionsPage() {
                  <p className="text-xs text-center text-muted-foreground">Tap to share the link with your contact to start a conversation with your friend.</p>
                 <div className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                     <LinkIcon className="h-5 w-5 text-muted-foreground flex-shrink-0 ml-2"/>
-                    <p className="text-sm truncate text-muted-foreground flex-1">{connectionLink}</p>
-                    <Button variant="ghost" size="icon" onClick={handleCopyLink}><Copy className="w-5 h-5"/></Button>
-                    <Button size="icon" onClick={handleShare}><Share2 className="w-5 h-5"/></Button>
+                    <p className="text-sm truncate text-muted-foreground flex-1">{connectionLink || 'Generating...'}</p>
+                    <Button variant="ghost" size="icon" onClick={handleCopyLink} disabled={!connectionLink}><Copy className="w-5 h-5"/></Button>
+                    <Button size="icon" onClick={handleShare} disabled={!connectionLink}><Share2 className="w-5 h-5"/></Button>
                  </div>
                  <Button variant="outline" className="w-full" onClick={handleGenerateNew}>
                     <RefreshCw className="mr-2" />

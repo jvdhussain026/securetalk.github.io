@@ -9,10 +9,9 @@ import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import Image from 'next/image'
 
-import { contacts as allContacts } from '@/lib/dummy-data'
-import type { Message, Attachment } from '@/lib/types'
+import type { Message, Attachment, Contact } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { useCollection } from '@/firebase/firestore/use-collection';
+import { useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useFirebase } from '@/firebase/provider';
 import { translateMessage } from '@/ai/flows/translate-message-flow'
 import { detectLanguage } from '@/ai/flows/detect-language-flow'
@@ -44,6 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { addDocumentNonBlocking } from '@/firebase'
 
 
 type MessageContentProps = {
@@ -129,7 +129,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   
   const renderAudio = (attachment: Attachment) => (
      <div key={attachment.url} className="mt-1 w-full max-w-xs min-w-[250px]">
-       <AudioPlayer src={attachment.url} isSender={message.isSender} />
+       <AudioPlayer src={attachment.url} isSender={message.senderId === useFirebase().user?.uid} />
     </div>
   );
   
@@ -180,7 +180,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   );
 }
 
-function ReplyPreview({ message, isSender }: { message?: Message, isSender: boolean }) {
+function ReplyPreview({ message, isSender, contactName }: { message?: Message, isSender: boolean, contactName?: string }) {
     if (!message) return null;
     return (
         <div className={cn(
@@ -188,7 +188,7 @@ function ReplyPreview({ message, isSender }: { message?: Message, isSender: bool
             isSender ? "bg-black/10 border-white/20" : "bg-muted border-border"
         )}>
             <p className={cn("font-bold", isSender ? "text-primary-foreground/80" : "text-primary")}>
-                {message.isSender ? "You" : allContacts.find(c => c.id === useParams().id)?.name}
+                {message.senderId === useFirebase().user?.uid ? "You" : contactName}
             </p>
             <p className={cn("truncate", isSender ? "text-primary-foreground/80" : "text-muted-foreground")}>
                 {message.text || "Media"}
@@ -214,23 +214,27 @@ export default function ChatPage() {
   const params = useParams();
   const { firestore, user } = useFirebase();
 
-  // SIMULATED: This should come from your auth context.
-  const currentUserId = user?.uid || 'currentUser'; 
+  const currentUserId = user?.uid;
   const contactId = params.id as string;
+
+  const contactDocRef = useMemoFirebase(() => {
+    if (!firestore || !contactId) return null;
+    return doc(firestore, 'users', contactId);
+  }, [firestore, contactId]);
   
-  const contact = allContacts.find((c) => c.id === contactId);
+  const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
   const chatId = useMemo(() => {
-    if (!contactId) return null;
+    if (!currentUserId || !contactId) return null;
     return createChatId(currentUserId, contactId);
   }, [currentUserId, contactId]);
 
-  const messagesQuery = useMemo(() => {
+  const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !chatId) return null;
     return query(collection(firestore, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
   }, [firestore, chatId]);
 
-  const { data: messages, isLoading } = useCollection<Message>(messagesQuery);
+  const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
   const [newMessage, setNewMessage] = useState('')
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
@@ -289,7 +293,7 @@ export default function ChatPage() {
       return;
     }
     
-    if (!messageToTranslate.isSender && messageToTranslate.text) {
+    if (messageToTranslate.senderId !== currentUserId && messageToTranslate.text) {
       setIsTranslating(messageToTranslate.id);
       try {
         const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: preferredLang });
@@ -302,7 +306,7 @@ export default function ChatPage() {
         setIsTranslating(null);
       }
     }
-  }, [preferredLang, contact?.liveTranslationEnabled, translatedMessages, isTranslating]);
+  }, [preferredLang, contact?.liveTranslationEnabled, translatedMessages, isTranslating, currentUserId]);
 
   
   useEffect(() => {
@@ -394,7 +398,7 @@ export default function ChatPage() {
     const textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
 
-    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId || !firestore) return;
+    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId || !firestore || !currentUserId) return;
 
     setNewMessage('');
     setAttachmentsToSend([]);
@@ -436,25 +440,14 @@ export default function ChatPage() {
     }
 
     // Add message to Firestore
-    try {
-        await addDoc(collection(firestore, "chats", chatId, "messages"), {
-            text: finalText,
-            attachments: attachmentsToUpload,
-            senderId: currentUserId,
-            timestamp: serverTimestamp(),
-            replyTo: replyingTo?.id || null,
-        });
-    } catch (error) {
-        console.error("Error sending message: ", error);
-        toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to send message.",
-        });
-        // Restore on error
-        setNewMessage(textToSend);
-        setAttachmentsToSend(attachmentsToUpload);
-    }
+    const collectionRef = collection(firestore, "chats", chatId, "messages");
+    addDocumentNonBlocking(collectionRef, {
+        text: finalText,
+        attachments: attachmentsToUpload,
+        senderId: currentUserId,
+        timestamp: serverTimestamp(),
+        replyTo: replyingTo?.id || null,
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -561,7 +554,7 @@ export default function ChatPage() {
 
   const stopRecordingAndSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (mediaRecorderRef.current && isRecording && chatId && firestore) {
+    if (mediaRecorderRef.current && isRecording && chatId && firestore && currentUserId) {
       
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
@@ -575,23 +568,15 @@ export default function ChatPage() {
               size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
             };
             
-            try {
-                await addDoc(collection(firestore, "chats", chatId, "messages"), {
-                    text: '',
-                    attachments: [newAttachment],
-                    senderId: currentUserId,
-                    timestamp: serverTimestamp(),
-                    replyTo: replyingTo?.id || null,
-                });
-                setReplyingTo(null);
-            } catch (error) {
-                console.error("Error sending voice message: ", error);
-                toast({
-                    variant: "destructive",
-                    title: "Error",
-                    description: "Failed to send voice message.",
-                });
-            }
+            const collectionRef = collection(firestore, "chats", chatId, "messages");
+            addDocumentNonBlocking(collectionRef, {
+                text: '',
+                attachments: [newAttachment],
+                senderId: currentUserId,
+                timestamp: serverTimestamp(),
+                replyTo: replyingTo?.id || null,
+            });
+            setReplyingTo(null);
         }
         reader.readAsDataURL(audioBlob);
         
@@ -682,8 +667,6 @@ export default function ChatPage() {
   const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
     if (!selectedMessage) return;
     // Firestore deletion logic would go here.
-    // For now, we filter UI
-    // setMessages(messages.filter(msg => msg.id !== selectedMessage.id));
     toast({
       title: "Message Deleted",
       description: `The message has been deleted ${forEveryone ? 'for everyone' : 'for you'}. (UI only)`,
@@ -713,15 +696,16 @@ export default function ChatPage() {
   }
 
   const handleInboundTranslate = async (targetLang?: string) => {
+    const langToUse = targetLang || preferredLang;
+
     if (!selectedMessage || !selectedMessage.text) {
       toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
+      setIsMessageOptionsOpen(false);
       return;
     }
     
-    const langToUse = targetLang || preferredLang;
-
     if (!langToUse) {
-      setIsLangSelectOpen(true);
+      setIsLangSelectOpen(true); // Re-open selection if no language is set
       return;
     }
     
@@ -778,7 +762,6 @@ export default function ChatPage() {
     localStorage.setItem('preferredLang', lang);
     setIsLangSelectOpen(false);
     if (selectedMessage) {
-        // We pass the new lang directly to avoid race condition with state update
         setTimeout(() => handleInboundTranslate(lang), 100);
     }
   };
@@ -831,6 +814,15 @@ export default function ChatPage() {
     }
   };
 
+  const isLoading = areMessagesLoading || isContactLoading;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col h-full items-center justify-center">
+        <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    )
+  }
 
   if (!contact) {
     return (
@@ -988,7 +980,7 @@ export default function ChatPage() {
                       message.senderId === currentUserId ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
                        (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
                     )}>
-                        <ReplyPreview message={repliedToMessage} isSender={message.senderId === currentUserId} />
+                        <ReplyPreview message={repliedToMessage} isSender={message.senderId === currentUserId} contactName={contact.name} />
                         <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
                           {isTranslating === message.id ? (
                             <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
@@ -1017,7 +1009,7 @@ export default function ChatPage() {
                             <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.senderId === currentUserId ? "text-primary-foreground/70" : "text-muted-foreground")}>
                               {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
                               {message.isEdited && <Pencil className="h-3 w-3" />}
-                              {message.timestamp && <span>{format(new Date(message.timestamp.toString()), 'p')}</span>}
+                              {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
                               {message.isStarred && message.senderId !== currentUserId && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
                             </div>
                           </ClientOnly>
@@ -1227,5 +1219,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    

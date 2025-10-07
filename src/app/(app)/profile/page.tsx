@@ -1,9 +1,9 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Camera, BadgeCheck } from 'lucide-react'
+import { ArrowLeft, Camera, BadgeCheck, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,19 +11,56 @@ import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase'
+import { doc, setDoc } from 'firebase/firestore'
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
 export default function ProfilePage() {
   const { toast } = useToast()
-  const [name, setName] = useState('Javed Hussain')
-  const [bio, setBio] = useState('Digital nomad, coffee enthusiast, and lifelong learner. Exploring the world one city at a time.')
-  const [avatar, setAvatar] = useState('https://picsum.photos/seed/user/200/200')
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const { firestore, user } = useFirebase();
 
-  const handleSave = () => {
+  const userDocRef = useMemoFirebase(() => {
+      if (!firestore || !user) return null;
+      return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc(userDocRef);
+
+  const [name, setName] = useState('')
+  const [bio, setBio] = useState('')
+  const [avatar, setAvatar] = useState('')
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  useEffect(() => {
+    if (userProfile) {
+        setName(userProfile.name || '');
+        setBio(userProfile.bio || '');
+        setAvatar(userProfile.profilePictureUrl || '');
+    }
+  }, [userProfile]);
+
+  const handleSave = async () => {
+    if (!userDocRef) {
+        toast({ variant: "destructive", title: "Error", description: "User not authenticated."});
+        return;
+    }
+    setIsSaving(true);
+    const profileData = {
+        name,
+        bio,
+        profilePictureUrl: avatar,
+    };
+    
+    // Using non-blocking update
+    setDocumentNonBlocking(userDocRef, profileData, { merge: true });
+
+    // Optimistic UI update
     toast({
       title: 'Profile Updated',
       description: 'Your changes have been saved successfully.',
-    })
+    });
+    setIsSaving(false);
   }
   
   const handleAvatarChange = () => {
@@ -34,9 +71,18 @@ export default function ProfilePage() {
   }
 
   const handleAvatarClick = () => {
-    setImagePreview({ urls: [avatar], startIndex: 0 });
+    if (avatar) {
+      setImagePreview({ urls: [avatar], startIndex: 0 });
+    }
   };
 
+  if (isProfileLoading) {
+      return (
+          <div className="flex h-full items-center justify-center">
+              <LoaderCircle className="h-8 w-8 animate-spin" />
+          </div>
+      )
+  }
 
   return (
       <>
@@ -77,17 +123,21 @@ export default function ProfilePage() {
             <Label htmlFor="name">Name</Label>
             <div className="relative">
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" />
-              <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />
+              {/* This could be shown for verified users in the future */}
+              {/* <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" /> */}
             </div>
           </div>
           <div>
             <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
+            <Textarea id="bio" placeholder="Tell us a little about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
           </div>
         </div>
         
         <div className="pt-4">
-          <Button className="w-full" onClick={handleSave}>Save Changes</Button>
+          <Button className="w-full" onClick={handleSave} disabled={isSaving}>
+              {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : null}
+              {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
       </main>
     </div>

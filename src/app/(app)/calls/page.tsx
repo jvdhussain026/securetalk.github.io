@@ -1,14 +1,11 @@
 
 'use client'
 
-import React, { useState, useMemo } from 'react'
+import React from 'react'
 import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 
-import { callHistory } from '@/lib/dummy-call-data'
 import type { CallRecord } from '@/lib/dummy-call-data'
-import type { Contact } from '@/lib/types'
-import { contacts } from '@/lib/dummy-data'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -21,6 +18,8 @@ import { NavLink } from '@/components/nav-link'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { ClientOnly } from '@/components/client-only'
+import type { Contact } from '@/lib/types';
+
 
 function formatCallTimestamp(timestamp: Date): string {
   if (isToday(timestamp)) {
@@ -54,19 +53,23 @@ const CallIcon = ({ type, direction }: { type: 'voice' | 'video', direction: 'in
 
 
 export default function CallsPage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [selectedContact, setSelectedContact] = useState<Contact | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
-  const [searchQuery, setSearchQuery] = useState('')
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
+  const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null)
+  const [isSheetOpen, setIsSheetOpen] = React.useState(false)
+  const [searchQuery, setSearchQuery] = React.useState('')
+  const [imagePreview, setImagePreview] = React.useState<ImagePreviewState | null>(null);
   const { toast } = useToast()
+
+  const callHistory: any[] = [];
   
   const handleContactSelect = (call: CallRecord) => {
-    const contact = contacts.find(c => c.id === call.contactId);
-    if (contact) {
-      setSelectedContact(contact)
-      setIsSheetOpen(true)
-    }
+    // This needs to be updated to fetch real contact data
+    // const contact = contacts.find(c => c.id === call.contactId);
+    // if (contact) {
+    //   setSelectedContact(contact)
+    //   setIsSheetOpen(true)
+    // }
+     toast({title: 'Feature coming soon'})
   }
   
   const handleAvatarClick = (call: CallRecord) => {
@@ -80,35 +83,46 @@ export default function CallsPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
   
-  const filteredCallHistory = useMemo(() => {
+  const filteredCallHistory = React.useMemo(() => {
     return callHistory.filter(call =>
       call.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [searchQuery]);
 
-  const renderCallList = (calls: CallRecord[]) => (
-    <div>
-      {calls.map((call) => (
-        <div key={call.id} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
-          <div className="flex items-center gap-4 p-4">
-             <button onClick={() => handleAvatarClick(call)}>
-                <Avatar className="h-12 w-12">
-                    <AvatarImage src={call.avatar} alt={call.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{call.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-            </button>
-            <button onClick={() => handleContactSelect(call)} className="flex-1 overflow-hidden text-left">
-              <p className="font-bold truncate text-base">{call.name}</p>
-              <ClientOnly>
-                <p className="text-sm text-muted-foreground whitespace-nowrap">{formatCallTimestamp(call.timestamp)}</p>
-              </ClientOnly>
-            </button>
-            <CallIcon type={call.type} direction={call.direction} />
-          </div>
+  const renderCallList = (calls: CallRecord[]) => {
+    if (calls.length === 0) {
+      return (
+        <div className="text-center p-8">
+            <PhoneMissed className="mx-auto h-16 w-16 text-muted-foreground/50" />
+            <h2 className="mt-4 text-xl font-semibold">No Call History</h2>
+            <p className="mt-2 text-muted-foreground">Your call history will appear here.</p>
         </div>
-      ))}
-    </div>
-  )
+      );
+    }
+    return (
+      <div>
+        {calls.map((call) => (
+          <div key={call.id} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
+            <div className="flex items-center gap-4 p-4">
+               <button onClick={() => handleAvatarClick(call)}>
+                  <Avatar className="h-12 w-12">
+                      <AvatarImage src={call.avatar} alt={call.name} data-ai-hint="person portrait" />
+                      <AvatarFallback>{call.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+              </button>
+              <button onClick={() => handleContactSelect(call)} className="flex-1 overflow-hidden text-left">
+                <p className="font-bold truncate text-base">{call.name}</p>
+                <ClientOnly>
+                  <p className="text-sm text-muted-foreground whitespace-nowrap">{formatCallTimestamp(call.timestamp)}</p>
+                </ClientOnly>
+              </button>
+              <CallIcon type={call.type} direction={call.direction} />
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
 
   return (
     <>
@@ -136,7 +150,7 @@ export default function CallsPage() {
         </header>
 
         <main className="flex-1 flex flex-col overflow-y-auto">
-          <Tabs defaultValue="all" className="flex flex-col">
+          <Tabs defaultValue="all" className="flex flex-col flex-1">
             <TabsList className="shrink-0">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="missed">Missed</TabsTrigger>

@@ -1,4 +1,5 @@
 
+import type { Timestamp } from 'firebase/firestore';
 
 export type Attachment = {
   type: 'image' | 'video' | 'audio' | 'document';
@@ -11,18 +12,17 @@ export type Message = {
   id: string;
   text?: string;
   attachments?: Attachment[];
-  timestamp: Date;
-  isSender: boolean;
+  timestamp: Timestamp; // Using Firestore Timestamp
+  senderId: string;
   isStarred?: boolean;
   isEdited?: boolean;
   replyTo?: string; // ID of the message being replied to
 };
 
 export type Contact = {
-  id:string;
+  id:string; // This will be the user's UID
   name: string;
   avatar: string;
-  messages: Message[];
   language: string;
   status?: 'online' | 'offline';
   bio?: string;
@@ -30,10 +30,11 @@ export type Contact = {
   liveTranslationEnabled?: boolean;
 };
 
-export type User = {
-    id: string;
+export type UserProfile = {
+    uid: string;
     name: string;
     avatar: string;
+    bio: string;
 }
 
 export type NearbyUser = {
@@ -43,5 +44,3 @@ export type NearbyUser = {
   bio?: string;
   connectionStatus: 'none' | 'requested' | 'connected';
 };
-
-    

@@ -8,13 +8,21 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, Wifi, Users, ArrowRight, ArrowLeft } from 'lucide-react';
+import { ShieldCheck, Wifi, Users, ArrowRight, ArrowLeft, LoaderCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useFirebase } from '@/firebase';
+import { signInAnonymously } from 'firebase/auth';
+import { doc, setDoc } from 'firebase/firestore';
 
 
 // Step 1: Welcome Screen
-const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
+const WelcomeStep = ({ onNext, onAnonymousSignIn, isSigningIn }: { onNext: () => void; onAnonymousSignIn: () => void; isSigningIn: boolean; }) => {
+    
+    const handleGetStarted = () => {
+        onAnonymousSignIn();
+    };
+
     return (
         <div className="h-full w-full flex flex-col justify-between p-8 text-white text-center bg-gradient-to-br from-blue-600 via-blue-800 to-gray-900">
              <motion.div
@@ -38,7 +46,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
                         <Users className="w-6 h-6 mt-1 flex-shrink-0 text-blue-300" />
                         <div>
                             <h3 className="font-semibold">Decentralized Freedom</h3>
-                            <p className="text-sm text-blue-200">Host your own server for complete control over your data and conversations.</p>
+                            <p className="text-sm text-blue-200">Connect directly without central servers for most features.</p>
                         </div>
                     </div>
                 </div>
@@ -48,8 +56,10 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
                  animate={{ opacity: 1, y: 0 }}
                  transition={{ duration: 0.5, delay: 0.8 }}
             >
-                <Button size="lg" className="w-full" onClick={onNext}>
-                    Let's Go <ArrowRight className="ml-2" />
+                <Button size="lg" className="w-full" onClick={handleGetStarted} disabled={isSigningIn}>
+                    {isSigningIn && <LoaderCircle className="animate-spin mr-2" />}
+                    {isSigningIn ? 'Securing your session...' : 'Let\'s Go'} 
+                    {!isSigningIn && <ArrowRight className="ml-2" />}
                 </Button>
             </motion.div>
         </div>
@@ -57,7 +67,7 @@ const WelcomeStep = ({ onNext }: { onNext: () => void }) => {
 };
 
 // Step 2: Name Input
-const NameStep = ({ onNext }: { onNext: (name: string) => void }) => {
+const NameStep = ({ onNext, isSaving }: { onNext: (name: string) => void; isSaving: boolean; }) => {
     const [name, setName] = useState('');
     return (
         <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
@@ -68,8 +78,9 @@ const NameStep = ({ onNext }: { onNext: (name: string) => void }) => {
                     <Label htmlFor="name">Display Name</Label>
                     <Input id="name" placeholder="E.g., Javed Hussain" value={name} onChange={(e) => setName(e.target.value)} />
                 </div>
-                <Button size="lg" className="w-full" onClick={() => onNext(name)} disabled={name.length < 2}>
-                    Next
+                <Button size="lg" className="w-full" onClick={() => onNext(name)} disabled={name.length < 2 || isSaving}>
+                    {isSaving && <LoaderCircle className="animate-spin mr-2" />}
+                    {isSaving ? 'Creating Profile...' : 'Next'}
                 </Button>
             </div>
         </div>
@@ -301,21 +312,63 @@ export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
 // Main Onboarding Flow Component
 export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const [step, setStep] = useState(0);
-    const [userName, setUserName] = useState('');
+    const { auth, firestore, user } = useFirebase();
     const { toast } = useToast();
+    const [isSigningIn, setIsSigningIn] = useState(false);
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
     
     const nextStep = () => setStep(s => s + 1);
     const prevStep = () => setStep(s => s - 1);
 
-    const handleNameNext = (name: string) => {
+    const handleAnonymousSignIn = async () => {
+        if (!auth) return;
+        setIsSigningIn(true);
+        try {
+            await signInAnonymously(auth);
+            // The onAuthStateChanged listener in FirebaseProvider will handle the user state change
+            // and the UI will proceed once the user object is available.
+        } catch (error) {
+            console.error("Anonymous sign-in failed:", error);
+            toast({ variant: 'destructive', title: "Authentication Failed", description: "Could not start a secure session."});
+            setIsSigningIn(false);
+        }
+    };
+    
+    // This effect will trigger when the user is successfully signed in and move to the next step
+    useEffect(() => {
+        if(user && step === 0) {
+            setIsSigningIn(false);
+            nextStep();
+        }
+    }, [user, step]);
+
+    const handleNameNext = async (name: string) => {
         if (name.trim().length < 2) {
              toast({ variant: "destructive", title: "Please enter a valid name."});
              return;
         }
-        setUserName(name);
-        // Here you would typically save the user's name to your state/backend
-        localStorage.setItem('userName', name);
-        nextStep();
+        if (!user || !firestore) {
+            toast({ variant: "destructive", title: "Authentication error. Please restart."});
+            return;
+        }
+        setIsSavingProfile(true);
+        try {
+            const userRef = doc(firestore, 'users', user.uid);
+            await setDoc(userRef, {
+                id: user.uid,
+                name: name,
+                email: user.email, // Can be null for anonymous
+                username: name.replace(/\s+/g, '').toLowerCase(), // basic username
+                profilePictureUrl: `https://picsum.photos/seed/${user.uid}/200/200`,
+                bio: ''
+            });
+            nextStep();
+        } catch (error) {
+            console.error("Failed to save user profile:", error);
+            toast({ variant: "destructive", title: "Profile creation failed."});
+        } finally {
+            setIsSavingProfile(false);
+        }
     }
     
     const handleTermsNext = () => {
@@ -323,13 +376,12 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     }
 
     const handleNotificationsNext = () => {
-        // This is the final step of this flow.
         onComplete();
     };
 
     const steps = [
-        <WelcomeStep onNext={nextStep} />,
-        <NameStep onNext={handleNameNext} />,
+        <WelcomeStep onNext={nextStep} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} />,
+        <NameStep onNext={handleNameNext} isSaving={isSavingProfile} />,
         <TermsStep onNext={handleTermsNext} onBack={prevStep} />,
         <NotificationsStep onNext={handleNotificationsNext} onBack={prevStep} />,
     ];
@@ -367,5 +419,3 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
-
-    

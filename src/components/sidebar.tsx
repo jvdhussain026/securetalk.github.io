@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link'
 import {
   User,
@@ -23,6 +23,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { ComingSoonDialog } from './coming-soon-dialog';
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 type SidebarProps = {
   open: boolean
@@ -32,7 +34,14 @@ type SidebarProps = {
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
-  const userAvatar = "https://picsum.photos/seed/user/200/200";
+  const { firestore, user } = useFirebase();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc(userDocRef);
 
   const menuItems = [
     { icon: User, label: 'My Profile', href: '/profile' },
@@ -45,7 +54,9 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   ]
   
   const handleAvatarClick = () => {
-    setImagePreview({ urls: [userAvatar], startIndex: 0 });
+    if (userProfile?.profilePictureUrl) {
+      setImagePreview({ urls: [userProfile.profilePictureUrl], startIndex: 0 });
+    }
   };
 
 
@@ -60,13 +71,13 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         <div className="p-6 text-center bg-muted rounded-b-2xl shadow-inner">
             <button onClick={handleAvatarClick} className="mx-auto">
                 <Avatar className="h-20 w-20 mx-auto mb-4 border-2 border-white/50">
-                    <AvatarImage src={userAvatar} alt="User" data-ai-hint="person portrait"/>
-                    <AvatarFallback>JH</AvatarFallback>
+                    <AvatarImage src={userProfile?.profilePictureUrl} alt={userProfile?.name} data-ai-hint="person portrait"/>
+                    <AvatarFallback>{userProfile?.name?.charAt(0) || 'U'}</AvatarFallback>
                 </Avatar>
             </button>
              <div className="flex items-center justify-center gap-2">
-                <p className="font-bold text-xl drop-shadow-sm text-foreground">Javed Hussain</p>
-                <BadgeCheck className="h-6 w-6 text-primary drop-shadow-sm" />
+                <p className="font-bold text-xl drop-shadow-sm text-foreground">{userProfile?.name || 'User'}</p>
+                {/* <BadgeCheck className="h-6 w-6 text-primary drop-shadow-sm" /> */}
               </div>
         </div>
         <div className="flex-1 space-y-2 p-4">
