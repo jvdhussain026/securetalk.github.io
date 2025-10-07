@@ -234,10 +234,13 @@ export default function ChatPage() {
   useEffect(() => {
     const ensureChatDocument = () => {
       if (!firestore || !chatId || !currentUserId || !contactId) return;
-  
+
       const chatDocRef = doc(firestore, 'chats', chatId);
+      
+      // Use non-blocking read
       getDocumentNonBlocking(chatDocRef).then(chatDoc => {
-        if (!chatDoc?.exists()) {
+        // If the document doesn't exist, create it
+        if (chatDoc && !chatDoc.exists()) {
           const chatData = {
             participants: {
               [currentUserId]: true,
@@ -245,11 +248,12 @@ export default function ChatPage() {
             },
             createdAt: serverTimestamp(),
           };
+          // Use non-blocking write
           setDocumentNonBlocking(chatDocRef, chatData, { merge: true });
         }
       });
     };
-  
+
     ensureChatDocument();
   }, [firestore, chatId, currentUserId, contactId]);
 
@@ -1245,5 +1249,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
