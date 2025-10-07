@@ -3,13 +3,12 @@
 
 import { Suspense, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { getDoc, doc } from 'firebase/firestore';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import type { Contact } from '@/lib/types';
 import { setDocumentNonBlocking } from '@/firebase';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
+import { doc } from 'firebase/firestore';
 
 
 function Connect() {
@@ -49,6 +48,7 @@ function Connect() {
                 router.push('/chats');
                 return;
             }
+            
             const newContactData = newContactDoc.data();
             
             if (!newContactData) {
@@ -66,6 +66,8 @@ function Connect() {
                 avatar: newContactData.profilePictureUrl,
                 bio: newContactData.bio,
                 language: newContactData.language || 'en',
+                verified: newContactData.verified || false,
+                liveTranslationEnabled: newContactData.liveTranslationEnabled || false,
             }, { merge: true });
 
             toast({
@@ -91,7 +93,7 @@ function Connect() {
 
 export default function ConnectPage() {
     return (
-        <Suspense fallback={<div>Loading...</div>}>
+        <Suspense fallback={<div className="h-full w-full flex flex-col items-center justify-center gap-4"><LoaderCircle className="h-10 w-10 animate-spin text-primary" /><p className="text-muted-foreground">Loading...</p></div>}>
             <Connect />
         </Suspense>
     )
