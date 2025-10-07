@@ -1,30 +1,20 @@
 /**
- * @file Firebase Security Rules for Secure Talk application.
+ * @file Firestore Security Rules for Secure Talk application.
  *
- * @corePhilosophy
- * This ruleset enforces a strict user-ownership model for user profiles and contacts,
- * and a shared access model for chats and messages. Only authenticated users can
- * access resources, and access is limited based on ownership or participation.
+ * @core_philosophy This ruleset enforces a strict user-ownership model for user profiles and contacts.
+ *  Chat access is controlled through a participant list, allowing only listed users to read and write messages.
  *
- * @dataStructure
- * - /users/{userId}: Stores user profile information, accessible only by the user.
- * - /chats/{chatId}: Stores chat session information, accessible to chat participants.
- * - /chats/{chatId}/messages/{messageId}: Stores messages within a chat, accessible to chat participants.
- * - /users/{userId}/contacts/{contactId}: Stores contact information for a user, accessible only by the user.
+ * @data_structure The data is organized hierarchically:
+ *   - `/users/{userId}`: Stores user profile information, accessible only by the user themselves.
+ *   - `/chats/{chatId}`: Stores chat session information.
+ *   - `/chats/{chatId}/messages/{messageId}`: Stores messages within a chat session, accessible only to chat participants.
+ *   - `/users/{userId}/contacts/{contactId}`: Stores contact information for a user, accessible only by the user themselves.
  *
- * @keySecurityDecisions
- * - User listing is explicitly denied to prevent unauthorized access to user data.
- * - Chats and messages are secured using a shared access model based on the `participants` map in the chat document.
- * - All write operations require authentication.
- * - Data validation is minimized in the prototyping phase to allow for rapid iteration.  Only authorization-critical
- *   fields are validated to ensure data consistency.
+ * @key_security_decisions
+ *   - User listing is disallowed to protect user privacy.
+ *   - Chat access is controlled via a `participants` map on the chat document. Only users listed in this map can read or write to the chat or its messages.
  *
- * @denormalizationForAuthorization
- * - The `chats/{chatId}` document contains a `participants` map, allowing efficient
- *   authorization checks for messages within the chat.
- *
- * @structuralSegregation
- * - No structural segregation is used in this data model.
+ * @denormalization_for_authorization The `Message` entity does not require denormalization because its parent `Chat` entity already contains access control information.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -33,114 +23,121 @@ service cloud.firestore {
     /**
      * @description Controls access to user profile information.
      * @path /users/{userId}
-     * @allow (create) - User with ID 'user123' can create their profile.
-     *     - request.auth.uid == 'user123' and request.resource.data.id == 'user123'
-     * @allow (get, update, delete) - User with ID 'user123' can read, update, and delete their own profile.
-     *     - request.auth.uid == 'user123'
-     * @deny (create) - User with ID 'user456' cannot create a profile with ID 'user123'.
-     *     - request.auth.uid == 'user456' and request.resource.data.id == 'user123'
-     * @deny (get, update, delete) - User with ID 'user456' cannot read, update, or delete user 'user123's profile.
-     *     - request.auth.uid == 'user456'
-     * @principle Enforces document ownership for writes.
+     * @allow (get) Authenticated user can read their own profile.
+     * @allow (create) Authenticated user can create their own profile.
+     * @allow (update) Authenticated user can update their own profile.
+     * @allow (delete) Authenticated user can delete their own profile.
+     * @deny (get) Authenticated user cannot read another user's profile.
+     * @deny (create) Authenticated user cannot create a profile with a mismatched ID.
+     * @deny (update) Authenticated user cannot update another user's profile.
+     * @deny (delete) Authenticated user cannot delete another user's profile.
+     * @principle Enforces document ownership for reads and writes.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-      allow get: if isOwner(userId);
+      // Allow the user to read their own profile.
+      allow get: if isSignedIn() && isOwner(userId);
+
+      // Allow the user to create their own profile, but enforce that the ID matches the authenticated user's ID.
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+
+      // Allow the user to update their own profile, but ensure that the ID remains immutable.
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.id == request.resource.data.id;
+
+      // Allow the user to delete their own profile.
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+
+      // Disallow listing all users.
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
     }
 
     /**
      * @description Controls access to chat session information.
      * @path /chats/{chatId}
-     * @allow (create) - Any authenticated user can create a new chat.
-     *     - request.auth != null
-     * @allow (get, list) - Any authenticated user can read or list a chat if they are a participant.
-     *     - request.auth.uid in resource.data.participants
-     * @allow (update, delete) - Only a participant can update or delete a chat
-     *     - resource.data.participants[request.auth.uid] == true && resource != null
-     * @deny (create) - Unauthenticated user cannot create a chat
-     *     - request.auth == null
-     * @deny (get, list) - User 'user456' cannot read or list a chat if they are not a participant.
-     *     - request.auth.uid == 'user456' and resource.data.participants['user456'] == null
-     * @principle Enforces shared access for reads and owner-only access for writes.
+     * @allow (get) Authenticated user who is a participant can read the chat.
+     * @allow (create) Authenticated user can create a chat they are participating in.
+     * @allow (update) Authenticated user who is a participant can update the chat.
+     * @allow (delete) Authenticated user who is a participant can delete the chat.
+     * @deny (get) Authenticated user who is not a participant cannot read the chat.
+     * @deny (create) Authenticated user cannot create a chat they are not participating in.
+     * @deny (update) Authenticated user who is not a participant cannot update the chat.
+     * @deny (delete) Authenticated user who is not a participant cannot delete the chat.
+     * @principle Enforces shared access based on the participants list.
      */
     match /chats/{chatId} {
-      function isParticipant() {
-        return request.auth.uid in resource.data.participants;
-      }
-      function isExistingParticipant() {
-        return isParticipant() && resource != null;
-      }
-      allow get, list: if true;
-      allow create: if isSignedIn();
-      allow update: if isExistingParticipant();
-      allow delete: if isExistingParticipant();
+      allow get: if isSignedIn() && isChatParticipant(chatId);
+      allow create: if isSignedIn() && request.resource.data.participants[request.auth.uid] == true;
+      allow update: if isSignedIn() && isExistingChatParticipant(chatId);
+      allow delete: if isSignedIn() && isExistingChatParticipant(chatId);
+      allow list: if false; // Listing chats not supported
     }
 
     /**
      * @description Controls access to messages within a chat session.
      * @path /chats/{chatId}/messages/{messageId}
-     * @allow (create) - Any participant of the chat can create a message.
-     *     - get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true
-     * @allow (get, list) - Any participant of the chat can read/list the messages.
-     *     - get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true
-     * @allow (update, delete) - Only a participant can update or delete a message
-     *     - get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true && resource != null
-     * @deny (create) - User 'user456' cannot create a message in chat 'chat123' if they are not a participant.
-     *     - request.auth.uid == 'user456' and get(/databases/$(database)/documents/chats/chat123).data.participants['user456'] == null
-     * @deny (get, list) - User 'user456' cannot read/list messages in chat 'chat123' if they are not a participant.
-     *     - request.auth.uid == 'user456' and get(/databases/$(database)/documents/chats/chat123).data.participants['user456'] == null
-     * @principle Enforces shared access based on chat membership.
+     * @allow (get) Authenticated user who is a participant in the chat can read the message.
+     * @allow (create) Authenticated user who is a participant in the chat can create a message.
+     * @allow (update) Authenticated user who is a participant in the chat can update the message.
+     * @allow (delete) Authenticated user who is a participant in the chat can delete the message.
+     * @deny (get) Authenticated user who is not a participant in the chat cannot read the message.
+     * @deny (create) Authenticated user who is not a participant in the chat cannot create a message.
+     * @deny (update) Authenticated user who is not a participant in the chat cannot update the message.
+     * @deny (delete) Authenticated user who is not a participant in the chat cannot delete the message.
+     * @principle Enforces shared access to messages based on chat participants.
      */
     match /chats/{chatId}/messages/{messageId} {
-      function isChatParticipant(chatId) {
-        return get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
-      }
-       function isExistingChatParticipant(chatId) {
-        return isChatParticipant(chatId) && resource != null;
-      }
-      allow get, list: if true;
+      allow get: if isSignedIn() && isChatParticipant(chatId);
       allow create: if isSignedIn() && isChatParticipant(chatId);
-      allow update: if isExistingChatParticipant(chatId);
-      allow delete: if isExistingChatParticipant(chatId);
+      allow update: if isSignedIn() && isChatParticipant(chatId) && resource != null;
+      allow delete: if isSignedIn() && isChatParticipant(chatId) && resource != null;
+      allow list: if isSignedIn() && isChatParticipant(chatId);
     }
 
     /**
      * @description Controls access to contact information for a user.
      * @path /users/{userId}/contacts/{contactId}
-     * @allow (create) - User with ID 'user123' can create a contact in their contact list.
-     *     - request.auth.uid == 'user123' and request.resource.data.userId == 'user123'
-     * @allow (get, list, update, delete) - User with ID 'user123' can read, list, update, and delete contacts in their contact list.
-     *     - request.auth.uid == 'user123'
-     * @deny (create) - User with ID 'user456' cannot create a contact for user 'user123'.
-     *     - request.auth.uid == 'user456' and request.resource.data.userId == 'user123'
-     * @deny (get, list, update, delete) - User with ID 'user456' cannot read, list, update, or delete contacts for user 'user123'.
-     *     - request.auth.uid == 'user456'
-     * @principle Enforces document ownership for writes.
+     * @allow (get) Authenticated user can read their own contact.
+     * @allow (create) Authenticated user can create their own contact.
+     * @allow (update) Authenticated user can update their own contact.
+     * @allow (delete) Authenticated user can delete their own contact.
+     * @deny (get) Authenticated user cannot read another user's contact.
+     * @deny (create) Authenticated user cannot create a contact with a mismatched user ID.
+     * @deny (update) Authenticated user cannot update another user's contact.
+     * @deny (delete) Authenticated user cannot delete another user's contact.
+     * @principle Enforces document ownership for contacts.
      */
     match /users/{userId}/contacts/{contactId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-      allow get, list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isSignedIn() && isExistingOwner(userId) && resource.data.userId == request.resource.data.userId;
+      allow delete: if isSignedIn() && isExistingOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
     }
 
+    // --- Helper Functions ---
+
+    // Returns true if the user is signed in.
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    // Returns true if the authenticated user's ID matches the provided user ID.
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Returns true if the authenticated user's ID matches the provided user ID, and the document exists.
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // Returns true if the authenticated user is a participant in the chat.
+    function isChatParticipant(chatId) {
+      return get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
+    }
+
+      // Returns true if the authenticated user is a participant in the chat and the chat exists.
+    function isExistingChatParticipant(chatId) {
+        return isChatParticipant(chatId) && resource != null;
     }
   }
 }
