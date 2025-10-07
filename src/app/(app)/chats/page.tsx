@@ -5,7 +5,8 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
 import { format } from 'date-fns'
-import { collection, query, where, getDocs } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc } from 'firebase/firestore'
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -49,6 +50,46 @@ export default function ChatsPage() {
   const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
 
   const { toast } = useToast()
+
+  useEffect(() => {
+    if (user && firestore) {
+      const demoAddedKey = `demo_contacts_added_${user.uid}`;
+      const hasAddedDemoContacts = localStorage.getItem(demoAddedKey);
+      if (hasAddedDemoContacts !== 'true') {
+        addDemoContacts(user.uid);
+        localStorage.setItem(demoAddedKey, 'true');
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, firestore]);
+  
+  const addDemoContacts = (currentUserId: string) => {
+    if (!firestore) return;
+    const demoContacts = [
+        {
+            id: 'support-javed',
+            name: 'Javed Hussain',
+            avatar: 'https://picsum.photos/seed/user/200/200',
+            bio: 'Lead developer of Secure Talk. Here to help!',
+            language: 'en',
+            verified: true,
+            liveTranslationEnabled: true,
+        },
+        {
+            id: 'demo-sarah',
+            name: 'Sarah Miller',
+            avatar: 'https://picsum.photos/seed/user2/200/200',
+            bio: 'Let\'s test out the chat features!',
+            language: 'es',
+            liveTranslationEnabled: false,
+        }
+    ];
+
+    demoContacts.forEach(contact => {
+        const contactRef = doc(firestore, 'users', currentUserId, 'contacts', contact.id);
+        setDocumentNonBlocking(contactRef, contact, { merge: true });
+    });
+  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -230,3 +271,5 @@ export default function ChatsPage() {
     </>
   )
 }
+
+    

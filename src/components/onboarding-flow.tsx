@@ -321,33 +321,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const nextStep = () => setStep(s => s + 1);
     const prevStep = () => setStep(s => s - 1);
 
-    const addDemoContacts = (currentUserId: string) => {
-        const demoContacts = [
-            {
-                id: 'support-javed',
-                name: 'Javed Hussain',
-                avatar: 'https://picsum.photos/seed/user/200/200',
-                bio: 'Lead developer of Secure Talk. Here to help!',
-                language: 'en',
-                verified: true,
-                liveTranslationEnabled: true,
-            },
-            {
-                id: 'demo-sarah',
-                name: 'Sarah Miller',
-                avatar: 'https://picsum.photos/seed/user2/200/200',
-                bio: 'Let\'s test out the chat features!',
-                language: 'es',
-                liveTranslationEnabled: false,
-            }
-        ];
-
-        demoContacts.forEach(contact => {
-            const contactRef = doc(firestore, 'users', currentUserId, 'contacts', contact.id);
-            setDocumentNonBlocking(contactRef, contact, { merge: true });
-        });
-    }
-
     const handleAnonymousSignIn = async () => {
         if (!auth) return;
         setIsSigningIn(true);
@@ -385,7 +358,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         };
 
         setDocumentNonBlocking(userRef, profileData, { merge: true });
-        addDemoContacts(user.uid);
 
         // This is an optimistic update. We proceed to the next step.
         // The error will be caught by the global error handler if it fails.
@@ -439,3 +411,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
+
+    
