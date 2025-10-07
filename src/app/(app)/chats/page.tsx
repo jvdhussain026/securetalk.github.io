@@ -34,7 +34,7 @@ export default function ChatsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
-  const [isOnboardingComplete, setIsOnboardingComplete] = useState(true); // Assume complete initially
+  const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
   const [showTour, setShowTour] = useState(false);
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
@@ -50,14 +50,19 @@ export default function ChatsPage() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user?.uid}`);
-      if (hasCompletedOnboarding !== 'true') {
+      if (user) {
+        const hasCompletedOnboarding = localStorage.getItem(`onboarding_completed_${user.uid}`);
+        if (hasCompletedOnboarding !== 'true') {
+          setIsOnboardingComplete(false);
+        } else {
+          setIsOnboardingComplete(true);
+        }
+      } else if (!isUserLoading) {
+        // If there's no user and we're not loading, assume new user
         setIsOnboardingComplete(false);
-      } else {
-        setIsOnboardingComplete(true);
       }
     }
-  }, [user]);
+  }, [user, isUserLoading]);
 
 
   const handleOnboardingComplete = () => {
@@ -154,7 +159,7 @@ export default function ChatsPage() {
           </DropdownMenu>
         </header>
         <main className="flex-1 overflow-y-auto">
-          {filteredContacts.length === 0 ? (
+          {filteredContacts.length === 0 && !isLoading ? (
               <div className="text-center p-8">
                   <MessageSquare className="mx-auto h-16 w-16 text-muted-foreground/50" />
                   <h2 className="mt-4 text-xl font-semibold">No Chats Yet</h2>
