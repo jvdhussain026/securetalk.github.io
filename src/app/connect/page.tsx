@@ -49,12 +49,19 @@ function Connect() {
                 router.push('/chats');
                 return;
             }
-            const newContactData = newContactDoc.data() as Contact;
+            const newContactData = newContactDoc.data();
+            
+            if (!newContactData) {
+                toast({ variant: 'destructive', title: 'Could not read contact data.' });
+                router.push('/chats');
+                return;
+            }
+
 
             // Add the new contact to the current user's contact list
             const currentUserContactsRef = doc(firestore, 'users', currentUser.uid, 'contacts', newContactId);
             setDocumentNonBlocking(currentUserContactsRef, {
-                id: newContactData.id,
+                id: newContactId,
                 name: newContactData.name,
                 avatar: newContactData.profilePictureUrl,
                 bio: newContactData.bio,
