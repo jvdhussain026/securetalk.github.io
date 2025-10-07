@@ -6,7 +6,7 @@ import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc } from "firebase/firestore";
 import Image from 'next/image'
 
 import type { Message, Attachment, Contact } from '@/lib/types'
@@ -44,6 +44,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { addDocumentNonBlocking } from '@/firebase'
+import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads'
+import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
 
 type MessageContentProps = {
@@ -229,6 +231,26 @@ export default function ChatPage() {
     return createChatId(currentUserId, contactId);
   }, [currentUserId, contactId]);
 
+  useEffect(() => {
+    const ensureChatDocument = async () => {
+        if (!firestore || !chatId || !currentUserId || !contactId) return;
+
+        const chatDocRef = doc(firestore, 'chats', chatId);
+        const chatDoc = await getDocumentNonBlocking(chatDocRef);
+
+        if (!chatDoc?.exists()) {
+            const chatData = {
+                participants: [currentUserId, contactId],
+                createdAt: serverTimestamp(),
+            };
+            await setDocumentNonBlocking(chatDocRef, chatData, { merge: true });
+        }
+    };
+
+    ensureChatDocument();
+  }, [firestore, chatId, currentUserId, contactId]);
+
+
   const messagesQuery = useMemoFirebase(() => {
     if (!firestore || !chatId) return null;
     return query(collection(firestore, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
@@ -385,15 +407,6 @@ export default function ChatPage() {
     }
   }, [currentMatchIndex, searchMatches]);
   
-  const handleNavigateMatch = (direction: 'next' | 'prev') => {
-    if (searchMatches.length === 0) return;
-    if (direction === 'next') {
-      setCurrentMatchIndex((prev) => (prev + 1) % searchMatches.length);
-    } else {
-      setCurrentMatchIndex((prev) => (prev - 1 + searchMatches.length) % searchMatches.length);
-    }
-  };
-
   const handleSendMessage = async () => {
     const textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
@@ -846,6 +859,16 @@ export default function ChatPage() {
   const cancelReply = () => {
     setReplyingTo(null);
   }
+  
+  const handleNavigateMatch = (direction: 'next' | 'prev') => {
+    if (matches.length === 0) return;
+    if (direction === 'next') {
+      setCurrentMatchIndex((prevIndex) => (prevIndex + 1) % matches.length);
+    } else {
+      setCurrentMatchIndex((prevIndex) => (prevIndex - 1 + matches.length) % matches.length);
+    }
+  };
+
 
   return (
     <>
@@ -1219,3 +1242,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
