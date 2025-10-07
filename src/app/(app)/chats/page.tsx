@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase'
 import type { Contact } from '@/lib/types'
+import { lastMessages } from '@/lib/dummy-data'
+
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
@@ -168,7 +170,7 @@ export default function ChatsPage() {
           ) : (
             <div>
               {filteredContacts.map((contact) => {
-                const lastMessage = undefined; // We'll add this later
+                const lastMessage = (lastMessages as any)[contact.id];
                 return (
                   <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
                     <Link href={`/chats/${contact.id}`} className="flex items-center gap-4 p-4">
@@ -186,7 +188,7 @@ export default function ChatsPage() {
                           </div>
                           {lastMessage && (
                             <ClientOnly>
-                              <p className="text-xs text-muted-foreground whitespace-nowrap">{/*format(lastMessage.timestamp, 'p')*/}</p>
+                              <p className="text-xs text-muted-foreground whitespace-nowrap">{format(lastMessage.timestamp, 'p')}</p>
                             </ClientOnly>
                           )}
                         </div>
