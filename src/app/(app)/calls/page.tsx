@@ -5,7 +5,7 @@ import React from 'react'
 import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 
-import type { CallRecord } from '@/lib/dummy-call-data'
+import { callHistory, type CallRecord } from '@/lib/dummy-call-data'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,8 +60,6 @@ export default function CallsPage() {
   const [imagePreview, setImagePreview] = React.useState<ImagePreviewState | null>(null);
   const { toast } = useToast()
 
-  const callHistory: any[] = [];
-  
   const handleContactSelect = (call: CallRecord) => {
     // This needs to be updated to fetch real contact data
     // const contact = contacts.find(c => c.id === call.contactId);

@@ -14,6 +14,36 @@ export type CallRecord = {
   status: 'online' | 'offline';
 };
 
-// This file is now deprecated and will be removed in a future step.
-// All data is now being fetched from Firestore.
-export const callHistory: CallRecord[] = [];
+// This file is for demo purposes.
+export const callHistory: CallRecord[] = [
+    {
+        id: '1',
+        contactId: 'javed-hussain',
+        name: 'Javed Hussain',
+        avatar: 'https://picsum.photos/seed/user/200/200',
+        timestamp: subMinutes(now, 5),
+        type: 'video',
+        direction: 'missed',
+        status: 'online',
+    },
+    {
+        id: '2',
+        contactId: 'sarah-miller',
+        name: 'Sarah Miller',
+        avatar: 'https://picsum.photos/seed/user2/200/200',
+        timestamp: subHours(now, 2),
+        type: 'voice',
+        direction: 'outgoing',
+        status: 'offline',
+    },
+     {
+        id: '3',
+        contactId: 'javed-hussain',
+        name: 'Javed Hussain',
+        avatar: 'https://picsum.photos/seed/user/200/200',
+        timestamp: subDays(now, 1),
+        type: 'voice',
+        direction: 'incoming',
+        status: 'online',
+    },
+];
