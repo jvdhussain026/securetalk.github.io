@@ -240,7 +240,10 @@ export default function ChatPage() {
 
         if (!chatDoc?.exists()) {
             const chatData = {
-                participants: [currentUserId, contactId],
+                participants: {
+                  [currentUserId]: true,
+                  [contactId]: true,
+                },
                 createdAt: serverTimestamp(),
             };
             await setDocumentNonBlocking(chatDocRef, chatData, { merge: true });
@@ -861,11 +864,11 @@ export default function ChatPage() {
   }
   
   const handleNavigateMatch = (direction: 'next' | 'prev') => {
-    if (matches.length === 0) return;
+    if (searchMatches.length === 0) return;
     if (direction === 'next') {
-      setCurrentMatchIndex((prevIndex) => (prevIndex + 1) % matches.length);
+      setCurrentMatchIndex((prevIndex) => (prevIndex + 1) % searchMatches.length);
     } else {
-      setCurrentMatchIndex((prevIndex) => (prevIndex - 1 + matches.length) % matches.length);
+      setCurrentMatchIndex((prevIndex) => (prevIndex - 1 + searchMatches.length) % searchMatches.length);
     }
   };
 
@@ -1242,5 +1245,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
