@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "User": {
@@ -42,10 +43,10 @@
           "description": "Unique identifier for the Chat entity."
         },
         "participants": {
-          "type": "array",
-          "description": "References to Users participating in the chat. (Relationship: Chat N:N User)",
-          "items": {
-            "type": "string"
+          "type": "object",
+          "description": "Map of user UIDs participating in the chat. The value is a boolean.",
+          "additionalProperties": {
+            "type": "boolean"
           }
         },
         "createdAt": {
@@ -134,6 +135,7 @@
     ]
   },
   "firestore": {
+    "rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    // Users can only read their own profile, but can be read by any authenticated user.\n    match /users/{userId} {\n      allow get: if request.auth != null;\n      allow list: if request.auth != null;\n      allow write: if request.auth.uid == userId;\n    }\n\n    // Users can only read/write their own contacts\n    match /users/{userId}/contacts/{contactId} {\n       allow read, write: if request.auth.uid == userId;\n    }\n\n    // Participants of a chat can read/write to the chat document.\n    match /chats/{chatId} {\n        allow read, write: if request.auth.uid in resource.data.participants;\n    }\n    \n    // Participants of a chat can read/write messages in that chat's subcollection.\n    match /chats/{chatId}/messages/{messageId} {\n      allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;\n    }\n  }\n}\n",
     "structure": [
       {
         "path": "users/{userId}",
@@ -207,7 +209,6 @@
           ]
         }
       }
-    ],
-    "reasoning": "The Firestore structure is designed to ensure security, scalability, and ease of debugging, adhering to the principles of Authorization Independence, Clarity of Intent, DBAC, and QAPs. It leverages denormalization to avoid hierarchical authorization dependencies and structural segregation to maintain homogeneous security postures within collections.\n\n**Authorization Independence:**\n\n*   For `chats/{chatId}/messages/{messageId}`, the `chatId` is present in each message document. While not strictly an authorization field, it allows security rules to efficiently query messages belonging to a specific chat without needing to traverse user relationships. In collaborative scenarios where access to chat messages depends on membership, a 'members' map would need to be denormalized into each message for independent authorization (e.g., `messages/{messageId}.members`).\n*   For `users/{userId}/contacts/{contactId}`, the `userId` is included within the contact document. This enables security rules to directly verify ownership of contacts based on the `userId` field without external lookups.\n\n**Structural Segregation:**\n\n*   The separation of user-specific data (contacts) into `/users/{userId}/contacts/{contactId}` ensures that each collection has a consistent security profile, making rules simpler and more maintainable.\n\n**Access Modeling:**\n\n*   Private data, such as contacts, are stored under path-based ownership (`/users/{userId}/contacts/{contactId}`), which simplifies ownership-based security rules.\n*   Collaborative data (chats and messages) would require a membership map (`members: {uid1: \"role\", uid2: \"role\"}`) to be denormalized per Strategy A into both `chats` and `messages` if access control goes beyond the initial chat participants.\n\n**QAPs (Rules Are Not Filters):**\n\n*   The structure supports secure `list` operations by segregating data based on ownership and access control requirements. For example, listing contacts under `/users/{userId}/contacts` is inherently secure because the query is scoped to a specific user's contacts.\n\n**Invariants:**\n\n*   Ownership of contacts is enforced through the `userId` field, which must match the authenticated user's ID. Timestamps, although present in the schema, would require server-side enforcement via Firestore rules to maintain their integrity.\n\nIn summary, this structure prioritizes Authorization Independence through denormalization, enabling atomic operations and simplifying security rules. It leverages Structural Segregation to maintain homogeneous security postures and supports secure list operations (QAPs)."
+    ]
   }
 }
