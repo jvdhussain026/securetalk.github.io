@@ -1,141 +1,97 @@
-/**
- * @file Firebase Security Rules for Secure Talk Application
- *
- * @description This ruleset enforces a strict user-ownership model for user profiles and contacts,
- *   and a shared-access model for chats and messages. It prioritizes security and efficiency
- *   by denormalizing authorization data and structurally segregating private and shared data.
- *
- * @dataStructure
- *   - /users/{userId}: Stores user profile information. Each user document is owned by the
- *     corresponding user ID.
- *   - /users/{userId}/contacts/{contactId}: Stores contact information for a specific user. Each
- *     contact document is owned by the user specified in the userId path.
- *   - /chats/{chatId}: Stores chat session information. Each chat document contains a list of
- *     participating user IDs in the 'participants' array.
- *   - /chats/{chatId}/messages/{messageId}: Stores messages within a specific chat session. Each
- *     message document contains the chatId to maintain relational integrity.
- *
- * @keySecurityDecisions
- *   - Users can only read and write their own profile data.
- *   - Users can only read and write their own contacts.
- *   - Chats and messages are accessible to participants in the chat.
- *   - Listing all users is disallowed for privacy reasons.
- *
- * @denormalizationForAuthorization
- *   - Contacts: The userId field within the contact document is used to enforce ownership,
- *     avoiding the need for additional lookups.
- *   - Chats/Messages: If access control goes beyond the initial chat participants, a 'members' map
- *     would need to be denormalized into each message for independent authorization
- *     (e.g., `messages/{messageId}.members`).
- *
- * @structuralSegregation
- *   - User-specific data (contacts) is stored under `/users/{userId}/contacts/{contactId}` to
- *     ensure that each collection has a consistent security profile.
- */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the request is made by a signed-in user.
-     * @return {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user ID matches the provided user ID.
-     * @param {string} userId - The user ID to compare against.
-     * @return {boolean} True if the user IDs match, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user is the owner of the existing document.
-     * @param {string} userId - The user ID to compare against.
-     * @return {boolean} True if the user IDs match and the document exists, false otherwise.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Grants access to user documents.
-     * @path /users/{userId}
-     * @allow (create) Signed-in user can create their own user document.
-     * @allow (get) Signed-in user can get their own user document.
-     * @allow (update) Signed-in user can update their own user document.
-     * @allow (delete) Signed-in user can delete their own user document.
-     * @deny (create) User attempts to create a document with an ID that does not match their auth UID.
-     * @deny (get) Another user attempts to read this user's profile.
-     * @principle Enforces document ownership for all operations.
+     * @description Secure user profiles. Only the user can read/write their own profile.
+     * @path /databases/{database}/documents/users/{userId}
+     * @allow (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' can access their own profile.
+     * @deny (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' cannot access another user's profile ('3bX2voPdZHOhFGXAp1EjByd9j9l1').
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Grants access to contact documents for a specific user.
-     * @path /users/{userId}/contacts/{contactId}
-     * @allow (create) Signed-in user can create a contact document for themselves.
-     * @allow (get) Signed-in user can get a contact document for themselves.
-     * @allow (update) Signed-in user can update a contact document for themselves.
-     * @allow (delete) Signed-in user can delete a contact document for themselves.
-     * @deny (create) User attempts to create a contact document for another user.
-     * @deny (get) Another user attempts to read this user's contact.
-     * @principle Restricts access to a user's own contacts.
-     */
-    match /users/{userId}/contacts/{contactId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
-      allow delete: if isExistingOwner(userId);
-    }
-
-    /**
-     * @description Grants access to chat documents.
-     * @path /chats/{chatId}
-     * @allow (create) Signed-in user can create a chat document if they are a participant.
-     * @allow (get) Signed-in user can get a chat document if they are a participant.
-     * @allow (update) Signed-in user can update a chat document if they are a participant.
-     * @allow (delete) Signed-in user can delete a chat document if they are a participant.
-     * @deny (create) User attempts to create a chat document without being a participant.
-     * @deny (get) Another user attempts to read this chat document if they are not a participant.
-     * @principle Enforces shared access based on chat participants.
+     * @description Secure chat sessions. Access is granted to members of the chat.
+     * @path /databases/{database}/documents/chats/{chatId}
+     * @allow (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' can access a chat if they are a participant.
+     * @deny (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' cannot access a chat if they are not a participant.
+     * @principle Enforces shared access based on the 'participants' array.
      */
     match /chats/{chatId} {
-      allow get: if isSignedIn() && request.auth.uid in resource.data.participants;
-      allow list: if false;
-      allow create: if isSignedIn() && request.resource.data.participants.hasAny([request.auth.uid]);
-      allow update: if isSignedIn() && request.auth.uid in resource.data.participants;
-      allow delete: if isSignedIn() && request.auth.uid in resource.data.participants;
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isParticipant() {
+        return request.auth.uid in resource.data.participants;
+      }
+
+      allow get: if isSignedIn() && resource.data.participants is list && request.auth.uid in resource.data.participants;
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.participants is list && request.auth.uid in request.resource.data.participants;
+      allow update: if isSignedIn() && resource.data.participants is list && request.auth.uid in resource.data.participants;
+      allow delete: if isSignedIn() && resource.data.participants is list && request.auth.uid in resource.data.participants;
     }
 
     /**
-     * @description Grants access to message documents within a chat.
-     * @path /chats/{chatId}/messages/{messageId}
-     * @allow (create) Signed-in user can create a message document if they are a participant in the chat.
-     * @allow (get) Signed-in user can get a message document if they are a participant in the chat.
-     * @allow (update) Signed-in user can update a message document if they are a participant in the chat.
-     * @allow (delete) Signed-in user can delete a message document if they are a participant in the chat.
-     * @deny (create) User attempts to create a message document in a chat they are not a participant in.
-     * @deny (get) Another user attempts to read this message document if they are not a participant in the chat.
-     * @principle Enforces shared access based on chat participants.
+     * @description Secure messages within a chat session. Access is granted to members of the chat.
+     * @path /databases/{database}/documents/chats/{chatId}/messages/{messageId}
+     * @allow (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' can access a message if they are a participant in the chat.
+     * @deny (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' cannot access a message if they are not a participant in the chat.
+     * @principle Enforces shared access to messages based on chat membership.
      */
     match /chats/{chatId}/messages/{messageId} {
-      allow get: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
-      allow list: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
-      allow create: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]) && request.resource.data.chatId == chatId;
-      allow update: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
-      allow delete: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isChatParticipant(chatId) {
+        return get(/databases/$(database)/documents/chats/$(chatId)).data.participants is list && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+
+      allow get: if isSignedIn() && isChatParticipant(chatId);
+      allow list: if isSignedIn() && isChatParticipant(chatId);
+      allow create: if isSignedIn() && isChatParticipant(chatId);
+      allow update: if isSignedIn() && isChatParticipant(chatId);
+      allow delete: if isSignedIn() && isChatParticipant(chatId);
+    }
+
+    /**
+     * @description Secure contact information for a user. Only the user can read/write their own contacts.
+     * @path /databases/{database}/documents/users/{userId}/contacts/{contactId}
+     * @allow (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' can access their own contact.
+     * @deny (get, create, update, delete) User 'Ysf0cXtN8zTxbqhmSjaUBSAz21v2' cannot access another user's contact.
+     * @principle Enforces document ownership for writes.
+     */
+    match /users/{userId}/contacts/{contactId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if isSignedIn() && isOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
   }
 }
