@@ -12,7 +12,8 @@ import Image from 'next/image'
 import { contacts as allContacts } from '@/lib/dummy-data'
 import type { Message, Attachment } from '@/lib/types'
 import { cn } from '@/lib/utils'
-import { db } from '@/lib/firebase'
+import { useCollection } from '@/firebase/firestore/use-collection';
+import { useFirebase } from '@/firebase/provider';
 import { translateMessage } from '@/ai/flows/translate-message-flow'
 import { detectLanguage } from '@/ai/flows/detect-language-flow'
 import { useDebounce } from '@/hooks/use-debounce'
@@ -205,11 +206,32 @@ function getLanguageName(langCode: string | null) {
   }
 }
 
+function createChatId(uid1: string, uid2: string): string {
+  return [uid1, uid2].sort().join('_');
+}
+
 export default function ChatPage() {
-  const params = useParams()
-  const contact = allContacts.find((c) => c.id === params.id)
+  const params = useParams();
+  const { firestore, user } = useFirebase();
+
+  // SIMULATED: This should come from your auth context.
+  const currentUserId = user?.uid || 'currentUser'; 
+  const contactId = params.id as string;
   
-  const [messages, setMessages] = useState<Message[]>([])
+  const contact = allContacts.find((c) => c.id === contactId);
+
+  const chatId = useMemo(() => {
+    if (!contactId) return null;
+    return createChatId(currentUserId, contactId);
+  }, [currentUserId, contactId]);
+
+  const messagesQuery = useMemo(() => {
+    if (!firestore || !chatId) return null;
+    return query(collection(firestore, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
+  }, [firestore, chatId]);
+
+  const { data: messages, isLoading } = useCollection<Message>(messagesQuery);
+  
   const [newMessage, setNewMessage] = useState('')
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
@@ -252,8 +274,6 @@ export default function ChatPage() {
   const contentEditableRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
-
-  const chatId = params.id as string;
 
   useEffect(() => {
     const lang = localStorage.getItem('preferredLang');
@@ -304,40 +324,8 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    if (!chatId) return;
-
-    const q = query(collection(db, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
-    
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      if (querySnapshot.empty) {
-          const contactData = allContacts.find(c => c.id === chatId);
-          if (contactData) {
-              setMessages(contactData.messages);
-          }
-          return;
-      }
-
-      const newMessages: Message[] = [];
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        const msg: Message = {
-          id: doc.id,
-          text: data.text,
-          attachments: data.attachments || [],
-          timestamp: data.timestamp?.toDate() || new Date(),
-          isSender: data.senderId === 'currentUser', // Replace with actual current user ID
-          isStarred: data.isStarred,
-          isEdited: data.isEdited,
-          replyTo: data.replyTo,
-        };
-        newMessages.push(msg);
-        handleAutoTranslate(msg);
-      });
-      setMessages(newMessages);
-    });
-
-    return () => unsubscribe();
-  }, [chatId, handleAutoTranslate]);
+    messages?.forEach(handleAutoTranslate);
+  }, [messages, handleAutoTranslate]);
 
   useEffect(() => {
     try {
@@ -365,7 +353,7 @@ export default function ChatPage() {
   
   // Search logic
   useEffect(() => {
-    if (searchQuery.length > 1) {
+    if (searchQuery.length > 1 && messages) {
       const matches: { messageId: string, index: number }[] = [];
       messages.forEach(message => {
         if (message.text) {
@@ -406,7 +394,7 @@ export default function ChatPage() {
     const textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
 
-    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId) return;
+    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId || !firestore) return;
 
     setNewMessage('');
     setAttachmentsToSend([]);
@@ -437,7 +425,7 @@ export default function ChatPage() {
     }
 
     if (editingMessage) {
-        const messageRef = doc(db, "chats", chatId, "messages", editingMessage.id);
+        const messageRef = doc(firestore, "chats", chatId, "messages", editingMessage.id);
         await updateDoc(messageRef, {
             text: finalText,
             isEdited: true,
@@ -449,10 +437,10 @@ export default function ChatPage() {
 
     // Add message to Firestore
     try {
-        await addDoc(collection(db, "chats", chatId, "messages"), {
+        await addDoc(collection(firestore, "chats", chatId, "messages"), {
             text: finalText,
             attachments: attachmentsToUpload,
-            senderId: 'currentUser',
+            senderId: currentUserId,
             timestamp: serverTimestamp(),
             replyTo: replyingTo?.id || null,
         });
@@ -573,7 +561,7 @@ export default function ChatPage() {
 
   const stopRecordingAndSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (mediaRecorderRef.current && isRecording) {
+    if (mediaRecorderRef.current && isRecording && chatId && firestore) {
       
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
@@ -588,10 +576,10 @@ export default function ChatPage() {
             };
             
             try {
-                await addDoc(collection(db, "chats", chatId, "messages"), {
+                await addDoc(collection(firestore, "chats", chatId, "messages"), {
                     text: '',
                     attachments: [newAttachment],
-                    senderId: 'currentUser',
+                    senderId: currentUserId,
                     timestamp: serverTimestamp(),
                     replyTo: replyingTo?.id || null,
                 });
@@ -682,8 +670,8 @@ export default function ChatPage() {
   }
 
   const handleToggleStar = async () => {
-    if (!selectedMessage) return;
-    const messageRef = doc(db, "chats", chatId, "messages", selectedMessage.id);
+    if (!selectedMessage || !chatId || !firestore) return;
+    const messageRef = doc(firestore, "chats", chatId, "messages", selectedMessage.id);
     await updateDoc(messageRef, {
         isStarred: !selectedMessage.isStarred
     });
@@ -694,7 +682,8 @@ export default function ChatPage() {
   const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
     if (!selectedMessage) return;
     // Firestore deletion logic would go here.
-    setMessages(messages.filter(msg => msg.id !== selectedMessage.id));
+    // For now, we filter UI
+    // setMessages(messages.filter(msg => msg.id !== selectedMessage.id));
     toast({
       title: "Message Deleted",
       description: `The message has been deleted ${forEveryone ? 'for everyone' : 'for you'}. (UI only)`,
@@ -728,7 +717,6 @@ export default function ChatPage() {
       toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
       return;
     }
-    setIsMessageOptionsOpen(false);
     
     const langToUse = targetLang || preferredLang;
 
@@ -736,6 +724,8 @@ export default function ChatPage() {
       setIsLangSelectOpen(true);
       return;
     }
+    
+    setIsMessageOptionsOpen(false);
 
     // If already translated, show original
     if (translatedMessages[selectedMessage.id]) {
@@ -788,6 +778,7 @@ export default function ChatPage() {
     localStorage.setItem('preferredLang', lang);
     setIsLangSelectOpen(false);
     if (selectedMessage) {
+        // We pass the new lang directly to avoid race condition with state update
         setTimeout(() => handleInboundTranslate(lang), 100);
     }
   };
@@ -850,7 +841,7 @@ export default function ChatPage() {
     )
   }
 
-  const replyingToMessage = messages.find(m => m.id === replyingTo?.id);
+  const replyingToMessage = messages?.find(m => m.id === replyingTo?.id);
   
   const cancelEdit = () => {
     setEditingMessage(null);
@@ -977,7 +968,8 @@ export default function ChatPage() {
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-1">
-              {messages.map((message, messageIndex) => {
+              {isLoading && <div className="flex justify-center items-center h-full"><LoaderCircle className="h-8 w-8 animate-spin text-primary" /></div>}
+              {messages && messages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
                 
@@ -985,7 +977,7 @@ export default function ChatPage() {
                   <div 
                     key={message.id} 
                     ref={el => { if(el) messageRefs.current[message.id] = el }}
-                    className={cn("flex items-end gap-2", message.isSender ? "justify-end" : "justify-start")}
+                    className={cn("flex items-end gap-2", message.senderId === currentUserId ? "justify-end" : "justify-start")}
                     onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
                     onTouchStart={() => handleTouchStart(message)}
                     onTouchEnd={handleTouchEnd}
@@ -993,10 +985,10 @@ export default function ChatPage() {
                   >
                     <div className={cn(
                       "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
-                      message.isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
+                      message.senderId === currentUserId ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
                        (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
                     )}>
-                        <ReplyPreview message={repliedToMessage} isSender={message.isSender} />
+                        <ReplyPreview message={repliedToMessage} isSender={message.senderId === currentUserId} />
                         <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
                           {isTranslating === message.id ? (
                             <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
@@ -1022,15 +1014,15 @@ export default function ChatPage() {
                             />
                           )}
                           <ClientOnly>
-                            <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                            <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.senderId === currentUserId ? "text-primary-foreground/70" : "text-muted-foreground")}>
                               {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
                               {message.isEdited && <Pencil className="h-3 w-3" />}
-                              <span>{format(new Date(message.timestamp), 'p')}</span>
-                              {message.isStarred && !message.isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
+                              {message.timestamp && <span>{format(new Date(message.timestamp.toString()), 'p')}</span>}
+                              {message.isStarred && message.senderId !== currentUserId && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
                             </div>
                           </ClientOnly>
                         </div>
-                         {message.isStarred && message.isSender && (
+                         {message.isStarred && message.senderId === currentUserId && (
                             <div className="absolute -bottom-1 -left-2 text-yellow-400">
                                 <Star className="h-3.5 w-3.5 fill-yellow-400" />
                             </div>
@@ -1057,7 +1049,7 @@ export default function ChatPage() {
              {replyingTo && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
                   <div className="overflow-hidden">
-                    <p className="font-bold text-sm text-primary">Replying to {replyingTo.isSender ? "yourself" : contact?.name}</p>
+                    <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === currentUserId ? "yourself" : contact?.name}</p>
                     <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
                   </div>
                   <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
@@ -1170,7 +1162,7 @@ export default function ChatPage() {
             onEdit={handleEdit}
             onReply={handleReply}
             onStar={handleToggleStar}
-            onTranslate={handleInboundTranslate}
+            onTranslate={() => handleInboundTranslate()}
             isTranslated={!!translatedMessages[selectedMessage.id]}
             onClose={() => {
                 setSelectedMessage(null);
@@ -1197,7 +1189,7 @@ export default function ChatPage() {
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}
         onClose={() => setIsAttachmentSheetOpen(false)}
-        chatId={chatId}
+        chatId={chatId || ''}
         onSelect={(option) => {
             setIsAttachmentSheetOpen(false);
             if (fileInputRef.current) {
@@ -1235,3 +1227,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
