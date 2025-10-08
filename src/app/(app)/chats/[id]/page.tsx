@@ -900,7 +900,34 @@ export default function ChatPage() {
     <>
       <div className="flex flex-col h-full bg-chat">
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
-            <div className="flex items-center gap-2 w-full">
+          <AnimatePresence>
+            {isSearchOpen ? (
+              <motion.div
+                key="search-bar"
+                initial={{ opacity: 0, x: 20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2 w-full"
+                >
+                <ChatSearch
+                    onClose={() => setIsSearchOpen(false)}
+                    searchQuery={searchQuery}
+                    setSearchQuery={setSearchQuery}
+                    matches={searchMatches}
+                    currentMatchIndex={currentMatchIndex}
+                    onNavigate={handleNavigateMatch}
+                />
+              </motion.div>
+            ) : (
+              <motion.div
+                key="chat-header"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 20 }}
+                transition={{ duration: 0.2 }}
+                className="flex items-center gap-2 w-full"
+              >
                 <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground">
                 <Link href="/chats">
                     <ArrowLeft className="h-6 w-6" />
@@ -982,26 +1009,7 @@ export default function ChatPage() {
                     </DropdownMenuContent>
                 </DropdownMenu>
                 </div>
-          </div>
-          <AnimatePresence>
-            {isSearchOpen && (
-              <motion.div
-                key="search-bar"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2 w-full"
-                >
-                <ChatSearch
-                    onClose={() => setIsSearchOpen(false)}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    matches={searchMatches}
-                    currentMatchIndex={currentMatchIndex}
-                    onNavigate={handleNavigateMatch}
-                />
-              </motion.div>
+            </motion.div>
             )}
           </AnimatePresence>
         </header>
