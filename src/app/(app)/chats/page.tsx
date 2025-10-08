@@ -5,8 +5,9 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
+import { formatDistanceToNow, isToday, format } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -28,19 +29,117 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase'
-import type { Contact } from '@/lib/types'
+import type { Contact, Message } from '@/lib/types'
+
+function formatLastMessageTimestamp(timestamp: any) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate();
+  if (isToday(date)) {
+    return format(date, 'p');
+  }
+  return format(date, 'P');
+}
+
+
+function ChatListItem({ contact }: { contact: Contact }) {
+  const { firestore, user } = useFirebase();
+  const [lastMessage, setLastMessage] = useState<Message | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+
+
+  const chatId = useMemo(() => {
+    if (!user?.uid || !contact.id) return null;
+    return [user.uid, contact.id].sort().join('_');
+  }, [user?.uid, contact.id]);
+
+  useEffect(() => {
+    if (!firestore || !chatId) {
+      setIsLoading(false);
+      return;
+    };
+
+    const messagesQuery = query(
+      collection(firestore, "chats", chatId, "messages"),
+      orderBy("timestamp", "desc"),
+    );
+
+    // Using a simpler onSnapshot to just get the latest message
+    const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        setLastMessage({ id: doc.id, ...doc.data() } as Message);
+      } else {
+        setLastMessage(null);
+      }
+      setIsLoading(false);
+    }, (error) => {
+        console.error("Error fetching last message:", error);
+        setIsLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [firestore, chatId]);
+
+  const handleAvatarClick = (e: React.MouseEvent) => {
+    e.preventDefault();
+    setImagePreview({ urls: [contact.avatar], startIndex: 0 });
+  };
+
+  const lastMessageText = useMemo(() => {
+    if (isLoading) return 'Loading...';
+    if (!lastMessage) return 'No messages yet.';
+    if (lastMessage.text) return lastMessage.text;
+    if (lastMessage.attachments && lastMessage.attachments.length > 0) {
+      const type = lastMessage.attachments[0].type;
+      return `${type.charAt(0).toUpperCase() + type.slice(1)} attachment`;
+    }
+    return '...';
+  }, [lastMessage, isLoading]);
+  
+  return (
+      <>
+        <Link href={`/chats/${contact.id}`} className="flex items-center gap-4 p-4">
+            <button onClick={handleAvatarClick} className="relative">
+                <Avatar className="h-12 w-12">
+                    <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+            </button>
+            <div className="flex-1 overflow-hidden">
+                <div className="flex items-baseline justify-between">
+                    <div className="flex items-center gap-1">
+                        <p className="font-bold truncate text-base">{contact.name}</p>
+                        {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
+                    </div>
+                    <ClientOnly>
+                         <p className="text-xs text-muted-foreground whitespace-nowrap">
+                            {lastMessage?.timestamp ? formatLastMessageTimestamp(lastMessage.timestamp) : ''}
+                        </p>
+                    </ClientOnly>
+                </div>
+                <p className={cn("text-sm truncate", lastMessage ? 'text-muted-foreground' : 'text-muted-foreground italic')}>
+                    {lastMessageText}
+                </p>
+            </div>
+        </Link>
+        <ImagePreviewDialog
+            imagePreview={imagePreview}
+            onOpenChange={(open) => !open && setImagePreview(null)}
+        />
+      </>
+  );
+}
 
 
 export default function ChatsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
   const [showTour, setShowTour] = useState(false);
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
-  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -48,18 +147,6 @@ export default function ChatsPage() {
   }, [firestore, user]);
 
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<Contact>(userDocRef);
-
-  useEffect(() => {
-    if (userProfile?.lastConnection) {
-        const newContactId = userProfile.lastConnection;
-        // Navigate to the new chat
-        router.push(`/chats/${newContactId}`);
-        // Clear the lastConnection field to prevent re-navigation
-        if(userDocRef) {
-            updateDoc(userDocRef, { lastConnection: null });
-        }
-    }
-  }, [userProfile, userDocRef, router]);
 
 
   const contactsQuery = useMemoFirebase(() => {
@@ -70,46 +157,6 @@ export default function ChatsPage() {
   const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
 
   const { toast } = useToast()
-
-  useEffect(() => {
-    if (user && firestore) {
-      const demoAddedKey = `demo_contacts_added_${user.uid}`;
-      const hasAddedDemoContacts = localStorage.getItem(demoAddedKey);
-      if (hasAddedDemoContacts !== 'true') {
-        addDemoContacts(user.uid);
-        localStorage.setItem(demoAddedKey, 'true');
-      }
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, firestore]);
-  
-  const addDemoContacts = (currentUserId: string) => {
-    if (!firestore) return;
-    const demoContacts = [
-        {
-            id: 'support-javed',
-            name: 'Javed Hussain',
-            avatar: 'https://picsum.photos/seed/user/200/200',
-            bio: 'Lead developer of Secure Talk. Here to help!',
-            language: 'en',
-            verified: true,
-            liveTranslationEnabled: true,
-        },
-        {
-            id: 'demo-sarah',
-            name: 'Sarah Miller',
-            avatar: 'https://picsum.photos/seed/user2/200/200',
-            bio: 'Let\'s test out the chat features!',
-            language: 'es',
-            liveTranslationEnabled: false,
-        }
-    ];
-
-    demoContacts.forEach(contact => {
-        const contactRef = doc(firestore, 'users', currentUserId, 'contacts', contact.id);
-        setDocumentNonBlocking(contactRef, contact, { merge: true });
-    });
-  }
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -159,22 +206,18 @@ export default function ChatsPage() {
     );
   }, [contacts, searchQuery]);
   
-  const handleAvatarClick = (contact: any) => {
-    setImagePreview({ urls: [contact.avatar], startIndex: 0 });
-  };
-
   const isLoading = isUserLoading || areContactsLoading || isProfileLoading;
 
-  if (isLoading && isOnboardingComplete) {
+  if (!isOnboardingComplete) {
+    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
+  if (isLoading) {
       return (
           <div className="h-full flex items-center justify-center">
               <LoaderCircle className="animate-spin h-8 w-8 text-primary" />
           </div>
       )
-  }
-
-  if (!isOnboardingComplete) {
-    return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
 
@@ -238,23 +281,7 @@ export default function ChatsPage() {
             <div>
               {filteredContacts.map((contact) => (
                   <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
-                    <Link href={`/chats/${contact.id}`} className="flex items-center gap-4 p-4">
-                      <button onClick={(e) => { e.preventDefault(); handleAvatarClick(contact); }} className="relative">
-                          <Avatar className="h-12 w-12">
-                            <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                            <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-                          </Avatar>
-                      </button>
-                      <div className="flex-1 overflow-hidden">
-                        <div className="flex items-baseline justify-between">
-                          <div className="flex items-center gap-1">
-                            <p className="font-bold truncate text-base">{contact.name}</p>
-                            {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
-                          </div>
-                        </div>
-                        <p className="text-sm text-muted-foreground italic">No messages yet.</p>
-                      </div>
-                    </Link>
+                    <ChatListItem contact={contact} />
                   </div>
                 )
               )}
@@ -278,10 +305,6 @@ export default function ChatsPage() {
 
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
-       <ImagePreviewDialog
-        imagePreview={imagePreview}
-        onOpenChange={(open) => !open && setImagePreview(null)}
-      />
       {showTour && <TourStep onComplete={handleTourComplete} />}
     </>
   )

@@ -19,12 +19,14 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useFirebase } from '@/firebase'
 
 export default function SettingsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isAlertOpen, setIsAlertOpen] = useState(false)
   const [isResetAlertOpen, setIsResetAlertOpen] = useState(false)
   const router = useRouter()
+  const { auth } = useFirebase();
 
   const settingsItems = [
     { text: "Privacy", href: "#" },
@@ -44,14 +46,31 @@ export default function SettingsPage() {
   }
 
   const handleResetOnboarding = () => {
-    localStorage.removeItem('hasCompletedOnboarding');
+    if (auth.currentUser) {
+        localStorage.removeItem(`onboarding_completed_${auth.currentUser.uid}`);
+    }
     // A full page reload is better to ensure all state is reset
     window.location.href = '/chats';
   }
 
   const handleResetData = () => {
+    // Clear local storage which contains flags like onboarding status
     localStorage.clear();
-    window.location.href = '/';
+    
+    // Clear all IndexedDB databases which holds Firestore's offline cache
+    indexedDB.databases().then((dbs) => {
+        dbs.forEach(db => {
+            if (db.name) {
+                console.log(`Deleting IndexedDB: ${db.name}`);
+                indexedDB.deleteDatabase(db.name);
+            }
+        });
+    }).catch(err => {
+        console.error("Error deleting IndexedDB databases:", err);
+    }).finally(() => {
+        // After clearing everything, redirect to the root to trigger re-onboarding
+        window.location.href = '/';
+    });
   }
 
   return (

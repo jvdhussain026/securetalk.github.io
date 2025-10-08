@@ -243,19 +243,23 @@ export default function ChatPage() {
 
   useEffect(() => {
     const ensureChatDocument = async () => {
-      if (!firestore || !chatId || !currentUserId || !contactId || isChatLoading) return;
+      if (!firestore || !chatId || !currentUserId || !contactId || isChatLoading || chat) return;
 
-      if (!chat) { // Only create if chat doc doesn't exist
-        const newChatDocRef = doc(firestore, 'chats', chatId);
-        const chatData = {
-          participants: {
-            [currentUserId]: true,
-            [contactId]: true,
-          },
-          createdAt: serverTimestamp(),
-        };
-        // Use non-blocking write
-        await setDoc(newChatDocRef, chatData);
+      const newChatDocRef = doc(firestore, 'chats', chatId);
+      try {
+        const chatDoc = await getDocumentNonBlocking(newChatDocRef);
+        if (!chatDoc || !chatDoc.exists()) {
+            const chatData = {
+              participants: {
+                [currentUserId]: true,
+                [contactId]: true,
+              },
+              createdAt: serverTimestamp(),
+            };
+            await setDoc(newChatDocRef, chatData);
+        }
+      } catch (error) {
+          console.error("Failed to ensure chat document:", error);
       }
     };
 
@@ -787,10 +791,9 @@ export default function ChatPage() {
   const handleLanguageSelected = (lang: string) => {
     setPreferredLang(lang);
     localStorage.setItem('preferredLang', lang);
+    setIsLangSelectOpen(false);
     if (selectedMessage) {
         handleInboundTranslate(lang);
-    } else {
-        setIsLangSelectOpen(false);
     }
   };
   
@@ -998,7 +1001,6 @@ export default function ChatPage() {
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-1">
-              {isLoading && !messages && <div className="flex justify-center items-center h-full"><LoaderCircle className="h-8 w-8 animate-spin text-primary" /></div>}
               {messages && messages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
