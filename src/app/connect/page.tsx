@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 
 
 function Connect() {
@@ -55,6 +55,8 @@ function Connect() {
                  router.push('/chats');
                  return;
             }
+            
+            const currentTimestamp = serverTimestamp();
 
             // Add new contact to current user's contact list
             const currentUserContactsRef = doc(firestore, 'users', currentUser.uid, 'contacts', newContactId);
@@ -66,6 +68,7 @@ function Connect() {
                 language: newContactData.language || 'en',
                 verified: newContactData.verified || false,
                 liveTranslationEnabled: newContactData.liveTranslationEnabled || false,
+                lastMessageTimestamp: currentTimestamp,
             }, { merge: true });
             
             // Add current user to the new contact's contact list (mutual connection)
@@ -78,11 +81,14 @@ function Connect() {
                 language: userProfile.language || 'en',
                 verified: userProfile.verified || false,
                 liveTranslationEnabled: userProfile.liveTranslationEnabled || false,
+                lastMessageTimestamp: currentTimestamp,
             }, { merge: true });
 
-            // Trigger real-time update for the other user (User A)
-            // This is a placeholder for a real notification system
-            // For now, we'll just rely on the contact appearing in their list.
+            // This is a workaround to trigger a real-time update for the other user.
+            // In a real production app, this would be handled by a Cloud Function and FCM.
+            const otherUserDocForUpdate = doc(firestore, 'users', newContactId);
+            updateDoc(otherUserDocForUpdate, { lastConnection: currentUser.uid });
+
 
             toast({
                 title: 'Connection added!',

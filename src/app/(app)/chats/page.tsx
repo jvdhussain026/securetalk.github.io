@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase'
 import type { Contact, Message } from '@/lib/types'
+import { Badge } from '@/components/ui/badge'
 
 function formatLastMessageTimestamp(timestamp: any) {
   if (!timestamp) return '';
@@ -113,9 +114,13 @@ function ChatListItem({ contact }: { contact: Contact }) {
                         {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                     </div>
                     <ClientOnly>
-                         <p className="text-xs text-muted-foreground whitespace-nowrap">
-                            {contact.lastMessageTimestamp ? formatLastMessageTimestamp(contact.lastMessageTimestamp) : ''}
-                        </p>
+                        {!lastMessage && !isLoading ? (
+                           <Badge variant="secondary" className="text-primary font-bold">New</Badge>
+                        ) : (
+                             <p className="text-xs text-muted-foreground whitespace-nowrap">
+                                {contact.lastMessageTimestamp ? formatLastMessageTimestamp(contact.lastMessageTimestamp) : ''}
+                            </p>
+                        )}
                     </ClientOnly>
                 </div>
                 <p className={cn("text-sm truncate", lastMessage ? 'text-muted-foreground' : 'text-muted-foreground italic')}>
@@ -173,6 +178,22 @@ export default function ChatsPage() {
       }
     }
   }, [user, isUserLoading]);
+  
+    // Real-time listener for new connections
+   useEffect(() => {
+    if (userDocRef) {
+      const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
+        const data = snapshot.data();
+        if (data && data.lastConnection) {
+          // A new connection was made by another user
+          router.push(`/chats/${data.lastConnection}`);
+          // Clear the field to prevent re-triggering
+          updateDoc(userDocRef, { lastConnection: null });
+        }
+      });
+      return () => unsubscribe();
+    }
+   }, [userDocRef, router]);
 
 
   const handleOnboardingComplete = () => {
@@ -202,22 +223,9 @@ export default function ChatsPage() {
   const sortedContacts = useMemo(() => {
     if (!contacts) return [];
     
-    // Create a copy to avoid mutating the original array
-    const contactsCopy = [...contacts];
-
-    contactsCopy.sort((a, b) => {
-        const aTime = a.lastMessageTimestamp?.toDate().getTime() || 0;
-        const bTime = b.lastMessageTimestamp?.toDate().getTime() || 0;
-
-        // If one doesn't have a timestamp, it's newer and should be first.
-        if (aTime === 0 && bTime > 0) return -1;
-        if (bTime === 0 && aTime > 0) return 1;
-
-        // Otherwise, sort by most recent time.
-        return bTime - aTime;
-    });
-
-    return contactsCopy.filter(contact =>
+    // The query now handles the sorting by lastMessageTimestamp descending.
+    // We just need to filter.
+    return contacts.filter(contact =>
         contact.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [contacts, searchQuery]);
