@@ -62,10 +62,12 @@ export default function ConnectionsPage() {
     try {
         const url = new URL(link);
         const userId = url.searchParams.get('userId');
-        if (userId && url.origin === window.location.origin) {
+        // The origin check was too strict for development vs production URLs.
+        // We will just validate the presence of userId.
+        if (userId) {
             router.push(`/connect?userId=${userId}`);
         } else {
-            throw new Error("Invalid link");
+            throw new Error("Invalid link: Missing userId");
         }
     } catch (error) {
         toast({ variant: 'destructive', title: 'Invalid Connection Link', description: 'The QR code or link is not a valid Secure Talk connection.' });
