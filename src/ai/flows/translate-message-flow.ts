@@ -31,7 +31,10 @@ const prompt = ai.definePrompt({
   input: {schema: TranslateMessageInputSchema},
   output: {schema: TranslateMessageOutputSchema},
   prompt: `Translate the following text into '{{targetLanguage}}'.
-If the text is already in '{{targetLanguage}}', just return the original text.
+
+If '{{targetLanguage}}' is 'en-IN', translate into Hinglish (a mix of Hindi and English).
+
+If the text is already in the target language, just return the original text.
 Do not add any preamble or explanation, just the translation.
 
 Text to translate:
