@@ -854,7 +854,7 @@ export default function ChatPage() {
       case 'image':
         return <Image src={attachment.url} alt={`Preview`} width={80} height={80} className="rounded-lg object-cover aspect-square" />;
       case 'video':
-        return <div className="w-full aspect-square rounded-lg bg-black flex items-center justify-center"><VideoIcon className="h-8 w-8 text-white" /></div>;
+        return <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center"><VideoIcon className="h-8 w-8 text-white" /></div>;
       case 'document':
         return <div className="w-full aspect-square rounded-lg bg-muted flex items-center justify-center"><File className="h-8 w-8 text-muted-foreground" /></div>;
       case 'audio':
@@ -989,8 +989,8 @@ export default function ChatPage() {
                         <span className="sr-only">More options</span>
                     </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent className="w-56 overflow-hidden">
-                        <AnimatePresence initial={false}>
+                    <DropdownMenuContent className="w-auto min-w-[220px] overflow-hidden">
+                        <AnimatePresence initial={false} mode="wait">
                             <motion.div
                                 key={menuPage}
                                 initial={{ opacity: 0, x: menuPage === 1 ? 0 : 20 }}
@@ -998,7 +998,7 @@ export default function ChatPage() {
                                 exit={{ opacity: 0, x: menuPage === 1 ? 20 : -20 }}
                                 transition={{ duration: 0.2, ease: 'easeInOut' }}
                             >
-                                {menuPage === 1 && (
+                                {menuPage === 1 ? (
                                     <>
                                         <DropdownMenuItem onSelect={() => { setIsUserDetailsOpen(true); setIsMenuOpen(false); }}>
                                             <User className="mr-2 h-4 w-4" />
@@ -1022,8 +1022,7 @@ export default function ChatPage() {
                                             <ChevronRight className="ml-auto h-4 w-4" />
                                         </DropdownMenuItem>
                                     </>
-                                )}
-                                {menuPage === 2 && (
+                                ) : (
                                      <>
                                         <DropdownMenuItem onSelect={() => setMenuPage(1)}>
                                             <ChevronLeft className="mr-2 h-4 w-4" />
