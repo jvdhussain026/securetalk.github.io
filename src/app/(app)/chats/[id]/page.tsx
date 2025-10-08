@@ -199,13 +199,15 @@ function ReplyPreview({ message, isSender, contactName }: { message?: Message, i
     )
 }
 
-function getLanguageName(langCode: string | null) {
-  if (!langCode) return "Not Set";
-  try {
-    return new Intl.DisplayNames(['en'], { type: 'language' }).of(langCode);
-  } catch (e) {
-    return langCode;
-  }
+function getLanguageName(langCode: string | null): string {
+    if (!langCode) return "Not Set";
+    if (langCode.toLowerCase() === 'en-in') return "Hinglish";
+    try {
+        const displayName = new Intl.DisplayNames(['en'], { type: 'language' });
+        return displayName.of(langCode) || langCode;
+    } catch (e) {
+        return langCode;
+    }
 }
 
 function createChatId(uid1: string, uid2: string): string {
@@ -231,37 +233,40 @@ export default function ChatPage() {
     return createChatId(currentUserId, contactId);
   }, [currentUserId, contactId]);
 
-  useEffect(() => {
-    const ensureChatDocument = () => {
-      if (!firestore || !chatId || !currentUserId || !contactId) return;
+  const chatDocRef = useMemoFirebase(() => {
+    if (!firestore || !chatId) return null;
+    return doc(firestore, 'chats', chatId);
+  }, [firestore, chatId]);
 
-      const chatDocRef = doc(firestore, 'chats', chatId);
-      
-      // Use non-blocking read
-      getDocumentNonBlocking(chatDocRef).then(chatDoc => {
-        // If the document doesn't exist, create it
-        if (chatDoc && !chatDoc.exists()) {
-          const chatData = {
-            participants: {
-              [currentUserId]: true,
-              [contactId]: true,
-            },
-            createdAt: serverTimestamp(),
-          };
-          // Use non-blocking write
-          setDocumentNonBlocking(chatDocRef, chatData, { merge: true });
-        }
-      });
+  const { data: chat, isLoading: isChatLoading } = useDoc(chatDocRef);
+
+
+  useEffect(() => {
+    const ensureChatDocument = async () => {
+      if (!firestore || !chatId || !currentUserId || !contactId || isChatLoading) return;
+
+      if (!chat) { // Only create if chat doc doesn't exist
+        const newChatDocRef = doc(firestore, 'chats', chatId);
+        const chatData = {
+          participants: {
+            [currentUserId]: true,
+            [contactId]: true,
+          },
+          createdAt: serverTimestamp(),
+        };
+        // Use non-blocking write
+        await setDoc(newChatDocRef, chatData);
+      }
     };
 
     ensureChatDocument();
-  }, [firestore, chatId, currentUserId, contactId]);
+  }, [firestore, chatId, currentUserId, contactId, chat, isChatLoading]);
 
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !chatId) return null;
+    if (!firestore || !chatId || !chat) return null; // Wait for chat doc to exist
     return query(collection(firestore, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
-  }, [firestore, chatId]);
+  }, [firestore, chatId, chat]);
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
@@ -282,7 +287,7 @@ export default function ChatPage() {
 
   const [isRecording, setIsRecording] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const mediaRecorderRef = useRef<HTMLMediaRecorder | null>(null);
   const recordingIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
@@ -837,9 +842,9 @@ export default function ChatPage() {
     }
   };
 
-  const isLoading = areMessagesLoading || isContactLoading;
+  const isLoading = areMessagesLoading || isContactLoading || isChatLoading;
 
-  if (isLoading) {
+  if (isLoading && !messages) {
     return (
       <div className="flex flex-col h-full items-center justify-center">
         <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
@@ -993,7 +998,7 @@ export default function ChatPage() {
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-1">
-              {isLoading && <div className="flex justify-center items-center h-full"><LoaderCircle className="h-8 w-8 animate-spin text-primary" /></div>}
+              {isLoading && !messages && <div className="flex justify-center items-center h-full"><LoaderCircle className="h-8 w-8 animate-spin text-primary" /></div>}
               {messages && messages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];

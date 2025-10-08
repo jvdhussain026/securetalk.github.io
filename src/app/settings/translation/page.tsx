@@ -28,16 +28,18 @@ export default function TranslationSettingsPage() {
     setPreferredLang(lang);
     localStorage.setItem('preferredLang', lang);
     setIsLangSelectOpen(false);
-    toast({ title: `Preferred language set to ${new Intl.DisplayNames(['en'], { type: 'language' }).of(lang)}` });
+    toast({ title: `Preferred language set to ${getLanguageName(lang)}` });
   };
   
-  const getLanguageName = (langCode: string | null) => {
-      if (!langCode) return "Not Set";
-      try {
-        return new Intl.DisplayNames(['en'], { type: 'language' }).of(langCode);
-      } catch (e) {
+  const getLanguageName = (langCode: string | null): string => {
+    if (!langCode) return "Not Set";
+    if (langCode.toLowerCase() === 'en-in') return "Hinglish";
+    try {
+        const displayName = new Intl.DisplayNames(['en'], { type: 'language' });
+        return displayName.of(langCode) || langCode;
+    } catch (e) {
         return langCode;
-      }
+    }
   }
 
   return (
