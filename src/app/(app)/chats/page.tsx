@@ -333,5 +333,4 @@ export default function ChatsPage() {
       {showTour && <TourStep onComplete={handleTourComplete} />}
     </>
   )
-
-    
+}
