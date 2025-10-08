@@ -137,36 +137,49 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
         <div className="p-2 bg-muted rounded-lg mb-4">
           <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Media message'}</p>
         </div>
-        <div className="flex justify-around items-start text-center">
-            {primaryItems.map(renderItem)}
-             <button 
-                onClick={() => setShowMore(!showMore)} 
-                className="flex flex-col items-center justify-start text-center w-16 gap-1 text-muted-foreground hover:text-primary"
-            >
-                <div className="flex items-center justify-center h-12 w-12 rounded-full bg-muted/60">
-                   <MoreHorizontal className="h-6 w-6" />
-                </div>
-                <span className="text-xs">More</span>
-            </button>
-        </div>
+        <div className="relative h-[84px] overflow-hidden">
         <AnimatePresence>
-            {showMore && (
-                <motion.div
-                    initial={{ height: 0, opacity: 0, marginTop: 0 }}
-                    animate={{ height: 'auto', opacity: 1, marginTop: '1rem' }}
-                    exit={{ height: 0, opacity: 0, marginTop: 0 }}
-                    className="overflow-hidden"
-                >
-                    <div className="flex justify-around items-start text-center flex-wrap gap-y-4">
-                        {secondaryItems.map(renderItem)}
-                        {/* This is a bit of a hack to ensure the grid items wrap correctly and align to the left */}
-                        {Array.from({ length: Math.max(0, 4 - (secondaryItems.filter(i => i.show).length % 4)) }).map((_, i) => (
-                          <div key={`spacer-${i}`} className="w-16" />
-                        ))}
-                    </div>
-                </motion.div>
-            )}
+          {!showMore && (
+              <motion.div
+                  key="primary"
+                  initial={{ x: '-100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '-100%' }}
+                  transition={{ type: 'tween', ease: 'easeInOut', duration: 0.2 }}
+                  className="absolute inset-0 flex justify-around items-start text-center"
+              >
+                  {primaryItems.map(renderItem)}
+                  <button 
+                      onClick={() => setShowMore(true)} 
+                      className="flex flex-col items-center justify-start text-center w-16 gap-1 text-muted-foreground hover:text-primary"
+                  >
+                      <div className="flex items-center justify-center h-12 w-12 rounded-full bg-muted/60">
+                          <MoreHorizontal className="h-6 w-6" />
+                      </div>
+                      <span className="text-xs">More</span>
+                  </button>
+              </motion.div>
+          )}
         </AnimatePresence>
+        <AnimatePresence>
+          {showMore && (
+              <motion.div
+                  key="secondary"
+                  initial={{ x: '100%' }}
+                  animate={{ x: 0 }}
+                  exit={{ x: '100%' }}
+                  transition={{ type: 'tween', ease: 'easeInOut', duration: 0.2 }}
+                  className="absolute inset-0 flex justify-around items-start text-center flex-wrap gap-y-4"
+              >
+                  {secondaryItems.map(renderItem)}
+                  {/* This is a bit of a hack to ensure the grid items wrap correctly and align to the left */}
+                   {Array.from({ length: Math.max(0, 4 - (secondaryItems.filter(i => i.show).length % 4)) }).map((_, i) => (
+                      <div key={`spacer-${i}`} className="w-16" />
+                   ))}
+              </motion.div>
+          )}
+        </AnimatePresence>
+        </div>
       </motion.div>
     </>
     )}
