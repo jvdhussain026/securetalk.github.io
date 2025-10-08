@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -24,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientOnly } from '@/components/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
@@ -725,7 +724,7 @@ export default function ChatPage() {
       setImagePreview({ urls: [avatarUrl], startIndex: 0 });
   };
   
-  const handleAction = (action: 'find' | 'mute' | 'theme' | 'more') => {
+  const handleAction = (action: 'find' | 'mute' | 'theme' | 'more' | 'block' | 'clear' | 'export') => {
     if (action === 'find') {
       setIsSearchOpen(true);
     } else {
@@ -992,39 +991,23 @@ export default function ChatPage() {
                             <BellOff className="mr-2 h-4 w-4" />
                             <span>Mute Notifications</span>
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem asChild>
-                            <Link href="/settings/translation">
-                            <Languages className="mr-2 h-4 w-4" />
-                            <span>Translation</span>
-                            </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleAction('theme')}>
+                         <DropdownMenuItem onSelect={() => handleAction('theme')}>
                             <Palette className="mr-2 h-4 w-4" />
                             <span>Chat Theme</span>
                         </DropdownMenuItem>
-                         <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                                <MoreVertical className="mr-2 h-4 w-4" />
-                                <span>More</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                                <DropdownMenuSubContent>
-                                    <DropdownMenuItem onSelect={() => handleAction('more')}>
-                                        <UserX className="mr-2 h-4 w-4" />
-                                        <span>Block</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleAction('more')}>
-                                        <Trash2 className="mr-2 h-4 w-4" />
-                                        <span>Clear chat</span>
-                                    </DropdownMenuItem>
-                                    <DropdownMenuItem onSelect={() => handleAction('more')}>
-                                        <FileUp className="mr-2 h-4 w-4" />
-                                        <span>Export chat</span>
-                                    </DropdownMenuItem>
-                                </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                        </DropdownMenuSub>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onSelect={() => handleAction('block')}>
+                            <UserX className="mr-2 h-4 w-4" />
+                            <span>Block</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('clear')}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Clear chat</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('export')}>
+                            <FileUp className="mr-2 h-4 w-4" />
+                            <span>Export chat</span>
+                        </DropdownMenuItem>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 </div>
@@ -1294,3 +1277,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
