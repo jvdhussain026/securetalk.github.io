@@ -715,29 +715,31 @@ export default function ChatPage() {
     }
   }
 
-  const handleInboundTranslate = async (targetLang?: string) => {
-    const langToUse = targetLang || preferredLang;
-
-    if (!selectedMessage || !selectedMessage.text) {
-      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
-      setIsMessageOptionsOpen(false);
-      return;
-    }
-    
-    if (!langToUse) {
-      setIsLangSelectOpen(true); // Re-open selection if no language is set
-      return;
-    }
-    
-    setIsMessageOptionsOpen(false);
-
+  const triggerInboundTranslate = () => {
     // If already translated, show original
-    if (translatedMessages[selectedMessage.id]) {
+    if (selectedMessage && translatedMessages[selectedMessage.id]) {
       setTranslatedMessages(prev => {
         const newTranslations = { ...prev };
         delete newTranslations[selectedMessage.id];
         return newTranslations;
       });
+      setIsMessageOptionsOpen(false);
+      return;
+    }
+
+    if (!preferredLang) {
+      setIsLangSelectOpen(true);
+      return;
+    }
+    handleInboundTranslate(preferredLang);
+  };
+  
+  const handleInboundTranslate = async (langToUse: string) => {
+    setIsLangSelectOpen(false);
+    setIsMessageOptionsOpen(false);
+
+    if (!selectedMessage || !selectedMessage.text) {
+      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
       return;
     }
 
@@ -754,7 +756,7 @@ export default function ChatPage() {
       setIsTranslating(null);
     }
   };
-  
+
   const handleOutboundTranslate = async () => {
     if (!newMessage.trim() || !contact) return;
     setIsOutboundTranslating(true);
@@ -780,9 +782,10 @@ export default function ChatPage() {
   const handleLanguageSelected = (lang: string) => {
     setPreferredLang(lang);
     localStorage.setItem('preferredLang', lang);
-    setIsLangSelectOpen(false);
     if (selectedMessage) {
-        setTimeout(() => handleInboundTranslate(lang), 100);
+        handleInboundTranslate(lang);
+    } else {
+        setIsLangSelectOpen(false);
     }
   };
   
@@ -1184,7 +1187,7 @@ export default function ChatPage() {
             onEdit={handleEdit}
             onReply={handleReply}
             onStar={handleToggleStar}
-            onTranslate={() => handleInboundTranslate()}
+            onTranslate={triggerInboundTranslate}
             isTranslated={!!translatedMessages[selectedMessage.id]}
             onClose={() => {
                 setSelectedMessage(null);

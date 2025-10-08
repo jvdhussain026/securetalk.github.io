@@ -42,7 +42,7 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
     }, 150);
   };
 
-  const canEdit = message.isSender && differenceInMinutes(new Date(), new Date(message.timestamp)) < 15;
+  const canEdit = message.senderId === 'user' && message.timestamp && differenceInMinutes(new Date(), message.timestamp.toDate()) < 15;
 
   const handleCopy = () => {
     if (message.text) {

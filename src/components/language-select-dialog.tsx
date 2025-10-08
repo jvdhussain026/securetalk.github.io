@@ -105,7 +105,7 @@ export function LanguageSelectDialog({ open, onOpenChange, onSelectLanguage }: L
         
         <div className="p-6 pt-2">
             <Button className="w-full" onClick={handleSelect} disabled={!selectedLanguage}>
-                Save and Translate
+                Translate
             </Button>
         </div>
       </DialogContent>
