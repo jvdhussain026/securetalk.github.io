@@ -60,7 +60,7 @@ service cloud.firestore {
      * @path /chats/{chatId}
      * @allow (get) Authenticated user can read a chat if they are a participant.
      * @allow (create) Authenticated user can create a chat if they are a participant.
-     * @allow (update) Authenticated user can update a chat if they are a participant and only modify participants.
+     * @allow (update) Authenticated user can update a chat if they are a participant.
      * @allow (delete) Authenticated user can delete a chat if they are a participant.
      * @deny (get) Authenticated user cannot read a chat if they are not a participant.
      * @deny (create) Authenticated user cannot create a chat if they are not a participant.
@@ -75,12 +75,15 @@ service cloud.firestore {
       function isParticipant() {
         return isSignedIn() && resource.data.participants[request.auth.uid] == true;
       }
+      function isExistingParticipant() {
+        return isParticipant() && resource != null;
+      }
 
       allow get: if isParticipant();
       allow list: if true; // Listing chats is permitted
       allow create: if isSignedIn() && request.resource.data.participants[request.auth.uid] == true;
-      allow update: if isParticipant();
-      allow delete: if isParticipant();
+      allow update: if isExistingParticipant();
+      allow delete: if isExistingParticipant();
     }
 
     /**
@@ -103,12 +106,15 @@ service cloud.firestore {
       function isChatParticipant(chatId) {
         return isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
       }
+       function isExistingChatParticipant(chatId) {
+        return isChatParticipant(chatId) && resource != null;
+      }
 
       allow get: if isChatParticipant(chatId);
       allow list: if isChatParticipant(chatId);
-      allow create: if isSignedIn() && isChatParticipant(chatId);
-      allow update: if isChatParticipant(chatId);
-      allow delete: if isChatParticipant(chatId);
+      allow create: if isSignedIn() && isChatParticipant(chatId) && request.resource.data.chatId == chatId;
+      allow update: if isExistingChatParticipant(chatId);
+      allow delete: if isExistingChatParticipant(chatId);
     }
 
     /**
@@ -131,12 +137,15 @@ service cloud.firestore {
       function isOwner(userId) {
         return isSignedIn() && request.auth.uid == userId;
       }
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
 
       allow get: if isOwner(userId);
       allow list: if isOwner(userId);
       allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
     }
   }
 }
