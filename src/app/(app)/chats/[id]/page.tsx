@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc } from "firebase/firestore";
