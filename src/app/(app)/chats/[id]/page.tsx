@@ -949,8 +949,8 @@ export default function ChatPage() {
                 <div className="ml-auto flex items-center">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground">
-                        <Phone className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12">
+                        <Phone className="h-6 w-6" />
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         <span className="sr-only">Call</span>
                     </Button>
@@ -973,8 +973,8 @@ export default function ChatPage() {
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground">
-                        <MoreVertical className="h-5 w-5" />
+                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 ml-1">
+                        <MoreVertical className="h-6 w-6" />
                         <span className="sr-only">More options</span>
                     </Button>
                     </DropdownMenuTrigger>
