@@ -1,151 +1,92 @@
 /**
- * @fileoverview Firestore Security Rules for Secure Talk application.
+ * @fileOverview Firestore Security Rules for Secure Talk application.
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user profiles and contacts.
- * Chats and messages use a shared access model based on participant lists.
+ * This ruleset prioritizes ease of access and rapid prototyping by granting broad read and write permissions to authenticated users.
+ * This is a temporary measure for development and should be replaced with more restrictive rules in a production environment.
  *
  * Data Structure:
- * - /users/{userId}: Stores user profile information.
- * - /chats/{chatId}: Stores chat session information, including a participants map.
- * - /chats/{chatId}/messages/{messageId}: Stores messages within a chat session.
- * - /users/{userId}/contacts/{contactId}: Stores contact information for a user.
+ * - /users/{userId}: Stores user profiles.
+ * - /chats/{chatId}: Stores chat session metadata.
+ * - /chats/{chatId}/messages/{messageId}: Stores individual messages within a chat.
+ * - /users/{userId}/contacts/{contactId}: Stores user contact lists.
  *
  * Key Security Decisions:
- * - Users can only read and write their own profile data.
- * - Chats can only be accessed by participating users.
- * - Contacts are private to the user who owns them.
- * - Listing of users is disallowed.
+ * - Authenticated users have full read and write access to all collections.
+ * - No schema validation is performed in this prototyping phase.
  *
- * Denormalization for Authorization:
- * - The `Chat` entity contains a `participants` map for easy authorization of chat access.
+ * WARNING: These rules are insecure and should NOT be used in production.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile information.
+     * @description Allows any authenticated user to read and write user profiles.
      * @path /users/{userId}
-     * @allow (get) Authenticated user can read their own profile.
-     * @allow (create) Authenticated user can create their own profile if the userId matches their auth.uid.
-     * @allow (update) Authenticated user can update their own profile if the userId matches their auth.uid.
-     * @allow (delete) Authenticated user can delete their own profile if the userId matches their auth.uid.
-     * @deny (get) Authenticated user cannot read another user's profile.
-     * @deny (create) Authenticated user cannot create a profile with a userId that doesn't match their auth.uid.
-     * @deny (update) Authenticated user cannot update another user's profile.
-     * @deny (delete) Authenticated user cannot delete another user's profile.
-     * @principle Enforces document ownership for writes.
+     * @allow (read, write): If the user is authenticated.
+     * @deny Never.
+     * @principle Grants full access to user profiles for authenticated users.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // Listing users is not permitted.
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Controls access to chat session information.
+     * @description Allows any authenticated user to read and write chat session metadata.
      * @path /chats/{chatId}
-     * @allow (get) Authenticated user can read a chat if they are a participant.
-     * @allow (create) Authenticated user can create a chat if they are a participant.
-     * @allow (update) Authenticated user can update a chat if they are a participant.
-     * @allow (delete) Authenticated user can delete a chat if they are a participant.
-     * @deny (get) Authenticated user cannot read a chat if they are not a participant.
-     * @deny (create) Authenticated user cannot create a chat if they are not a participant.
-     * @deny (update) Authenticated user cannot update a chat if they are not a participant.
-     * @deny (delete) Authenticated user cannot delete a chat if they are not a participant.
-     * @principle Enforces shared access based on the 'participants' map.
+     * @allow (read, write): If the user is authenticated.
+     * @deny Never.
+     * @principle Grants full access to chat metadata for authenticated users.
      */
     match /chats/{chatId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isParticipant() {
-        return isSignedIn() && resource.data.participants[request.auth.uid] == true;
-      }
-      function isExistingParticipant() {
-        return isParticipant() && resource != null;
-      }
-
-      allow get: if isParticipant();
-      allow list: if true; // Listing chats is permitted
-      allow create: if isSignedIn() && request.resource.data.participants[request.auth.uid] == true;
-      allow update: if isExistingParticipant();
-      allow delete: if isExistingParticipant();
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Controls access to messages within a chat session.
+     * @description Allows any authenticated user to read and write messages within a chat session.
      * @path /chats/{chatId}/messages/{messageId}
-     * @allow (get) Authenticated user can read a message if they are a participant in the chat.
-     * @allow (create) Authenticated user can create a message if they are a participant in the chat.
-     * @allow (update) Authenticated user can update a message if they are a participant in the chat.
-     * @allow (delete) Authenticated user can delete a message if they are a participant in the chat.
-     * @deny (get) Authenticated user cannot read a message if they are not a participant in the chat.
-     * @deny (create) Authenticated user cannot create a message if they are not a participant in the chat.
-     * @deny (update) Authenticated user cannot update a message if they are not a participant in the chat.
-     * @deny (delete) Authenticated user cannot delete a message if they are not a participant in the chat.
-     * @principle Enforces shared access to messages based on chat participation.
+     * @allow (read, write): If the user is authenticated.
+     * @deny Never.
+     * @principle Grants full access to messages for authenticated users.
      */
     match /chats/{chatId}/messages/{messageId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isChatParticipant(chatId) {
-        return isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
-      }
-       function isExistingChatParticipant(chatId) {
-        return isChatParticipant(chatId) && resource != null;
-      }
-
-      allow get: if isChatParticipant(chatId);
-      allow list: if isChatParticipant(chatId);
-      allow create: if isSignedIn() && isChatParticipant(chatId) && request.resource.data.chatId == chatId;
-      allow update: if isExistingChatParticipant(chatId);
-      allow delete: if isExistingChatParticipant(chatId);
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
     }
 
     /**
-     * @description Controls access to contact information for a user.
+     * @description Allows any authenticated user to read and write contact information for a user.
      * @path /users/{userId}/contacts/{contactId}
-     * @allow (get) Authenticated user can read their own contact.
-     * @allow (create) Authenticated user can create a contact if the userId matches their auth.uid.
-     * @allow (update) Authenticated user can update their own contact if the userId matches their auth.uid.
-     * @allow (delete) Authenticated user can delete their own contact if the userId matches their auth.uid.
-     * @deny (get) Authenticated user cannot read another user's contact.
-     * @deny (create) Authenticated user cannot create a contact with a userId that doesn't match their auth.uid.
-     * @deny (update) Authenticated user cannot update another user's contact.
-     * @deny (delete) Authenticated user cannot delete another user's contact.
-     * @principle Enforces document ownership for contact writes.
+     * @allow (read, write): If the user is authenticated.
+     * @deny Never.
+     * @principle Grants full access to contact information for authenticated users.
      */
     match /users/{userId}/contacts/{contactId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
 
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId) && request.resource.data.userId == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
-      allow delete: if isExistingOwner(userId);
+    /**
+     * @description Helper function to check if a user is signed in.
+     * @returns {boolean} True if the user is signed in, false otherwise.
+     */
+    function isSignedIn() {
+      return request.auth != null;
     }
   }
 }
