@@ -145,6 +145,7 @@ export default function ChatsPage() {
   const [showTour, setShowTour] = useState(false);
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
+  const router = useRouter();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -332,4 +333,5 @@ export default function ChatsPage() {
       {showTour && <TourStep onComplete={handleTourComplete} />}
     </>
   )
-}
+
+    
