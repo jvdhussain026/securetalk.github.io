@@ -43,7 +43,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { addDocumentNonBlocking } from '@/firebase'
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase'
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
@@ -457,6 +457,8 @@ export default function ChatPage() {
         }
     }
 
+    const currentTimestamp = serverTimestamp();
+
     if (editingMessage) {
         const messageRef = doc(firestore, "chats", chatId, "messages", editingMessage.id);
         await updateDoc(messageRef, {
@@ -465,18 +467,24 @@ export default function ChatPage() {
         });
         setEditingMessage(null);
         toast({ title: "Message updated" });
-        return;
+    } else {
+        // Add message to Firestore
+        const collectionRef = collection(firestore, "chats", chatId, "messages");
+        addDocumentNonBlocking(collectionRef, {
+            text: finalText,
+            attachments: attachmentsToUpload,
+            senderId: currentUserId,
+            timestamp: currentTimestamp,
+            replyTo: replyingTo?.id || null,
+        });
     }
 
-    // Add message to Firestore
-    const collectionRef = collection(firestore, "chats", chatId, "messages");
-    addDocumentNonBlocking(collectionRef, {
-        text: finalText,
-        attachments: attachmentsToUpload,
-        senderId: currentUserId,
-        timestamp: serverTimestamp(),
-        replyTo: replyingTo?.id || null,
-    });
+    // Update last message timestamp for both users
+    const userContactRef = doc(firestore, 'users', currentUserId, 'contacts', contactId);
+    updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
+    
+    const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', currentUserId);
+    updateDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {

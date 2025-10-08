@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format } from 'date-fns'
 
@@ -114,7 +114,7 @@ function ChatListItem({ contact }: { contact: Contact }) {
                     </div>
                     <ClientOnly>
                          <p className="text-xs text-muted-foreground whitespace-nowrap">
-                            {lastMessage?.timestamp ? formatLastMessageTimestamp(lastMessage.timestamp) : ''}
+                            {contact.lastMessageTimestamp ? formatLastMessageTimestamp(contact.lastMessageTimestamp) : ''}
                         </p>
                     </ClientOnly>
                 </div>
@@ -151,7 +151,7 @@ export default function ChatsPage() {
 
   const contactsQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null;
-      return collection(firestore, 'users', user.uid, 'contacts');
+      return query(collection(firestore, 'users', user.uid, 'contacts'), orderBy('lastMessageTimestamp', 'desc'));
   }, [firestore, user]);
 
   const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
@@ -199,9 +199,25 @@ export default function ChatsPage() {
     setIsModalOpen(true);
   };
 
-  const filteredContacts = useMemo(() => {
+  const sortedContacts = useMemo(() => {
     if (!contacts) return [];
-    return contacts.filter(contact =>
+    
+    // Create a copy to avoid mutating the original array
+    const contactsCopy = [...contacts];
+
+    contactsCopy.sort((a, b) => {
+        const aTime = a.lastMessageTimestamp?.toDate().getTime() || 0;
+        const bTime = b.lastMessageTimestamp?.toDate().getTime() || 0;
+
+        // If one doesn't have a timestamp, it's newer and should be first.
+        if (aTime === 0 && bTime > 0) return -1;
+        if (bTime === 0 && aTime > 0) return 1;
+
+        // Otherwise, sort by most recent time.
+        return bTime - aTime;
+    });
+
+    return contactsCopy.filter(contact =>
         contact.name.toLowerCase().includes(searchQuery.toLowerCase())
     );
   }, [contacts, searchQuery]);
@@ -265,7 +281,7 @@ export default function ChatsPage() {
           </DropdownMenu>
         </header>
         <main className="flex-1 overflow-y-auto">
-          {filteredContacts.length === 0 && !isLoading ? (
+          {sortedContacts.length === 0 && !isLoading ? (
               <div className="text-center p-8 mt-10 flex flex-col items-center">
                   <MessageSquare className="mx-auto h-16 w-16 text-muted-foreground/50" />
                   <h2 className="mt-4 text-xl font-semibold">No Chats Yet</h2>
@@ -279,7 +295,7 @@ export default function ChatsPage() {
               </div>
           ) : (
             <div>
-              {filteredContacts.map((contact) => (
+              {sortedContacts.map((contact) => (
                   <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
                     <ChatListItem contact={contact} />
                   </div>
