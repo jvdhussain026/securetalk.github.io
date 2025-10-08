@@ -144,6 +144,7 @@
             "$ref": "#/backend/entities/User"
           },
           "description": "Stores user profile information.",
+          "rules": "allow read: if request.auth != null; allow write: if request.auth.uid == userId;",
           "params": [
             {
               "name": "userId",
@@ -160,6 +161,7 @@
             "$ref": "#/backend/entities/Chat"
           },
           "description": "Stores chat session information.",
+          "rules": "allow read, update, delete: if resource.data.participants[request.auth.uid] == true; allow create: if request.resource.data.participants[request.auth.uid] == true;",
           "params": [
             {
               "name": "chatId",
@@ -176,6 +178,7 @@
             "$ref": "#/backend/entities/Message"
           },
           "description": "Stores messages within a chat session. Includes denormalized 'chatId' for efficient querying.",
+          "rules": "allow read, write: if get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;",
           "params": [
             {
               "name": "chatId",
@@ -196,6 +199,7 @@
             "$ref": "#/backend/entities/Contact"
           },
           "description": "Stores contact information for a user. Includes 'userId' to ensure that only the user can access their contacts.",
+          "rules": "allow read, write: if request.auth.uid == userId;",
           "params": [
             {
               "name": "userId",
