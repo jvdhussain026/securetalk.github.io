@@ -5,7 +5,6 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
-import { format } from 'date-fns'
 import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
@@ -30,7 +29,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase'
 import type { Contact } from '@/lib/types'
-import { lastMessages } from '@/lib/dummy-data'
 
 
 export default function ChatsPage() {
@@ -225,16 +223,20 @@ export default function ChatsPage() {
         </header>
         <main className="flex-1 overflow-y-auto">
           {filteredContacts.length === 0 && !isLoading ? (
-              <div className="text-center p-8">
+              <div className="text-center p-8 mt-10 flex flex-col items-center">
                   <MessageSquare className="mx-auto h-16 w-16 text-muted-foreground/50" />
                   <h2 className="mt-4 text-xl font-semibold">No Chats Yet</h2>
-                  <p className="mt-2 text-muted-foreground">Tap the "Add Connection" button to start a conversation.</p>
+                  <p className="mt-2 text-muted-foreground">Tap the "Add Connection" button below to start a conversation.</p>
+                  <Button asChild className="mt-6">
+                    <Link href="/connections">
+                        <UserPlus className="mr-2"/>
+                        Add Connection
+                    </Link>
+                  </Button>
               </div>
           ) : (
             <div>
-              {filteredContacts.map((contact) => {
-                const lastMessage = (lastMessages as any)[contact.id];
-                return (
+              {filteredContacts.map((contact) => (
                   <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
                     <Link href={`/chats/${contact.id}`} className="flex items-center gap-4 p-4">
                       <button onClick={(e) => { e.preventDefault(); handleAvatarClick(contact); }} className="relative">
@@ -249,22 +251,13 @@ export default function ChatsPage() {
                             <p className="font-bold truncate text-base">{contact.name}</p>
                             {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                           </div>
-                          {lastMessage && (
-                            <ClientOnly>
-                              <p className="text-xs text-muted-foreground whitespace-nowrap">{format(lastMessage.timestamp, 'p')}</p>
-                            </ClientOnly>
-                          )}
                         </div>
-                        {lastMessage ? (
-                             <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>{lastMessage.isSender ? 'You: ' : ''}{lastMessage.text || 'Media'}</p>
-                        ) : (
-                            <p className="text-sm text-muted-foreground italic">No messages yet.</p>
-                        )}
+                        <p className="text-sm text-muted-foreground italic">No messages yet.</p>
                       </div>
                     </Link>
                   </div>
                 )
-              })}
+              )}
             </div>
           )}
         </main>
@@ -293,5 +286,3 @@ export default function ChatsPage() {
     </>
   )
 }
-
-    

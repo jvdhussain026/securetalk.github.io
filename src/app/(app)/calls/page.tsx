@@ -5,7 +5,6 @@ import React from 'react'
 import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 
-import { callHistory, type CallRecord } from '@/lib/dummy-call-data'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,6 +18,7 @@ import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { ClientOnly } from '@/components/client-only'
 import type { Contact } from '@/lib/types';
+import { callHistory, type CallRecord } from '@/lib/dummy-call-data';
 
 
 function formatCallTimestamp(timestamp: Date): string {
