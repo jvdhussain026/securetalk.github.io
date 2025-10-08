@@ -3,7 +3,7 @@
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc } from "firebase/firestore";
@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientOnly } from '@/components/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubTrigger, DropdownMenuSubContent, DropdownMenuPortal } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
@@ -724,7 +724,7 @@ export default function ChatPage() {
       setImagePreview({ urls: [avatarUrl], startIndex: 0 });
   };
   
-  const handleAction = (action: 'find' | 'mute' | 'theme') => {
+  const handleAction = (action: 'find' | 'mute' | 'theme' | 'more') => {
     if (action === 'find') {
       setIsSearchOpen(true);
     } else {
@@ -949,7 +949,7 @@ export default function ChatPage() {
                 <div className="ml-auto flex items-center">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12">
+                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-auto">
                         <Phone className="h-6 w-6" />
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         <span className="sr-only">Call</span>
@@ -973,39 +973,57 @@ export default function ChatPage() {
 
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 ml-1">
+                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-auto ml-1">
                         <MoreVertical className="h-6 w-6" />
                         <span className="sr-only">More options</span>
                     </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
-                    <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
-                        <User className="mr-2 h-4 w-4" />
-                        <span>View Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
-                        <ImageIcon className="mr-2 h-4 w-4" />
-                        <span>Shared Media</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleAction('find')}>
-                        <Search className="mr-2 h-4 w-4" />
-                        <span>Find</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onSelect={() => handleAction('theme')}>
-                        <Palette className="mr-2 h-4 w-4" />
-                        <span>Chat Theme</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href="/settings/translation">
-                        <Languages className="mr-2 h-4 w-4" />
-                        <span>Translation</span>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleAction('mute')}>
-                        <BellOff className="mr-2 h-4 w-4" />
-                        <span>Mute Notifications</span>
-                    </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                            <User className="mr-2 h-4 w-4" />
+                            <span>View Profile</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('find')}>
+                            <Search className="mr-2 h-4 w-4" />
+                            <span>Find</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('mute')}>
+                            <BellOff className="mr-2 h-4 w-4" />
+                            <span>Mute Notifications</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link href="/settings/translation">
+                            <Languages className="mr-2 h-4 w-4" />
+                            <span>Translation</span>
+                            </Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onSelect={() => handleAction('theme')}>
+                            <Palette className="mr-2 h-4 w-4" />
+                            <span>Chat Theme</span>
+                        </DropdownMenuItem>
+                         <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <MoreVertical className="mr-2 h-4 w-4" />
+                                <span>More</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                    <DropdownMenuItem onSelect={() => handleAction('more')}>
+                                        <UserX className="mr-2 h-4 w-4" />
+                                        <span>Block</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleAction('more')}>
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Clear chat</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onSelect={() => handleAction('more')}>
+                                        <FileUp className="mr-2 h-4 w-4" />
+                                        <span>Export chat</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                        </DropdownMenuSub>
                     </DropdownMenuContent>
                 </DropdownMenu>
                 </div>
