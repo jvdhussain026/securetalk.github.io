@@ -3,9 +3,10 @@
 
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
 import { format } from 'date-fns'
-import { collection, query, where, getDocs, doc } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -27,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useFirebase, useUser, useCollection, useMemoFirebase } from '@/firebase'
+import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase'
 import type { Contact } from '@/lib/types'
 import { lastMessages } from '@/lib/dummy-data'
 
@@ -41,6 +42,27 @@ export default function ChatsPage() {
   const [showTour, setShowTour] = useState(false);
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
+  const router = useRouter();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<Contact>(userDocRef);
+
+  useEffect(() => {
+    if (userProfile?.lastConnection) {
+        const newContactId = userProfile.lastConnection;
+        // Navigate to the new chat
+        router.push(`/chats/${newContactId}`);
+        // Clear the lastConnection field to prevent re-navigation
+        if(userDocRef) {
+            updateDoc(userDocRef, { lastConnection: null });
+        }
+    }
+  }, [userProfile, userDocRef, router]);
+
 
   const contactsQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null;
@@ -143,7 +165,7 @@ export default function ChatsPage() {
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });
   };
 
-  const isLoading = isUserLoading || areContactsLoading;
+  const isLoading = isUserLoading || areContactsLoading || isProfileLoading;
 
   if (isLoading && isOnboardingComplete) {
       return (

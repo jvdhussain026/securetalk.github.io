@@ -354,7 +354,9 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             email: user.email, // Can be null for anonymous
             username: name.replace(/\s+/g, '').toLowerCase(), // basic username
             profilePictureUrl: `https://picsum.photos/seed/${user.uid}/200/200`,
-            bio: 'Just joined Secure Talk!'
+            bio: 'Just joined Secure Talk!',
+            language: 'en',
+            lastConnection: null,
         };
 
         setDocumentNonBlocking(userRef, profileData, { merge: true });

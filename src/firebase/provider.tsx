@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
@@ -5,6 +6,8 @@ import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
+import { useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 interface FirebaseProviderProps {
   children: ReactNode;
@@ -28,6 +31,7 @@ export interface FirebaseContextState {
   auth: Auth | null; // The Auth service instance
   // User authentication state
   user: User | null;
+  userProfile: any;
   isUserLoading: boolean; // True during initial auth check
   userError: Error | null; // Error from auth listener
 }
@@ -38,6 +42,7 @@ export interface FirebaseServicesAndUser {
   firestore: Firestore;
   auth: Auth;
   user: User | null;
+  userProfile: any;
   isUserLoading: boolean;
   userError: Error | null;
 }
@@ -89,6 +94,13 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
     return () => unsubscribe(); // Cleanup
   }, [auth]); // Depends on the auth instance
 
+  const userDocRef = useMemoFirebase(() => {
+      if (!firestore || !userAuthState.user) return null;
+      return doc(firestore, 'users', userAuthState.user.uid);
+  }, [firestore, userAuthState.user]);
+  const { data: userProfile } = useDoc(userDocRef);
+
+
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
     const servicesAvailable = !!(firebaseApp && firestore && auth);
@@ -98,10 +110,11 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       firestore: servicesAvailable ? firestore : null,
       auth: servicesAvailable ? auth : null,
       user: userAuthState.user,
+      userProfile,
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
-  }, [firebaseApp, firestore, auth, userAuthState]);
+  }, [firebaseApp, firestore, auth, userAuthState, userProfile]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
@@ -131,6 +144,7 @@ export const useFirebase = (): FirebaseServicesAndUser => {
     firestore: context.firestore,
     auth: context.auth,
     user: context.user,
+    userProfile: context.userProfile,
     isUserLoading: context.isUserLoading,
     userError: context.userError,
   };

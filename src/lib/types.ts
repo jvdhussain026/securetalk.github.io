@@ -28,6 +28,7 @@ export type Contact = {
   bio?: string;
   verified?: boolean;
   liveTranslationEnabled?: boolean;
+  lastConnection?: string; // UID of the last user who connected with this user
 };
 
 export type UserProfile = {
