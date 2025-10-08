@@ -86,22 +86,23 @@ export function AudioPlayer({ src, isSender }: AudioPlayerProps) {
       >
         {isPlaying ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
       </Button>
-      <div className="flex-grow flex flex-col gap-1.5 overflow-hidden">
+      <div className="flex-1 overflow-hidden">
          <Slider
           value={[currentTime]}
           max={duration || 100}
           step={0.1}
           onValueChange={handleSliderChange}
           className={cn(
+              "w-full my-1",
               isSender ? "[&>span>span]:bg-white" : "",
               "[&>span:last-child]:h-3 [&>span:last-child]:w-3"
           )}
         />
-        <div className="flex justify-between items-center">
-          <span className={cn("text-xs w-10", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+        <div className="flex justify-between items-center text-xs">
+          <span className={cn("w-10", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
             {formatTime(currentTime)}
           </span>
-          <span className={cn("text-xs w-10 text-right", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+          <span className={cn("w-10 text-right", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
             {formatTime(duration)}
           </span>
         </div>
