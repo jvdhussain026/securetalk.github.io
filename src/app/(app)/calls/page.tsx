@@ -18,62 +18,12 @@ import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { ClientOnly } from '@/components/client-only'
 import type { Contact } from '@/lib/types';
-import { callHistory, type CallRecord } from '@/lib/dummy-call-data';
-
-
-function formatCallTimestamp(timestamp: Date): string {
-  if (isToday(timestamp)) {
-    return `Today, ${format(timestamp, 'p')}`
-  }
-  if (isYesterday(timestamp)) {
-    return `Yesterday, ${format(timestamp, 'p')}`
-  }
-  return format(timestamp, 'MMMM d, yyyy')
-}
-
-const CallIcon = ({ type, direction }: { type: 'voice' | 'video', direction: 'incoming' | 'outgoing' | 'missed' }) => {
-  const className = cn(
-    'h-5 w-5',
-    direction === 'missed' ? 'text-destructive' : 'text-muted-foreground'
-  )
-
-  if (direction === 'missed') {
-     return <PhoneMissed className={className} />
-  }
-  if (direction === 'incoming') {
-     return <PhoneIncoming className={className} />
-  }
-
-  // Outgoing
-  if (type === 'video') {
-    return <Video className={className} />
-  }
-  return <PhoneOutgoing className={className} />
-}
-
 
 export default function CallsPage() {
   const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
-  const [selectedContact, setSelectedContact] = React.useState<Contact | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = React.useState(false)
   const [searchQuery, setSearchQuery] = React.useState('')
   const [imagePreview, setImagePreview] = React.useState<ImagePreviewState | null>(null);
   const { toast } = useToast()
-
-  const handleContactSelect = (call: CallRecord) => {
-    // This needs to be updated to fetch real contact data
-    // const contact = contacts.find(c => c.id === call.contactId);
-    // if (contact) {
-    //   setSelectedContact(contact)
-    //   setIsSheetOpen(true)
-    // }
-     toast({title: 'Feature coming soon'})
-  }
-  
-  const handleAvatarClick = (call: CallRecord) => {
-    setImagePreview({ urls: [call.avatar], startIndex: 0 });
-  };
-
 
   const navItems = [
     { href: '/chats', icon: MessageSquare, label: 'Chats' },
@@ -81,43 +31,12 @@ export default function CallsPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
   
-  const filteredCallHistory = React.useMemo(() => {
-    return callHistory.filter(call =>
-      call.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [searchQuery]);
-
-  const renderCallList = (calls: CallRecord[]) => {
-    if (calls.length === 0) {
-      return (
-        <div className="text-center p-8">
-            <PhoneMissed className="mx-auto h-16 w-16 text-muted-foreground/50" />
-            <h2 className="mt-4 text-xl font-semibold">No Call History</h2>
-            <p className="mt-2 text-muted-foreground">Your call history will appear here.</p>
-        </div>
-      );
-    }
+  const renderEmptyCallList = () => {
     return (
-      <div>
-        {calls.map((call) => (
-          <div key={call.id} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
-            <div className="flex items-center gap-4 p-4">
-               <button onClick={() => handleAvatarClick(call)}>
-                  <Avatar className="h-12 w-12">
-                      <AvatarImage src={call.avatar} alt={call.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{call.name.charAt(0)}</AvatarFallback>
-                  </Avatar>
-              </button>
-              <button onClick={() => handleContactSelect(call)} className="flex-1 overflow-hidden text-left">
-                <p className="font-bold truncate text-base">{call.name}</p>
-                <ClientOnly>
-                  <p className="text-sm text-muted-foreground whitespace-nowrap">{formatCallTimestamp(call.timestamp)}</p>
-                </ClientOnly>
-              </button>
-              <CallIcon type={call.type} direction={call.direction} />
-            </div>
-          </div>
-        ))}
+      <div className="text-center p-8 mt-10">
+          <PhoneMissed className="mx-auto h-16 w-16 text-muted-foreground/50" />
+          <h2 className="mt-4 text-xl font-semibold">No Call History</h2>
+          <p className="mt-2 text-muted-foreground">Your call history is not yet available.</p>
       </div>
     );
   }
@@ -139,6 +58,7 @@ export default function CallsPage() {
                 className="pl-10 rounded-full" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                disabled
             />
           </div>
           <Button variant="ghost" size="icon" className="h-11 w-11">
@@ -156,10 +76,10 @@ export default function CallsPage() {
               <TabsTrigger value="incoming">Incoming</TabsTrigger>
             </TabsList>
             <div className="flex-1 overflow-y-auto">
-                <TabsContent value="all">{renderCallList(filteredCallHistory)}</TabsContent>
-                <TabsContent value="missed">{renderCallList(filteredCallHistory.filter(c => c.direction === 'missed'))}</TabsContent>
-                <TabsContent value="outgoing">{renderCallList(filteredCallHistory.filter(c => c.direction === 'outgoing'))}</TabsContent>
-                <TabsContent value="incoming">{renderCallList(filteredCallHistory.filter(c => c.direction === 'incoming'))}</TabsContent>
+                <TabsContent value="all">{renderEmptyCallList()}</TabsContent>
+                <TabsContent value="missed">{renderEmptyCallList()}</TabsContent>
+                <TabsContent value="outgoing">{renderEmptyCallList()}</TabsContent>
+                <TabsContent value="incoming">{renderEmptyCallList()}</TabsContent>
             </div>
           </Tabs>
         </main>
@@ -171,13 +91,6 @@ export default function CallsPage() {
           </nav>
         </footer>
       </div>
-      {selectedContact && (
-        <CallDetailsSheet
-          open={isSheetOpen}
-          onOpenChange={setIsSheetOpen}
-          contact={selectedContact}
-        />
-      )}
        <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}

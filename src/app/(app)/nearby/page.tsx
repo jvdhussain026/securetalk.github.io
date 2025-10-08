@@ -3,7 +3,6 @@
 
 import React, { useState, useMemo } from 'react'
 import { User, Search, Wifi, MessageSquare, Phone, Users } from 'lucide-react'
-import { nearbyUsers as initialNearbyUsers } from '@/lib/dummy-nearby-data'
 import type { NearbyUser } from '@/lib/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -17,33 +16,7 @@ import type { ImagePreviewState } from '@/components/image-preview-dialog'
 
 export default function NearbyPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [nearbyUsers, setNearbyUsers] = useState<NearbyUser[]>(initialNearbyUsers)
-  const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null)
-  const [isSheetOpen, setIsSheetOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
-
-
-  const handleUserSelect = (user: NearbyUser) => {
-    setSelectedUser(user)
-    setIsSheetOpen(true)
-  }
-
-  const handleConnectRequest = (userId: string) => {
-    setNearbyUsers(users =>
-      users.map(u =>
-        u.id === userId ? { ...u, connectionStatus: 'requested' } : u
-      )
-    )
-    // In a real app, you would also close the sheet and probably show a toast
-    setTimeout(() => {
-        setIsSheetOpen(false)
-    }, 1000)
-  }
-  
-  const handleAvatarClick = (user: NearbyUser) => {
-    setImagePreview({ urls: [user.avatar], startIndex: 0 });
-  };
 
 
   const navItems = [
@@ -52,11 +25,6 @@ export default function NearbyPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
   
-  const filteredNearbyUsers = useMemo(() => {
-    return nearbyUsers.filter(user =>
-      user.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [nearbyUsers, searchQuery]);
 
   return (
     <>
@@ -75,6 +43,7 @@ export default function NearbyPage() {
               className="pl-10 rounded-full" 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              disabled
             />
           </div>
         </header>
@@ -83,28 +52,13 @@ export default function NearbyPage() {
             <Wifi className="mx-auto h-12 w-12 text-primary/80 mb-2" />
             <h2 className="text-lg font-semibold">Discover people nearby</h2>
             <p className="text-sm text-muted-foreground mt-1">
-              Start chats and calls without any internet with end-to-end encrypted technology. No one can read or listen, not even us.
+              This feature is coming soon! Find and chat with people around you without needing an internet connection.
             </p>
           </div>
-          <div>
-            {filteredNearbyUsers.map(user => (
-              <div key={user.id} className="w-full text-left block hover:bg-accent/50 transition-colors border-b">
-                <div className="flex items-center gap-4 p-4">
-                    <button onClick={() => handleAvatarClick(user)}>
-                        <Avatar className="h-12 w-12">
-                            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
-                            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-                        </Avatar>
-                    </button>
-                    <button onClick={() => handleUserSelect(user)} className="flex-1 overflow-hidden text-left">
-                        <p className="font-bold truncate text-base">{user.name}</p>
-                        <p className="text-sm text-muted-foreground truncate" style={{ wordBreak: 'break-word' }}>
-                        {user.bio}
-                        </p>
-                    </button>
-                </div>
-              </div>
-            ))}
+           <div className="text-center p-8 mt-10 flex flex-col items-center">
+              <Users className="mx-auto h-16 w-16 text-muted-foreground/50" />
+              <h2 className="mt-4 text-xl font-semibold">No One Nearby</h2>
+              <p className="mt-2 text-muted-foreground">The nearby users feature is under development.</p>
           </div>
         </main>
          <footer className="border-t shrink-0 bg-card">
@@ -115,18 +69,6 @@ export default function NearbyPage() {
             </nav>
         </footer>
       </div>
-      {selectedUser && (
-        <NearbyUserSheet
-          open={isSheetOpen}
-          onOpenChange={setIsSheetOpen}
-          user={selectedUser}
-          onConnect={handleConnectRequest}
-        />
-      )}
-       <ImagePreviewDialog
-        imagePreview={imagePreview}
-        onOpenChange={(open) => !open && setImagePreview(null)}
-      />
     </>
   )
 }
