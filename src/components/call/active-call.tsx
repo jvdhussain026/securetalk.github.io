@@ -17,9 +17,10 @@ type ActiveCallProps = {
   callType: 'voice' | 'video';
   initialStatus: 'ringing' | 'connected' | 'outgoing';
   onStatusChange: (status: 'ringing' | 'connected' | 'ended' | 'outgoing') => void;
+  onEndCall: (signal?: boolean) => void;
 };
 
-export function ActiveCall({ contact, callType, initialStatus, onStatusChange }: ActiveCallProps) {
+export function ActiveCall({ contact, callType, initialStatus, onStatusChange, onEndCall }: ActiveCallProps) {
   const router = useRouter();
   const { firestore, user } = useFirebase();
 
@@ -35,32 +36,25 @@ export function ActiveCall({ contact, callType, initialStatus, onStatusChange }:
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  
+  const recipientUserDocRef = useMemoFirebase(() => {
+    if (!firestore || !contact.id) return null;
+    return doc(firestore, 'users', contact.id);
+  }, [firestore, contact.id]);
 
-  const currentUserDocRef = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
 
-
+  // Listen for the other user ending the call
   useEffect(() => {
-    if (!currentUserDocRef) return;
-    // Listen for call status changes from the other user
-    const unsubscribe = onSnapshot(currentUserDocRef, (snapshot) => {
+    if (!recipientUserDocRef) return;
+    const unsubscribe = onSnapshot(recipientUserDocRef, (snapshot) => {
         const data = snapshot.data();
-        if (data?.callStatus === 'connected' && status !== 'connected') {
-            setStatus('connected');
-            onStatusChange('connected');
-            // Clear the status so we don't get stuck in a loop
-            updateDoc(currentUserDocRef, { callStatus: null, callWith: null });
-        }
-        if (data?.callStatus === 'declined' || data?.callStatus === 'ended') {
+        if (data?.callStatus === 'ended') {
             handleEndCall(false); // End call without signaling back
         }
     });
-
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserDocRef, status]);
+  }, [recipientUserDocRef]);
 
 
   const stopStream = (streamToStop: MediaStream | null) => {
@@ -112,17 +106,18 @@ export function ActiveCall({ contact, callType, initialStatus, onStatusChange }:
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVideoEnabled]);
 
+  useEffect(() => {
+    if(initialStatus === 'connected') {
+        setStatus('connected');
+    }
+  }, [initialStatus]);
+
 
   const handleEndCall = (signal = true) => {
     stopStream(stream);
     setStatus('ended');
     onStatusChange('ended');
-    
-    if (signal && firestore) {
-      // Signal to the other user that the call has ended
-      const otherUserDocRef = doc(firestore, 'users', contact.id);
-      updateDoc(otherUserDocRef, { callStatus: 'ended', incomingCall: null });
-    }
+    onEndCall(signal);
     
     setTimeout(() => {
       router.back();
@@ -136,15 +131,17 @@ export function ActiveCall({ contact, callType, initialStatus, onStatusChange }:
   };
 
   const CallStatus = () => {
-    switch (status) {
-      case 'ringing':
-        return <p className="text-lg text-white/80 animate-pulse">{initialStatus === 'outgoing' ? 'Ringing...' : 'Connecting...'}</p>;
+    switch (initialStatus) {
+      case 'outgoing':
+         return <p className="text-lg text-white/80 animate-pulse">Ringing...</p>;
       case 'connected':
-        return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
+         return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
       case 'ended':
         return <p className="text-lg text-white">Call Ended</p>;
       default:
-        return null;
+        // For incoming calls that get connected
+        if(status === 'connected') return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
+        return <p className="text-lg text-white/80 animate-pulse">Connecting...</p>;
     }
   };
 
@@ -269,3 +266,5 @@ export function ActiveCall({ contact, callType, initialStatus, onStatusChange }:
     </div>
   );
 }
+
+    

@@ -8,7 +8,7 @@ import { IncomingCall } from '@/components/call/incoming-call';
 import { ActiveCall } from '@/components/call/active-call';
 import { Loader2 } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
 
 function CallPageContent() {
   const searchParams = useSearchParams();
@@ -30,23 +30,30 @@ function CallPageContent() {
 
   const recipientUserDocRef = useMemoFirebase(() => {
       if (!firestore || !contactId) return null;
+      // This is the user doc of the person being called (if we are the caller)
+      // or the person who is calling (if we are the receiver).
       return doc(firestore, 'users', contactId);
   }, [firestore, contactId]);
 
+  const currentUserDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+
+  // This effect is for the CALLER to signal the recipient
   useEffect(() => {
-    // If this user is the one making the call, set the incomingCall field on the recipient's doc
     if (callStatusParam === 'outgoing' && recipientUserDocRef && user) {
         updateDoc(recipientUserDocRef, {
             incomingCall: { from: user.uid, type: type }
         });
     }
-
-    // Cleanup: when this call page is left for any reason, clear the incoming call signal.
+    
+    // Cleanup for the CALLER:
+    // If the call page is left for any reason (e.g. browser back), clear the outgoing call signal.
     return () => {
-      // This is the crucial fix: Only clear the incomingCall signal if the call was never connected.
-      // If we are the caller (outgoing) and the status is still 'outgoing', it means the other person never answered.
       if (currentStatus === 'outgoing' && recipientUserDocRef) {
-        updateDoc(recipientUserDocRef, { incomingCall: null });
+        updateDoc(recipientUserDocRef, { incomingCall: null, callStatus: null, callWith: null });
       }
     };
   // The dependencies are correct. We only want this effect to run once on mount.
@@ -54,34 +61,77 @@ function CallPageContent() {
   }, [callStatusParam, recipientUserDocRef, user, type]);
 
 
-  const handleAccept = () => {
-    if (!recipientUserDocRef || !user) return;
-    // The recipient (current user) accepts the call.
-    // Update the caller's user doc to let them know the call was accepted.
-    const callerDocRef = doc(firestore, 'users', contactId!);
-    updateDoc(callerDocRef, { callStatus: 'connected', callWith: user.uid });
-    
-    // Also clear my own incoming call signal
-    updateDoc(doc(firestore, 'users', user.uid), { incomingCall: null });
+  // This effect is for BOTH users to listen for state changes from the other party.
+  useEffect(() => {
+    if (!currentUserDocRef) return;
 
-    router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
+    const unsubscribe = onSnapshot(currentUserDocRef, (snapshot) => {
+        const data = snapshot.data();
+        if (!data) return;
+
+        // Caller-side: Call was accepted by recipient.
+        if (data.callStatus === 'connected' && data.callWith === contactId) {
+            setCurrentStatus('connected');
+            onStatusChange('connected');
+            router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
+            // Clear status field to prevent loops
+            updateDoc(currentUserDocRef, { callStatus: null, callWith: null });
+        }
+        
+        // Caller-side: Call was declined by recipient.
+        if (data.callStatus === 'declined') {
+            handleEndCall(false); // end without signaling back
+        }
+    });
+
+    return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUserDocRef, contactId, type, router]);
+
+
+  const handleAccept = () => {
+    if (!currentUserDocRef || !recipientUserDocRef || !contactId || !user) return;
+    
+    // Recipient (current user) accepts.
+    // 1. Tell the CALLER that the call is now 'connected'.
+    updateDoc(recipientUserDocRef, { callStatus: 'connected', callWith: user.uid });
+    
+    // 2. Clear my own incoming call signal.
+    updateDoc(currentUserDocRef, { incomingCall: null });
+
+    // 3. Immediately navigate to the connected state.
     setCurrentStatus('connected');
+    router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
   };
 
   const handleDecline = () => {
-    if (!user) return;
-    // Clear my own incoming call signal
-    const currentUserDocRef = doc(firestore, 'users', user.uid);
+    if (!currentUserDocRef || !recipientUserDocRef) return;
+
+    // 1. Clear my own incoming call signal.
     updateDoc(currentUserDocRef, { incomingCall: null });
 
-    // Let the caller know it was declined
-    const callerDocRef = doc(firestore, 'users', contactId!);
-    updateDoc(callerDocRef, { callStatus: 'declined' });
+    // 2. Tell the CALLER that the call was 'declined'.
+    updateDoc(recipientUserDocRef, { callStatus: 'declined' });
     
     router.back();
   };
 
+  const handleEndCall = (signal = true) => {
+    if (signal && recipientUserDocRef) {
+      // Signal to the other user that the call has ended
+      updateDoc(recipientUserDocRef, { callStatus: 'ended' });
+    }
+    // Also clear my own status fields to be safe
+    if(currentUserDocRef){
+        updateDoc(currentUserDocRef, { callStatus: null, callWith: null, incomingCall: null });
+    }
+    
+    router.back();
+  };
+
+
   if (!contactId || !type || !callStatusParam) {
+    // This case should ideally not happen with proper navigation.
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background text-foreground">
         <Loader2 className="h-8 w-8 animate-spin mb-4" />
@@ -108,11 +158,13 @@ function CallPageContent() {
     )
   }
 
+  // Render correct component based on initial status or current state
   if (currentStatus === 'incoming') {
     return <IncomingCall contact={contact} callType={type} onAccept={handleAccept} onDecline={handleDecline} />;
   }
 
-  return <ActiveCall contact={contact} callType={type} initialStatus={callStatusParam} onStatusChange={setCurrentStatus} />;
+  // This component now handles 'outgoing' (ringing) and 'connected' states.
+  return <ActiveCall contact={contact} callType={type} initialStatus={callStatusParam} onStatusChange={setCurrentStatus} onEndCall={handleEndCall}/>;
 }
 
 
@@ -127,3 +179,5 @@ export default function CallPage() {
         </Suspense>
     )
 }
+
+    

@@ -42,6 +42,9 @@ export type Contact = {
     type: 'voice' | 'video';
   } | null;
   lastConnection?: string | null;
+  // New fields for call state management
+  callStatus?: 'connected' | 'declined' | 'ended' | null;
+  callWith?: string | null; // UID of the person they are in a call with
 };
 
 export type UserProfile = {
@@ -58,3 +61,5 @@ export type NearbyUser = {
   bio?: string;
   connectionStatus: 'none' | 'requested' | 'connected';
 };
+
+    
