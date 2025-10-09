@@ -9,8 +9,6 @@ import { Mic, MicOff, Video, VideoOff, PhoneMissed, Volume2, RefreshCw } from 'l
 import type { Contact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { useFirebase, useMemoFirebase } from '@/firebase';
 
 type ActiveCallProps = {
   contact: Contact;
@@ -21,7 +19,6 @@ type ActiveCallProps = {
 
 export function ActiveCall({ contact, callType, initialStatus, onEndCall }: ActiveCallProps) {
   const router = useRouter();
-  const { firestore, user } = useFirebase();
 
   const [status, setStatus] = useState<'ringing' | 'connected' | 'ended'>(
     initialStatus === 'connected' ? 'connected' : 'ringing'
@@ -36,26 +33,6 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
   const localVideoRef = useRef<HTMLVideoElement | null>(null);
   const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
   
-  const recipientUserDocRef = useMemoFirebase(() => {
-    if (!firestore || !contact.id) return null;
-    return doc(firestore, 'users', contact.id);
-  }, [firestore, contact.id]);
-
-
-  // Listen for the other user ending the call
-  useEffect(() => {
-    if (!recipientUserDocRef) return;
-    const unsubscribe = onSnapshot(recipientUserDocRef, (snapshot) => {
-        const data = snapshot.data();
-        if (data?.callStatus === 'ended') {
-            handleEndCall(false); // End call without signaling back
-        }
-    });
-    return () => unsubscribe();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipientUserDocRef]);
-
-
   const stopStream = (streamToStop: MediaStream | null) => {
     if (streamToStop) {
       streamToStop.getTracks().forEach(track => track.stop());
@@ -112,14 +89,10 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
   }, [initialStatus]);
 
 
-  const handleEndCall = (signal = true) => {
+  const handleEndCall = () => {
     stopStream(stream);
     setStatus('ended');
-    onEndCall(signal);
-    
-    setTimeout(() => {
-      router.back();
-    }, 1500);
+    onEndCall(true); // Signal to the other user
   };
 
   const formatDuration = (seconds: number) => {
@@ -255,7 +228,7 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
           size="lg"
           variant="destructive"
           className="w-full h-16 rounded-full text-lg flex items-center justify-center gap-2"
-          onClick={() => handleEndCall()}
+          onClick={handleEndCall}
         >
           <PhoneMissed className="w-7 h-7 transform -rotate-[135deg]" />
           <span>End Call</span>

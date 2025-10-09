@@ -18,11 +18,6 @@ function CallPageContent() {
   const contactId = searchParams.get('contactId');
   const type = searchParams.get('type') as 'voice' | 'video';
   const callStatusParam = searchParams.get('status') as 'incoming' | 'outgoing' | 'connected';
-  
-  const [currentStatus, setCurrentStatus] = useState<'ringing' | 'connected' | 'ended'>(
-    callStatusParam === 'connected' ? 'connected' : 'ringing'
-  );
-
 
   const contactDocRef = useMemoFirebase(() => {
     if (!firestore || !user || !contactId) return null;
@@ -64,6 +59,20 @@ function CallPageContent() {
   }, [callStatusParam, recipientUserDocRef, user, type]);
 
 
+  const handleEndCall = (signal = true) => {
+    if (signal && recipientUserDocRef) {
+      // Signal to the other user that the call has ended
+      updateDoc(recipientUserDocRef, { callStatus: 'ended' });
+    }
+    // Also clear my own status fields to be safe
+    if(currentUserDocRef){
+        updateDoc(currentUserDocRef, { callStatus: null, callWith: null, incomingCall: null });
+    }
+    
+    router.back();
+  };
+
+
   // This effect is for BOTH users to listen for state changes from the other party.
   useEffect(() => {
     if (!currentUserDocRef) return;
@@ -81,6 +90,11 @@ function CallPageContent() {
         
         // Caller-side: Call was declined by recipient.
         if (data.callStatus === 'declined') {
+            handleEndCall(false); // end without signaling back
+        }
+
+        // Either-side: Call was ended by the other user.
+        if (data.callStatus === 'ended') {
             handleEndCall(false); // end without signaling back
         }
     });
@@ -112,19 +126,6 @@ function CallPageContent() {
 
     // 2. Tell the CALLER that the call was 'declined'.
     updateDoc(recipientUserDocRef, { callStatus: 'declined' });
-    
-    router.back();
-  };
-
-  const handleEndCall = (signal = true) => {
-    if (signal && recipientUserDocRef) {
-      // Signal to the other user that the call has ended
-      updateDoc(recipientUserDocRef, { callStatus: 'ended' });
-    }
-    // Also clear my own status fields to be safe
-    if(currentUserDocRef){
-        updateDoc(currentUserDocRef, { callStatus: null, callWith: null, incomingCall: null });
-    }
     
     router.back();
   };
