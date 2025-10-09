@@ -1,66 +1,88 @@
+// This is a basic service worker that allows the app to be installed and handles push notifications.
 
-// This gives the service worker access to all the APIs
-// that it needs to function.
-self.importScripts(
-  'https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js'
-);
-
-// This code listens for the user's confirmation to update the app.
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'SKIP_WAITING') {
-    self.skipWaiting();
-  }
+// Install event: cache necessary assets (optional, but good for offline capability)
+self.addEventListener('install', (event) => {
+  console.log('Service Worker installing.');
+  // You can add caching strategies here if needed.
+  // event.waitUntil(
+  //   caches.open('v1').then((cache) => {
+  //     return cache.addAll([
+  //       // list of assets to cache
+  //     ]);
+  //   })
+  // );
 });
 
-// The precacheAndRoute() method efficiently caches and responds to
-// requests for URLs in the manifest.
-// See https://goo.gl/S9QRab
-workbox.precaching.precacheAndRoute(self.__WB_MANIFEST);
+// Activate event: clean up old caches (optional)
+self.addEventListener('activate', (event) => {
+  console.log('Service Worker activating.');
+});
 
-// Listen for push events
+// Fetch event: serve from cache if available (optional)
+self.addEventListener('fetch', (event) => {
+  // You can add fetch event listeners here, e.g., for caching strategies.
+});
+
+// THIS IS THE PUSH NOTIFICATION LISTENER
 self.addEventListener('push', (event) => {
-  let payload;
-  try {
-    payload = event.data ? event.data.json() : { title: 'Secure Talk', body: 'You have a new message.' };
-  } catch (e) {
-    console.error('Error parsing push notification payload:', e);
-    payload = { title: 'Secure Talk', body: 'You have a new message.' };
+  console.log('[Service Worker] Push Received.');
+  if (!event.data) {
+    console.error('[Service Worker] Push event but no data');
+    return;
   }
+  
+  try {
+    const data = event.data.json();
+    console.log('[Service Worker] Push data: ', data);
+    
+    const title = data.title || 'Secure Talk';
+    const options = {
+      body: data.body || 'You have a new message.',
+      icon: data.icon || '/icons/icon-192x192.png',
+      badge: data.badge || '/icons/icon-96x96.png', // Badge for the notification bar
+      tag: data.tag || 'default-tag', // Used to group notifications
+      renotify: true, // Vibrate/play sound for a new notification even if one with the same tag exists.
+      data: {
+        url: data.url || '/', // URL to open on notification click
+      },
+    };
 
-  const { title, body, icon, badge, tag } = payload;
-
-  const options = {
-    body,
-    icon: icon || '/icons/icon-192x192.png',
-    badge: badge || '/icons/badge-72x72.png',
-    tag: tag || 'default-tag',
-    renotify: true,
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
-  );
+    event.waitUntil(self.registration.showNotification(title, options));
+  } catch (e) {
+    console.error('Error processing push data:', e);
+     // Fallback for non-JSON data
+    const title = 'Secure Talk';
+    const options = {
+      body: event.data.text(),
+      icon: '/icons/icon-192x192.png',
+    };
+    event.waitUntil(self.registration.showNotification(title, options));
+  }
 });
 
 
-// Listen for notification clicks
+// Notification click event
 self.addEventListener('notificationclick', (event) => {
+  console.log('[Service Worker] Notification click Received.');
   event.notification.close();
 
+  const urlToOpen = event.notification.data.url || '/';
+
   event.waitUntil(
-    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
-      // Check if there's already a window open
+    clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true,
+    }).then((clientList) => {
+      // If a window for the app is already open, focus it.
       for (const client of clientList) {
-        // If a window for the app is already open, focus it
-        if (client.url === '/' && 'focus' in client) {
+        if (client.url === urlToOpen && 'focus' in client) {
           return client.focus();
         }
       }
-      // If no window is open, open a new one
+      // Otherwise, open a new window.
       if (clients.openWindow) {
-        return clients.openWindow('/');
+        return clients.openWindow(urlToOpen);
       }
     })
   );
 });
-
