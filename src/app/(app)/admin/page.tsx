@@ -38,7 +38,8 @@ export default function AdminPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
+    // Removed orderBy to prevent query failure due to missing index
+    return query(collection(firestore, 'users'));
   }, [firestore]);
 
   const { data: users, isLoading, error } = useCollection<Contact>(usersQuery);
