@@ -1,7 +1,7 @@
 
 'use client';
 
-import { Suspense, useEffect, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Contact } from '@/lib/types';
 import { IncomingCall } from '@/components/call/incoming-call';
@@ -17,7 +17,9 @@ function CallPageContent() {
 
   const contactId = searchParams.get('contactId');
   const type = searchParams.get('type') as 'voice' | 'video';
-  const status = searchParams.get('status') as 'incoming' | 'outgoing' | 'connected';
+  const callStatusParam = searchParams.get('status') as 'incoming' | 'outgoing' | 'connected';
+  
+  const [currentStatus, setCurrentStatus] = useState(callStatusParam);
 
   const contactDocRef = useMemoFirebase(() => {
     if (!firestore || !user || !contactId) return null;
@@ -33,7 +35,7 @@ function CallPageContent() {
 
   useEffect(() => {
     // If this user is the one making the call, set the incomingCall field on the recipient's doc
-    if (status === 'outgoing' && recipientUserDocRef && user) {
+    if (callStatusParam === 'outgoing' && recipientUserDocRef && user) {
         updateDoc(recipientUserDocRef, {
             incomingCall: { from: user.uid, type: type }
         });
@@ -41,12 +43,15 @@ function CallPageContent() {
 
     // Cleanup: when this call page is left for any reason, clear the incoming call signal.
     return () => {
-      if (status === 'outgoing' && recipientUserDocRef) {
-        // Caller hangs up before receiver answers
+      // This is the crucial fix: Only clear the incomingCall signal if the call was never connected.
+      // If we are the caller (outgoing) and the status is still 'outgoing', it means the other person never answered.
+      if (currentStatus === 'outgoing' && recipientUserDocRef) {
         updateDoc(recipientUserDocRef, { incomingCall: null });
       }
     };
-  }, [status, recipientUserDocRef, user, type]);
+  // The dependencies are correct. We only want this effect to run once on mount.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callStatusParam, recipientUserDocRef, user, type]);
 
 
   const handleAccept = () => {
@@ -60,6 +65,7 @@ function CallPageContent() {
     updateDoc(doc(firestore, 'users', user.uid), { incomingCall: null });
 
     router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
+    setCurrentStatus('connected');
   };
 
   const handleDecline = () => {
@@ -75,7 +81,7 @@ function CallPageContent() {
     router.back();
   };
 
-  if (!contactId || !type || !status) {
+  if (!contactId || !type || !callStatusParam) {
     return (
       <div className="h-full flex flex-col items-center justify-center bg-background text-foreground">
         <Loader2 className="h-8 w-8 animate-spin mb-4" />
@@ -102,11 +108,11 @@ function CallPageContent() {
     )
   }
 
-  if (status === 'incoming') {
+  if (currentStatus === 'incoming') {
     return <IncomingCall contact={contact} callType={type} onAccept={handleAccept} onDecline={handleDecline} />;
   }
 
-  return <ActiveCall contact={contact} callType={type} initialStatus={status} />;
+  return <ActiveCall contact={contact} callType={type} initialStatus={callStatusParam} onStatusChange={setCurrentStatus} />;
 }
 
 

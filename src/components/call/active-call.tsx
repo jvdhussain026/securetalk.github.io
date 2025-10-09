@@ -16,9 +16,10 @@ type ActiveCallProps = {
   contact: Contact;
   callType: 'voice' | 'video';
   initialStatus: 'ringing' | 'connected' | 'outgoing';
+  onStatusChange: (status: 'ringing' | 'connected' | 'ended' | 'outgoing') => void;
 };
 
-export function ActiveCall({ contact, callType, initialStatus }: ActiveCallProps) {
+export function ActiveCall({ contact, callType, initialStatus, onStatusChange }: ActiveCallProps) {
   const router = useRouter();
   const { firestore, user } = useFirebase();
 
@@ -32,8 +33,8 @@ export function ActiveCall({ contact, callType, initialStatus }: ActiveCallProps
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRef = useRef<HTMLVideoElement>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
 
   const currentUserDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -48,6 +49,7 @@ export function ActiveCall({ contact, callType, initialStatus }: ActiveCallProps
         const data = snapshot.data();
         if (data?.callStatus === 'connected' && status !== 'connected') {
             setStatus('connected');
+            onStatusChange('connected');
             // Clear the status so we don't get stuck in a loop
             updateDoc(currentUserDocRef, { callStatus: null, callWith: null });
         }
@@ -57,6 +59,7 @@ export function ActiveCall({ contact, callType, initialStatus }: ActiveCallProps
     });
 
     return () => unsubscribe();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUserDocRef, status]);
 
 
@@ -113,6 +116,7 @@ export function ActiveCall({ contact, callType, initialStatus }: ActiveCallProps
   const handleEndCall = (signal = true) => {
     stopStream(stream);
     setStatus('ended');
+    onStatusChange('ended');
     
     if (signal && firestore) {
       // Signal to the other user that the call has ended
