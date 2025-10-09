@@ -12,6 +12,7 @@ import {
   Code,
   Users,
   BadgeCheck,
+  Shield,
 } from 'lucide-react'
 import {
   Sheet,
@@ -51,6 +52,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Heart, label: 'Support Us', href: '/support' },
     { icon: MessageSquareWarning, label: 'Report / Feedback', href: '/feedback' },
     { icon: Code, label: 'Developer', href: '/readme' },
+    { icon: Shield, label: 'Admin', href: '/admin' },
   ]
   
   const handleAvatarClick = () => {
