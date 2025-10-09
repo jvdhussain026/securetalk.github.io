@@ -19,7 +19,10 @@ function CallPageContent() {
   const type = searchParams.get('type') as 'voice' | 'video';
   const callStatusParam = searchParams.get('status') as 'incoming' | 'outgoing' | 'connected';
   
-  const [currentStatus, setCurrentStatus] = useState(callStatusParam);
+  const [currentStatus, setCurrentStatus] = useState<'ringing' | 'connected' | 'ended'>(
+    callStatusParam === 'connected' ? 'connected' : 'ringing'
+  );
+
 
   const contactDocRef = useMemoFirebase(() => {
     if (!firestore || !user || !contactId) return null;
@@ -52,7 +55,7 @@ function CallPageContent() {
     // Cleanup for the CALLER:
     // If the call page is left for any reason (e.g. browser back), clear the outgoing call signal.
     return () => {
-      if (currentStatus === 'outgoing' && recipientUserDocRef) {
+      if (callStatusParam === 'outgoing' && recipientUserDocRef) {
         updateDoc(recipientUserDocRef, { incomingCall: null, callStatus: null, callWith: null });
       }
     };
@@ -71,7 +74,6 @@ function CallPageContent() {
 
         // Caller-side: Call was accepted by recipient.
         if (data.callStatus === 'connected' && data.callWith === contactId) {
-            setCurrentStatus('connected');
             router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
             // Clear status field to prevent loops
             updateDoc(currentUserDocRef, { callStatus: null, callWith: null });
@@ -99,7 +101,6 @@ function CallPageContent() {
     updateDoc(currentUserDocRef, { incomingCall: null });
 
     // 3. Immediately navigate to the connected state.
-    setCurrentStatus('connected');
     router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
   };
 
@@ -158,7 +159,7 @@ function CallPageContent() {
   }
 
   // Render correct component based on initial status or current state
-  if (currentStatus === 'incoming') {
+  if (callStatusParam === 'incoming') {
     return <IncomingCall contact={contact} callType={type} onAccept={handleAccept} onDecline={handleDecline} />;
   }
 

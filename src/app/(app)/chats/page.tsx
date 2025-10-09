@@ -180,28 +180,6 @@ export default function ChatsPage() {
     }
   }, [user, isUserLoading]);
   
-    // Real-time listener for new connections and incoming calls
-   useEffect(() => {
-    if (userDocRef) {
-      const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
-        const data = snapshot.data();
-        if (data) {
-          // New connection was made by another user
-          if (data.lastConnection) {
-            router.push(`/chats/${data.lastConnection}`);
-            // Clear the field to prevent re-triggering
-            updateDoc(userDocRef, { lastConnection: null });
-          }
-          // New incoming call
-          if (data.incomingCall && data.incomingCall.from) {
-             router.push(`/call?contactId=${data.incomingCall.from}&type=${data.incomingCall.type}&status=incoming`);
-          }
-        }
-      });
-      return () => unsubscribe();
-    }
-   }, [userDocRef, router]);
-
 
   const handleOnboardingComplete = () => {
     if (user) {
