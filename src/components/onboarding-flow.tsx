@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 
@@ -429,6 +429,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             bio: 'Just joined Secure Talk!',
             language: 'en',
             lastConnection: null,
+            createdAt: serverTimestamp(),
         };
 
         setDocumentNonBlocking(userRef, profileData, { merge: true });

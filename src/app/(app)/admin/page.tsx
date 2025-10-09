@@ -7,7 +7,7 @@ import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck } from 'lucide-react
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -38,7 +38,7 @@ export default function AdminPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return collection(firestore, 'users');
+    return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
   const { data: users, isLoading, error } = useCollection<Contact>(usersQuery);
