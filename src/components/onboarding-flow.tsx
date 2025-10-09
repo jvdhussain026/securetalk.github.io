@@ -13,8 +13,9 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, setDoc, collection, addDoc } from 'firebase/firestore';
+import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 
 
 // Step 1: Welcome Screen
@@ -157,33 +158,86 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
 
 
 // Step 4: Notification Permission
-const NotificationsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void; }) => {
+const NotificationsStep = ({ onNext, onBack, user, firestore }: { onNext: () => void; onBack: () => void; user: any; firestore: any; }) => {
     const { toast } = useToast();
+    const [isSubscribing, setIsSubscribing] = useState(false);
 
-    const handleRequestPermission = () => {
-        if (!('Notification' in window)) {
-            toast({ variant: 'destructive', title: 'This browser does not support notifications.' });
-            onNext(); // Still proceed
+    const handleRequestPermission = async () => {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            toast({ variant: 'destructive', title: 'Push notifications are not supported in this browser.' });
+            onNext();
             return;
         }
 
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                toast({ title: 'Notifications enabled!' });
-            } else {
-                 toast({ variant: 'destructive', title: 'Notifications not enabled.' });
-            }
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            toast({ variant: 'destructive', title: 'Notifications not enabled.' });
             onNext();
-        });
+            return;
+        }
+
+        setIsSubscribing(true);
+        try {
+            const serviceWorkerRegistration = await navigator.serviceWorker.ready;
+            const existingSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
+
+            if (existingSubscription) {
+                toast({ title: 'You are already subscribed to notifications.' });
+                await saveSubscription(existingSubscription);
+            } else {
+                const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+                if (!vapidPublicKey) {
+                    throw new Error("VAPID public key not found. Cannot subscribe to push notifications.");
+                }
+
+                const newSubscription = await serviceWorkerRegistration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: vapidPublicKey,
+                });
+                
+                toast({ title: 'Notifications enabled!' });
+                await saveSubscription(newSubscription);
+            }
+        } catch (error) {
+            console.error('Error subscribing to push notifications:', error);
+            toast({ variant: 'destructive', title: 'Failed to subscribe to notifications.' });
+        } finally {
+            setIsSubscribing(false);
+            onNext();
+        }
     };
+    
+    const saveSubscription = async (subscription: PushSubscription) => {
+        if (!firestore || !user) {
+            console.error("Firestore or user not available to save subscription.");
+            return;
+        }
+        try {
+            const subscriptionJson = subscription.toJSON();
+            const subscriptionsRef = collection(firestore, 'users', user.uid, 'subscriptions');
+            // We can use the endpoint as a unique ID for the document to avoid duplicates
+            const docId = btoa(subscriptionJson.endpoint!).replace(/[/+=]/g, '');
+            const subscriptionDocRef = doc(subscriptionsRef, docId);
+            
+            const docSnap = await getDocumentNonBlocking(subscriptionDocRef);
+            if (!docSnap || !docSnap.exists()) {
+                setDocumentNonBlocking(subscriptionDocRef, subscriptionJson, { merge: true });
+            }
+        } catch (error) {
+            console.error("Failed to save push subscription to Firestore:", error);
+            toast({ variant: 'destructive', title: 'Could not save notification preferences.' });
+        }
+    };
+
 
     return (
         <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
             <h2 className="text-2xl font-bold mb-2 font-headline text-center">Don't miss a message</h2>
-            <p className="text-muted-foreground mb-8 text-center max-w-md">Allow notifications to get alerts when you receive new messages, even when the app is in the background.</p>
+            <p className="text-muted-foreground mb-8 text-center max-w-md">Enable push notifications to get real-time alerts for new messages, even when the app is closed.</p>
             <div className="w-full max-w-sm space-y-2">
-                 <Button size="lg" className="w-full" onClick={handleRequestPermission}>
-                    Enable Notifications
+                 <Button size="lg" className="w-full" onClick={handleRequestPermission} disabled={isSubscribing}>
+                    {isSubscribing ? <LoaderCircle className="animate-spin mr-2" /> : null}
+                    {isSubscribing ? 'Subscribing...' : 'Enable Notifications'}
                 </Button>
                  <Button size="lg" variant="ghost" className="w-full" onClick={onNext}>
                     Maybe Later
@@ -379,7 +433,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         <WelcomeStep key="welcome" onNext={nextStep} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} />,
         <NameStep key="name" onNext={handleNameNext} isSaving={isSavingProfile} />,
         <TermsStep key="terms" onNext={handleTermsNext} onBack={prevStep} />,
-        <NotificationsStep key="notifs" onNext={handleNotificationsNext} onBack={prevStep} />,
+        <NotificationsStep key="notifs" onNext={handleNotificationsNext} onBack={prevStep} user={user} firestore={firestore} />,
     ];
 
     return (
@@ -413,5 +467,3 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
-
-    
