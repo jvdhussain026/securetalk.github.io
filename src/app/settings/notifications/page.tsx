@@ -14,7 +14,9 @@ import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
-import { ComingSoonDialog } from '@/components/coming-soon-dialog';
+import { ToneSelectionDialog } from '@/components/tone-selection-dialog';
+import type { Tone } from '@/lib/audio';
+import { tones } from '@/lib/audio';
 
 // Helper function to convert VAPID public key string to a Uint8Array
 function urlBase64ToUint8Array(base64String: string) {
@@ -34,15 +36,33 @@ export default function NotificationsPage() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
-  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
   const [messageAlerts, setMessageAlerts] = useState(true);
 
+  const [isToneDialogOpen, setIsToneDialogOpen] = useState(false);
+  const [toneDialogType, setToneDialogType] = useState<'message' | 'call'>('message');
+
+  const [messageTone, setMessageTone] = useState<Tone>(tones[0]);
+  const [callRingtone, setCallRingtone] = useState<Tone>(tones[0]);
 
   useEffect(() => {
-    if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
-      setPermission(Notification.permission);
-    } else {
-      setIsSupported(false);
+    if (typeof window !== 'undefined') {
+      if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
+        setPermission(Notification.permission);
+      } else {
+        setIsSupported(false);
+      }
+      
+      const savedMessageToneName = localStorage.getItem('messageTone');
+      if (savedMessageToneName) {
+        const foundTone = tones.find(t => t.name === savedMessageToneName);
+        if (foundTone) setMessageTone(foundTone);
+      }
+
+      const savedCallRingtoneName = localStorage.getItem('callRingtone');
+      if (savedCallRingtoneName) {
+        const foundTone = tones.find(t => t.name === savedCallRingtoneName);
+        if (foundTone) setCallRingtone(foundTone);
+      }
     }
   }, []);
   
@@ -113,6 +133,24 @@ export default function NotificationsPage() {
       setIsSubscribing(false);
     }
   };
+  
+  const handleOpenToneDialog = (type: 'message' | 'call') => {
+    setToneDialogType(type);
+    setIsToneDialogOpen(true);
+  }
+  
+  const handleSaveTone = (tone: Tone) => {
+    if (toneDialogType === 'message') {
+      setMessageTone(tone);
+      localStorage.setItem('messageTone', tone.name);
+      toast({ title: `Message tone set to "${tone.name}"` });
+    } else {
+      setCallRingtone(tone);
+      localStorage.setItem('callRingtone', tone.name);
+      toast({ title: `Ringtone set to "${tone.name}"` });
+    }
+    setIsToneDialogOpen(false);
+  }
 
   const renderPushContent = () => {
     if (!isSupported) {
@@ -201,14 +239,14 @@ export default function NotificationsPage() {
                 </div>
                 <button 
                     className="flex items-center justify-between w-full py-4 text-left"
-                    onClick={() => setIsComingSoonOpen(true)}
+                    onClick={() => handleOpenToneDialog('message')}
                 >
                     <div className="font-medium flex items-center gap-3">
                          <Music className="h-5 w-5 text-muted-foreground" />
                         Message Tone
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Default</span>
+                        <span className="text-sm text-muted-foreground">{messageTone.name}</span>
                         <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </div>
                 </button>
@@ -222,14 +260,14 @@ export default function NotificationsPage() {
             <CardContent>
                  <button 
                     className="flex items-center justify-between w-full py-4 text-left"
-                    onClick={() => setIsComingSoonOpen(true)}
+                    onClick={() => handleOpenToneDialog('call')}
                 >
                     <div className="font-medium flex items-center gap-3">
                          <Phone className="h-5 w-5 text-muted-foreground" />
                         Ringtone
                     </div>
                     <div className="flex items-center gap-2">
-                        <span className="text-sm text-muted-foreground">Default Ringtone</span>
+                        <span className="text-sm text-muted-foreground">{callRingtone.name}</span>
                         <ChevronRight className="h-5 w-5 text-muted-foreground" />
                     </div>
                 </button>
@@ -237,7 +275,13 @@ export default function NotificationsPage() {
         </Card>
       </main>
     </div>
-    <ComingSoonDialog open={isComingSoonOpen} onOpenChange={setIsComingSoonOpen} />
+    <ToneSelectionDialog
+      open={isToneDialogOpen}
+      onOpenChange={setIsToneDialogOpen}
+      type={toneDialogType}
+      currentTone={toneDialogType === 'message' ? messageTone : callRingtone}
+      onSave={handleSaveTone}
+    />
     </>
   );
 }
