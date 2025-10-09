@@ -12,9 +12,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase'
-import { doc, setDoc } from 'firebase/firestore'
+import { doc, setDoc, getDocs, collection } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { ImageCropperDialog } from '@/components/image-cropper-dialog'
+import type { Contact } from '@/lib/types'
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -40,12 +41,12 @@ export default function ProfilePage() {
     if (userProfile) {
         setName(userProfile.name || '');
         setBio(userProfile.bio || '');
-        setAvatar(userProfile.profilePictureUrl || '');
+        setAvatar(userProfile.profilePictureUrl || userProfile.avatar || '');
     }
   }, [userProfile]);
 
   const handleSave = async () => {
-    if (!userDocRef) {
+    if (!userDocRef || !user || !firestore) {
         toast({ variant: "destructive", title: "Error", description: "User not authenticated."});
         return;
     }
@@ -56,10 +57,29 @@ export default function ProfilePage() {
         profilePictureUrl: avatar,
     };
     
-    // Using non-blocking update
+    // 1. Update the user's own profile document
     setDocumentNonBlocking(userDocRef, profileData, { merge: true });
 
-    // Optimistic UI update
+    // 2. Propagate changes to all contacts who have this user in their list
+    try {
+        const myContactsQuery = collection(firestore, 'users', user.uid, 'contacts');
+        const querySnapshot = await getDocs(myContactsQuery);
+        querySnapshot.forEach((contactDoc) => {
+            const contact = contactDoc.data() as Contact;
+            // This is the reference to this user's profile inside a contact's subcollection
+            const otherUserContactRef = doc(firestore, 'users', contact.id, 'contacts', user.uid);
+            
+            setDocumentNonBlocking(otherUserContactRef, {
+                name: name,
+                avatar: avatar,
+                bio: bio,
+            }, { merge: true });
+        });
+    } catch (error) {
+        console.error("Error propagating profile changes:", error);
+        // This part might fail if security rules don't allow it, but we won't block the UI
+    }
+
     toast({
       title: 'Profile Updated',
       description: 'Your changes have been saved successfully.',
@@ -125,7 +145,7 @@ export default function ProfilePage() {
             <button onClick={handleAvatarClick}>
                 <Avatar className="w-32 h-32">
                 <AvatarImage src={avatar} alt={name} data-ai-hint="person portrait" />
-                <AvatarFallback>{name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                <AvatarFallback>{name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
             </button>
             <Button
