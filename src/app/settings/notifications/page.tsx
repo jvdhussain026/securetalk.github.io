@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BellRing, BellOff, Info, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, BellRing, BellOff, Info, LoaderCircle, MessageSquare, Music, Phone, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -12,6 +12,9 @@ import { collection, doc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
+import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 
 // Helper function to convert VAPID public key string to a Uint8Array
 function urlBase64ToUint8Array(base64String: string) {
@@ -31,6 +34,9 @@ export default function NotificationsPage() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
+  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
+  const [messageAlerts, setMessageAlerts] = useState(true);
+
 
   useEffect(() => {
     if ('Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window) {
@@ -108,7 +114,7 @@ export default function NotificationsPage() {
     }
   };
 
-  const renderContent = () => {
+  const renderPushContent = () => {
     if (!isSupported) {
       return (
         <Alert variant="destructive">
@@ -125,9 +131,9 @@ export default function NotificationsPage() {
         return (
           <Alert>
             <BellRing className="h-4 w-4" />
-            <AlertTitle>Notifications are Enabled</AlertTitle>
+            <AlertTitle>Push Notifications Enabled</AlertTitle>
             <AlertDescription>
-              You will receive notifications for new messages. You can manage this permission in your browser's site settings.
+              You can manage this permission in your browser's site settings.
             </AlertDescription>
           </Alert>
         );
@@ -135,9 +141,9 @@ export default function NotificationsPage() {
         return (
           <Alert variant="destructive">
             <BellOff className="h-4 w-4" />
-            <AlertTitle>Notifications are Disabled</AlertTitle>
+            <AlertTitle>Push Notifications Disabled</AlertTitle>
             <AlertDescription>
-              You have blocked notifications. To enable them, you need to go to your browser's site settings for this app and change the permission.
+              You have blocked notifications. To enable them, please go to your browser's site settings for this app.
             </AlertDescription>
           </Alert>
         );
@@ -153,6 +159,7 @@ export default function NotificationsPage() {
   };
 
   return (
+    <>
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
       <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
         <Button variant="ghost" size="icon" asChild>
@@ -163,19 +170,74 @@ export default function NotificationsPage() {
         </Button>
         <h1 className="text-2xl font-bold font-headline">Notifications</h1>
       </header>
-      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <Card>
           <CardHeader>
             <CardTitle>Push Notifications</CardTitle>
             <CardDescription>
-              Get notified of new messages even when the app is in the background or closed.
+              Enable system-level notifications to get alerts when the app is in the background.
             </CardDescription>
           </CardHeader>
           <CardContent>
-            {renderContent()}
+            {renderPushContent()}
           </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Message Notifications</CardTitle>
+            </CardHeader>
+            <CardContent className="divide-y divide-border">
+                <div className="flex items-center justify-between py-4">
+                    <Label htmlFor="message-alerts" className="font-medium flex items-center gap-3 cursor-pointer">
+                        <MessageSquare className="h-5 w-5 text-muted-foreground" />
+                        New Message Alerts
+                    </Label>
+                    <Switch
+                        id="message-alerts"
+                        checked={messageAlerts}
+                        onCheckedChange={setMessageAlerts}
+                    />
+                </div>
+                <button 
+                    className="flex items-center justify-between w-full py-4 text-left"
+                    onClick={() => setIsComingSoonOpen(true)}
+                >
+                    <div className="font-medium flex items-center gap-3">
+                         <Music className="h-5 w-5 text-muted-foreground" />
+                        Message Tone
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Default</span>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                </button>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Call Notifications</CardTitle>
+            </CardHeader>
+            <CardContent>
+                 <button 
+                    className="flex items-center justify-between w-full py-4 text-left"
+                    onClick={() => setIsComingSoonOpen(true)}
+                >
+                    <div className="font-medium flex items-center gap-3">
+                         <Phone className="h-5 w-5 text-muted-foreground" />
+                        Ringtone
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <span className="text-sm text-muted-foreground">Default Ringtone</span>
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                </button>
+            </CardContent>
         </Card>
       </main>
     </div>
+    <ComingSoonDialog open={isComingSoonOpen} onOpenChange={setIsComingSoonOpen} />
+    </>
   );
 }
