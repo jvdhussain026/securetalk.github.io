@@ -1,4 +1,3 @@
-
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -130,8 +129,8 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   );
   
   const renderAudio = (attachment: Attachment) => (
-     <div key={attachment.url} className="mt-1 w-full max-w-xs min-w-[250px]">
-       <AudioPlayer src={attachment.url} isSender={message.senderId === useFirebase().user?.uid} />
+    <div key={attachment.url} className="mt-1 w-full max-w-xs min-w-[250px]">
+      <AudioPlayer src={attachment.url} isSender={message.senderId === useFirebase().user?.uid} />
     </div>
   );
   
@@ -318,6 +317,26 @@ export default function ChatPage() {
   const contentEditableRef = useRef<HTMLDivElement>(null)
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
+  const prevMessagesCountRef = useRef(messages?.length || 0);
+
+  useEffect(() => {
+    if (!messages || messages.length <= prevMessagesCountRef.current) {
+        prevMessagesCountRef.current = messages?.length || 0;
+        return;
+    }
+
+    const lastMessage = messages[messages.length - 1];
+    
+    // Only show toast for new incoming messages and if the document is hidden
+    if (lastMessage.senderId !== currentUserId && document.hidden) {
+        toast({
+            title: `New message from ${contact?.name}`,
+            description: lastMessage.text || 'Sent an attachment',
+        });
+    }
+
+    prevMessagesCountRef.current = messages.length;
+  }, [messages, contact?.name, currentUserId, toast]);
 
   useEffect(() => {
     const lang = localStorage.getItem('preferredLang');
@@ -960,7 +979,7 @@ export default function ChatPage() {
                 <div className="ml-auto flex items-center">
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-auto">
+                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12">
                         <Phone className="h-6 w-6" />
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                         <span className="sr-only">Call</span>
@@ -984,7 +1003,7 @@ export default function ChatPage() {
 
                 <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                     <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-auto ml-1">
+                    <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12 ml-1">
                         <MoreVertical className="h-6 w-6" />
                         <span className="sr-only">More options</span>
                     </Button>

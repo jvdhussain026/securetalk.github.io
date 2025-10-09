@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useCallback } from 'react';
@@ -91,7 +90,7 @@ function Connect() {
 
 
             toast({
-                title: 'Connection added!',
+                title: 'Connection Added!',
                 description: `You are now connected with ${newContactData.name}.`,
             });
             
