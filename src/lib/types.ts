@@ -17,6 +17,7 @@ export type Message = {
   isStarred?: boolean;
   isEdited?: boolean;
   replyTo?: string; // ID of the message being replied to
+  deletedFor?: string[]; // Array of user UIDs who have deleted this message
 };
 
 export type Contact = {

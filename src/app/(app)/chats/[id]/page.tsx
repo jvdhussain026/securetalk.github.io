@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, differenceInMinutes } from 'date-fns'
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import Image from 'next/image'
 
 import type { Message, Attachment, Contact } from '@/lib/types'
@@ -729,13 +729,23 @@ export default function ChatPage() {
     setIsMessageOptionsOpen(false);
   }
 
-  const handleDeleteMessage = ({ forEveryone }: { forEveryone: boolean }) => {
-    if (!selectedMessage) return;
-    // Firestore deletion logic would go here.
-    toast({
-      title: "Message Deleted",
-      description: `The message has been deleted ${forEveryone ? 'for everyone' : 'for you'}. (UI only)`,
-    });
+  const handleDeleteMessage = async ({ forEveryone }: { forEveryone: boolean }) => {
+    if (!selectedMessage || !chatId || !firestore || !currentUserId) return;
+
+    const messageRef = doc(firestore, "chats", chatId, "messages", selectedMessage.id);
+    
+    if (forEveryone) {
+      // Hard delete for everyone
+      await deleteDoc(messageRef);
+      toast({ title: "Message deleted for everyone." });
+    } else {
+      // Soft delete for the current user
+      await updateDoc(messageRef, {
+        deletedFor: arrayUnion(currentUserId)
+      });
+      toast({ title: "Message deleted for you." });
+    }
+
     setSelectedMessage(null);
     setIsDeleteAlertOpen(false);
   }
@@ -884,6 +894,15 @@ export default function ChatPage() {
   };
 
   const isLoading = areMessagesLoading || isContactLoading || isChatLoading;
+
+  const filteredMessages = useMemo(() => {
+    if (!messages) return [];
+    return messages.filter(message => {
+      // Hide message if it has been soft-deleted by the current user
+      return !message.deletedFor || !message.deletedFor.includes(currentUserId!);
+    });
+  }, [messages, currentUserId]);
+
 
   if (isLoading && !messages) {
     return (
@@ -1075,7 +1094,7 @@ export default function ChatPage() {
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-1">
-              {messages && messages.map((message, messageIndex) => {
+              {filteredMessages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
                 
