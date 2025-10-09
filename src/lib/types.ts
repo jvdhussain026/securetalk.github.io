@@ -32,6 +32,12 @@ export type Contact = {
   lastConnection?: string; // UID of the last user who connected with this user
   lastMessageTimestamp?: Timestamp;
   profilePictureUrl?: string;
+  call?: {
+    type: 'incoming' | 'outgoing' | 'missed';
+    callType: 'voice' | 'video';
+    timestamp: Timestamp;
+    duration?: number;
+  };
 };
 
 export type UserProfile = {

@@ -1,7 +1,7 @@
 
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 
@@ -18,12 +18,100 @@ import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { ClientOnly } from '@/components/client-only'
 import type { Contact } from '@/lib/types';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, query, orderBy } from 'firebase/firestore'
+import { LoaderCircle } from 'lucide-react'
+
+
+function CallItem({ contact }: { contact: Contact }) {
+  const [isSheetOpen, setIsSheetOpen] = useState(false);
+
+  const call = contact.call || {
+      type: 'outgoing',
+      callType: 'voice',
+      timestamp: new Date()
+  };
+
+  const handleCallAgain = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsSheetOpen(true);
+  };
+  
+  const formatTimestamp = (timestamp: any) => {
+    if (!timestamp) return '';
+    const date = timestamp instanceof Date ? timestamp : timestamp.toDate();
+    if (isToday(date)) return `Today, ${format(date, 'p')}`;
+    if (isYesterday(date)) return `Yesterday, ${format(date, 'p')}`;
+    return format(date, 'MMMM d, p');
+  }
+
+  const CallIcon = () => {
+    const commonClass = "h-5 w-5 mr-2";
+    switch(call.type) {
+      case 'incoming': return <PhoneIncoming className={cn(commonClass, "text-green-500")} />;
+      case 'outgoing': return <PhoneOutgoing className={cn(commonClass, "text-blue-500")} />;
+      case 'missed': return <PhoneMissed className={cn(commonClass, "text-red-500")} />;
+      default: return <Phone className={commonClass} />;
+    }
+  }
+
+  return (
+    <>
+      <div className="flex items-center p-4 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setIsSheetOpen(true)}>
+        <Avatar className="h-12 w-12 mr-4">
+          <AvatarImage src={contact.avatar} alt={contact.name} />
+          <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+        </Avatar>
+        <div className="flex-1 overflow-hidden">
+          <h3 className="font-bold truncate">{contact.name}</h3>
+          <div className="flex items-center text-sm text-muted-foreground">
+            <CallIcon />
+            <span>{formatTimestamp(call.timestamp)}</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={handleCallAgain}>
+            {call.callType === 'voice' ? <Phone className="h-6 w-6 text-primary" /> : <Video className="h-6 w-6 text-primary" />}
+          </Button>
+        </div>
+      </div>
+      <CallDetailsSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} contact={contact} />
+    </>
+  );
+}
+
 
 export default function CallsPage() {
-  const [isSidebarOpen, setIsSidebarOpen] = React.useState(false)
-  const [searchQuery, setSearchQuery] = React.useState('')
-  const [imagePreview, setImagePreview] = React.useState<ImagePreviewState | null>(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const { toast } = useToast()
+  const { user, firestore } = useFirebase();
+
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'contacts'), orderBy('lastMessageTimestamp', 'desc'));
+  }, [firestore, user]);
+
+  const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
+
+  const [callHistory, setCallHistory] = useState<Contact[]>([]);
+
+  useEffect(() => {
+    if (contacts) {
+      // Simulate a call history from contacts
+      const history = contacts.map((c, i) => ({
+        ...c,
+        call: {
+          type: i % 3 === 0 ? 'missed' : (i % 2 === 0 ? 'incoming' : 'outgoing'),
+          callType: i % 2 === 0 ? 'video' : 'voice',
+          timestamp: new Date(Date.now() - i * 1000 * 60 * 60 * 3), // 3 hours apart
+        }
+      }));
+      setCallHistory(history);
+    }
+  }, [contacts]);
+
 
   const navItems = [
     { href: '/chats', icon: MessageSquare, label: 'Chats' },
@@ -31,14 +119,34 @@ export default function CallsPage() {
     { href: '/nearby', icon: Users, label: 'Nearby' },
   ]
   
-  const renderEmptyCallList = () => {
+  const renderCallList = (filter?: 'missed' | 'outgoing' | 'incoming') => {
+    if (areContactsLoading) {
+      return (
+        <div className="flex items-center justify-center p-10">
+          <LoaderCircle className="w-8 h-8 animate-spin" />
+        </div>
+      )
+    }
+
+    const filteredCalls = filter 
+      ? callHistory.filter(c => c.call?.type === filter)
+      : callHistory;
+
+    if (filteredCalls.length === 0) {
+      return (
+        <div className="text-center p-8 mt-10">
+            <PhoneMissed className="mx-auto h-16 w-16 text-muted-foreground/50" />
+            <h2 className="mt-4 text-xl font-semibold">No {filter ? filter.charAt(0).toUpperCase() + filter.slice(1) : ''} Calls</h2>
+            <p className="mt-2 text-muted-foreground">Your call history will appear here.</p>
+        </div>
+      );
+    }
+
     return (
-      <div className="text-center p-8 mt-10">
-          <PhoneMissed className="mx-auto h-16 w-16 text-muted-foreground/50" />
-          <h2 className="mt-4 text-xl font-semibold">No Call History</h2>
-          <p className="mt-2 text-muted-foreground">Your call history is not yet available.</p>
+      <div className="divide-y">
+        {filteredCalls.map(contact => <CallItem key={contact.id} contact={contact} />)}
       </div>
-    );
+    )
   }
 
   return (
@@ -54,11 +162,11 @@ export default function CallsPage() {
              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input 
                 type="search" 
-                placeholder="Search..." 
+                placeholder="Search calls..." 
                 className="pl-10 rounded-full" 
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                disabled
+                disabled // Search not implemented yet
             />
           </div>
           <Button variant="ghost" size="icon" className="h-11 w-11">
@@ -72,14 +180,10 @@ export default function CallsPage() {
             <TabsList className="shrink-0">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="missed">Missed</TabsTrigger>
-              <TabsTrigger value="outgoing">Outgoing</TabsTrigger>
-              <TabsTrigger value="incoming">Incoming</TabsTrigger>
             </TabsList>
             <div className="flex-1 overflow-y-auto">
-                <TabsContent value="all">{renderEmptyCallList()}</TabsContent>
-                <TabsContent value="missed">{renderEmptyCallList()}</TabsContent>
-                <TabsContent value="outgoing">{renderEmptyCallList()}</TabsContent>
-                <TabsContent value="incoming">{renderEmptyCallList()}</TabsContent>
+                <TabsContent value="all">{renderCallList()}</TabsContent>
+                <TabsContent value="missed">{renderCallList('missed')}</TabsContent>
             </div>
           </Tabs>
         </main>
