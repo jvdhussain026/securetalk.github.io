@@ -4,7 +4,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, RefreshCw, Languages, Trash2, Palette } from 'lucide-react'
+import { ArrowLeft, ChevronRight, RefreshCw, Languages, Trash2, Palette, BellRing } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
@@ -31,7 +31,7 @@ export default function SettingsPage() {
   const settingsItems = [
     { text: "Privacy", href: "#" },
     { text: "Security", href: "#" },
-    { text: "Notifications", href: "#" },
+    { text: "Notifications", href: "/settings/notifications", icon: BellRing },
     { text: "Chat Customization", href: "/settings/chat-customization", icon: Palette },
     { text: "Data & Storage", href: "#" },
     { text: "Translation", href: "/settings/translation", icon: Languages },
