@@ -16,11 +16,10 @@ type ActiveCallProps = {
   contact: Contact;
   callType: 'voice' | 'video';
   initialStatus: 'ringing' | 'connected' | 'outgoing';
-  onStatusChange: (status: 'ringing' | 'connected' | 'ended' | 'outgoing') => void;
   onEndCall: (signal?: boolean) => void;
 };
 
-export function ActiveCall({ contact, callType, initialStatus, onStatusChange, onEndCall }: ActiveCallProps) {
+export function ActiveCall({ contact, callType, initialStatus, onEndCall }: ActiveCallProps) {
   const router = useRouter();
   const { firestore, user } = useFirebase();
 
@@ -116,7 +115,6 @@ export function ActiveCall({ contact, callType, initialStatus, onStatusChange, o
   const handleEndCall = (signal = true) => {
     stopStream(stream);
     setStatus('ended');
-    onStatusChange('ended');
     onEndCall(signal);
     
     setTimeout(() => {
@@ -266,5 +264,3 @@ export function ActiveCall({ contact, callType, initialStatus, onStatusChange, o
     </div>
   );
 }
-
-    

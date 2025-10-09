@@ -72,7 +72,6 @@ function CallPageContent() {
         // Caller-side: Call was accepted by recipient.
         if (data.callStatus === 'connected' && data.callWith === contactId) {
             setCurrentStatus('connected');
-            onStatusChange('connected');
             router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
             // Clear status field to prevent loops
             updateDoc(currentUserDocRef, { callStatus: null, callWith: null });
@@ -164,7 +163,7 @@ function CallPageContent() {
   }
 
   // This component now handles 'outgoing' (ringing) and 'connected' states.
-  return <ActiveCall contact={contact} callType={type} initialStatus={callStatusParam} onStatusChange={setCurrentStatus} onEndCall={handleEndCall}/>;
+  return <ActiveCall contact={contact} callType={type} initialStatus={callStatusParam} onEndCall={handleEndCall}/>;
 }
 
 
@@ -179,5 +178,3 @@ export default function CallPage() {
         </Suspense>
     )
 }
-
-    
