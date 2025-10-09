@@ -4,6 +4,8 @@ import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase';
 import './globals.css';
+import { GoogleAnalytics } from '@/components/google-analytics';
+import { Suspense } from 'react';
 
 const ptSans = PT_Sans({
   subsets: ['latin'],
@@ -50,6 +52,9 @@ export default function RootLayout({
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className={`${ptSans.variable} font-body antialiased h-full`}>
+        <Suspense>
+          <GoogleAnalytics />
+        </Suspense>
         <ThemeProvider
             attribute="class"
             defaultTheme="system"
