@@ -24,6 +24,10 @@
           "type": "string",
           "description": "URL of the user's profile picture.",
           "format": "uri"
+        },
+        "verified": {
+            "type": "boolean",
+            "description": "Indicates if the user is verified."
         }
       },
       "required": [
