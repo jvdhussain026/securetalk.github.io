@@ -221,9 +221,10 @@ export default function ChatPage() {
   const contactId = params.id as string;
 
   const contactDocRef = useMemoFirebase(() => {
-    if (!firestore || !contactId) return null;
-    return doc(firestore, 'users', contactId);
-  }, [firestore, contactId]);
+    if (!firestore || !currentUserId || !contactId) return null;
+    // Fetch contact details from the current user's contact subcollection
+    return doc(firestore, 'users', currentUserId, 'contacts', contactId);
+  }, [firestore, currentUserId, contactId]);
   
   const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
