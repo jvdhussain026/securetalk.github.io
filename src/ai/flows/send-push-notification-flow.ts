@@ -17,13 +17,20 @@ if (!getApps().length) {
 
 const db = getFirestore();
 
-// Configure web-push
-if (process.env.VAPID_PRIVATE_KEY && process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-  webpush.setVapidDetails(
-    'mailto:your-email@example.com',
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-  );
+// Safely configure web-push
+const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
+
+if (vapidPublicKey && vapidPrivateKey && vapidPrivateKey !== 'your_private_key_here') {
+  try {
+    webpush.setVapidDetails(
+      'mailto:your-email@example.com',
+      vapidPublicKey,
+      vapidPrivateKey
+    );
+  } catch (error) {
+    console.error("Error setting VAPID details, likely due to invalid keys:", error);
+  }
 }
 
 const PushPayloadSchema = z.object({
@@ -64,8 +71,8 @@ const sendPushNotificationFlow = ai.defineFlow(
     outputSchema: SendPushNotificationOutputSchema,
   },
   async ({ userId, payload }) => {
-    if (!process.env.VAPID_PRIVATE_KEY || !process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY) {
-        console.error("VAPID keys not configured. Skipping push notification.");
+    if (!vapidPublicKey || !vapidPrivateKey || vapidPrivateKey === 'your_private_key_here') {
+        console.error("VAPID keys not configured. Skipping push notification. Please run 'npm run generate-vapid-keys' and update your .env file.");
         return { success: false, results: [] };
     }
 
