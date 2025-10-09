@@ -1,4 +1,3 @@
-
 'use client';
 
 import { Suspense, useEffect, useMemo, useState } from 'react';
@@ -9,11 +8,16 @@ import { ActiveCall } from '@/components/call/active-call';
 import { Loader2 } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { CallEndedScreen } from '@/components/call/call-ended-screen';
 
 function CallPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { firestore, user } = useFirebase();
+  
+  const [isCallEnded, setIsCallEnded] = useState(false);
+  const [finalCallDuration, setFinalCallDuration] = useState(0);
+
 
   const contactId = searchParams.get('contactId');
   const type = searchParams.get('type') as 'voice' | 'video';
@@ -50,7 +54,7 @@ function CallPageContent() {
     // Cleanup for the CALLER:
     // If the call page is left for any reason (e.g. browser back), clear the outgoing call signal.
     return () => {
-      if (callStatusParam === 'outgoing' && recipientUserDocRef) {
+      if (callStatusParam === 'outgoing' && recipientUserDocRef && !isCallEnded) {
         updateDoc(recipientUserDocRef, { incomingCall: null, callStatus: null, callWith: null });
       }
     };
@@ -59,7 +63,9 @@ function CallPageContent() {
   }, [callStatusParam, recipientUserDocRef, user, type]);
 
 
-  const handleEndCall = (signal = true) => {
+  const handleEndCall = (duration: number, signal = true) => {
+    setFinalCallDuration(duration);
+    setIsCallEnded(true);
     if (signal && recipientUserDocRef) {
       // Signal to the other user that the call has ended
       updateDoc(recipientUserDocRef, { callStatus: 'ended' });
@@ -68,8 +74,6 @@ function CallPageContent() {
     if(currentUserDocRef){
         updateDoc(currentUserDocRef, { callStatus: null, callWith: null, incomingCall: null });
     }
-    
-    router.back();
   };
 
 
@@ -89,19 +93,19 @@ function CallPageContent() {
         }
         
         // Caller-side: Call was declined by recipient.
-        if (data.callStatus === 'declined') {
-            handleEndCall(false); // end without signaling back
+        if (data.callStatus === 'declined' && !isCallEnded) {
+            handleEndCall(0, false); // end without signaling back
         }
 
         // Either-side: Call was ended by the other user.
-        if (data.callStatus === 'ended') {
-            handleEndCall(false); // end without signaling back
+        if (data.callStatus === 'ended' && !isCallEnded) {
+            handleEndCall(0, false); // end without signaling back
         }
     });
 
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentUserDocRef, contactId, type, router]);
+  }, [currentUserDocRef, contactId, type, router, isCallEnded]);
 
 
   const handleAccept = () => {
@@ -157,6 +161,10 @@ function CallPageContent() {
         <p className="text-lg">Contact not found.</p>
       </div>
     )
+  }
+
+  if (isCallEnded) {
+    return <CallEndedScreen contact={contact} duration={finalCallDuration} />;
   }
 
   // Render correct component based on initial status or current state

@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -14,7 +13,7 @@ type ActiveCallProps = {
   contact: Contact;
   callType: 'voice' | 'video';
   initialStatus: 'ringing' | 'connected' | 'outgoing';
-  onEndCall: (signal?: boolean) => void;
+  onEndCall: (duration: number, signal?: boolean) => void;
 };
 
 export function ActiveCall({ contact, callType, initialStatus, onEndCall }: ActiveCallProps) {
@@ -92,7 +91,7 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
   const handleEndCall = () => {
     stopStream(stream);
     setStatus('ended');
-    onEndCall(true); // Signal to the other user
+    onEndCall(callDuration, true); // Signal to the other user and pass duration
   };
 
   const formatDuration = (seconds: number) => {
