@@ -15,6 +15,7 @@ import { useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useFirebase } from '@/firebase/provider';
 import { translateMessage } from '@/ai/flows/translate-message-flow'
 import { detectLanguage } from '@/ai/flows/detect-language-flow'
+import { sendPushNotification } from '@/ai/flows/send-push-notification-flow';
 import { useDebounce } from '@/hooks/use-debounce'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -216,7 +217,7 @@ function createChatId(uid1: string, uid2: string): string {
 
 export default function ChatPage() {
   const params = useParams();
-  const { firestore, user } = useFirebase();
+  const { firestore, user, userProfile } = useFirebase();
 
   const currentUserId = user?.uid;
   const contactId = params.id as string;
@@ -456,7 +457,7 @@ export default function ChatPage() {
     const textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
 
-    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId || !firestore || !currentUserId) return;
+    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId || !firestore || !currentUserId || !userProfile) return;
 
     setNewMessage('');
     setAttachmentsToSend([]);
@@ -499,12 +500,27 @@ export default function ChatPage() {
     } else {
         // Add message to Firestore
         const collectionRef = collection(firestore, "chats", chatId, "messages");
-        addDocumentNonBlocking(collectionRef, {
+        const messageData = {
             text: finalText,
             attachments: attachmentsToUpload,
             senderId: currentUserId,
             timestamp: currentTimestamp,
             replyTo: replyingTo?.id || null,
+        };
+        addDocumentNonBlocking(collectionRef, messageData);
+        
+        // Trigger push notification
+        const notificationPayload = {
+            userId: contact.id,
+            payload: {
+                title: userProfile.name || 'New Message',
+                body: finalText || 'Sent an attachment',
+                icon: userProfile.profilePictureUrl || '/icons/icon-192x192.png',
+                tag: chatId,
+            }
+        };
+        sendPushNotification(notificationPayload).catch(err => {
+            console.error("Failed to send push notification:", err);
         });
     }
 

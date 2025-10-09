@@ -1,45 +1,66 @@
 
-// This is a basic service worker file for handling push notifications.
+// This gives the service worker access to all the APIs
+// that it needs to function.
+self.importScripts(
+  'https://storage.googleapis.com/workbox-cdn/releases/6.4.1/workbox-sw.js'
+);
 
-self.addEventListener('push', (event) => {
-  const data = event.data.json();
-  const title = data.title || 'New Message';
-  const options = {
-    body: data.body || 'You have a new message.',
-    icon: '/icon-192x192.png', // Path to your app's icon
-    badge: '/badge-72x72.png', // Path to a smaller badge icon
-    data: {
-      url: data.url || '/', // URL to open when notification is clicked
-    },
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
+// This code listens for the user's confirmation to update the app.
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
+// The precacheAndRoute() method efficiently caches and responds to
+// requests for URLs in the manifest.
+// See https://goo.gl/S9QRab
+workbox.precaching.precacheAndRoute(self.__WB_MANIFEST);
+
+// Listen for push events
+self.addEventListener('push', (event) => {
+  let payload;
+  try {
+    payload = event.data ? event.data.json() : { title: 'Secure Talk', body: 'You have a new message.' };
+  } catch (e) {
+    console.error('Error parsing push notification payload:', e);
+    payload = { title: 'Secure Talk', body: 'You have a new message.' };
+  }
+
+  const { title, body, icon, badge, tag } = payload;
+
+  const options = {
+    body,
+    icon: icon || '/icons/icon-192x192.png',
+    badge: badge || '/icons/badge-72x72.png',
+    tag: tag || 'default-tag',
+    renotify: true,
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
+
+
+// Listen for notification clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
 
-  const urlToOpen = event.notification.data.url || '/';
-
   event.waitUntil(
-    clients.matchAll({
-      type: 'window',
-      includeUncontrolled: true,
-    }).then((clientList) => {
-      if (clientList.length > 0) {
-        let client = clientList[0];
-        for (const c of clientList) {
-            if (c.focused) {
-                client = c;
-            }
-        }
-        if (client.url === urlToOpen && 'focus' in client) {
-            return client.focus();
-        } else if (clients.openWindow) {
-            return clients.openWindow(urlToOpen);
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      // Check if there's already a window open
+      for (const client of clientList) {
+        // If a window for the app is already open, focus it
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
         }
       }
-      return clients.openWindow(urlToOpen);
+      // If no window is open, open a new one
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
     })
   );
 });
+
