@@ -13,11 +13,13 @@ export type Tone = {
 };
 
 let audioCtx: AudioContext | null = null;
-let activeSource: OscillatorNode | null = null;
+let activeSources: (OscillatorNode | GainNode)[] = [];
+let ringtoneInterval: NodeJS.Timeout | null = null;
+let vibrationInterval: NodeJS.Timeout | null = null;
 
 function getAudioContext(): AudioContext | null {
   if (typeof window === 'undefined') return null;
-  if (!audioCtx) {
+  if (!audioCtx || audioCtx.state === 'closed') {
     try {
       audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     } catch (e) {
@@ -37,43 +39,82 @@ export function playTone(sequence: Note[]) {
   const ctx = getAudioContext();
   if (!ctx) return;
 
-  // Ensure audio context is running
   if (ctx.state === 'suspended') {
     ctx.resume();
   }
   
-  stopAllTones();
+  stopAllTones(); // Stop any currently playing single tone
 
   const now = ctx.currentTime;
   const gainNode = ctx.createGain();
   gainNode.connect(ctx.destination);
-  gainNode.gain.setValueAtTime(0.3, now); // Set overall volume
+  gainNode.gain.setValueAtTime(0.3, now);
+
+  activeSources.push(gainNode);
 
   sequence.forEach(noteData => {
     const oscillator = ctx.createOscillator();
-    oscillator.type = 'sine'; // 'sine', 'square', 'sawtooth', 'triangle'
+    oscillator.type = 'sine';
     oscillator.frequency.setValueAtTime(midiToFreq(noteData.note), now + noteData.time);
 
-    // Simple envelope to avoid clicks
     oscillator.connect(gainNode);
     gainNode.gain.setValueAtTime(0.3, now + noteData.time);
     gainNode.gain.exponentialRampToValueAtTime(0.0001, now + noteData.time + noteData.duration);
 
     oscillator.start(now + noteData.time);
     oscillator.stop(now + noteData.time + noteData.duration);
+    activeSources.push(oscillator);
   });
 }
 
-export function stopAllTones() {
-    // This is a simplified stop. For complex sequences, more advanced scheduling and gain control would be needed.
-    // For this app, simply creating a new audio context on each play can effectively stop previous sounds.
-    // However, a better approach is to manage gain. For simplicity here, we will just disconnect.
-    // A full implementation would track all oscillator nodes and stop them.
-    if(activeSource) {
-      activeSource.stop();
-      activeSource.disconnect();
-      activeSource = null;
+export function playRingtone(sequence: Note[]) {
+  stopRingtone(); // Stop any existing ringtone first
+  const totalDuration = sequence.reduce((max, note) => Math.max(max, note.time + note.duration), 0) * 1000 + 500; // Total time + pause
+
+  const play = () => playTone(sequence);
+  play(); // Play immediately
+  ringtoneInterval = setInterval(play, totalDuration);
+}
+
+export function stopRingtone() {
+  if (ringtoneInterval) {
+    clearInterval(ringtoneInterval);
+    ringtoneInterval = null;
+  }
+  stopAllTones();
+}
+
+export function startVibration() {
+    if (typeof navigator.vibrate !== 'function') return;
+    stopVibration(); // Stop any existing vibration
+    
+    const vibrate = () => navigator.vibrate([400, 200, 400]); // Vibrate for 400ms, pause 200ms, vibrate 400ms
+    vibrate();
+    vibrationInterval = setInterval(vibrate, 1000);
+}
+
+export function stopVibration() {
+    if (typeof navigator.vibrate !== 'function') return;
+    if (vibrationInterval) {
+        clearInterval(vibrationInterval);
+        vibrationInterval = null;
     }
+    navigator.vibrate(0); // Stop any active vibration
+}
+
+
+export function stopAllTones() {
+    activeSources.forEach(source => {
+        try {
+            if (source instanceof OscillatorNode) {
+                source.stop();
+            }
+            source.disconnect();
+        } catch (e) {
+            // Ignore errors from trying to disconnect already disconnected nodes
+        }
+    });
+    activeSources = [];
 }
 
 
