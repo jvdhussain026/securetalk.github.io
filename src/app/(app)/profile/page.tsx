@@ -14,6 +14,7 @@ import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-p
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, setDoc } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
+import { ImageCropperDialog } from '@/components/image-cropper-dialog'
 
 export default function ProfilePage() {
   const { toast } = useToast()
@@ -33,6 +34,8 @@ export default function ProfilePage() {
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
   const [isSaving, setIsSaving] = useState(false);
   
+  const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+
   useEffect(() => {
     if (userProfile) {
         setName(userProfile.name || '');
@@ -71,20 +74,22 @@ export default function ProfilePage() {
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
         toast({
           variant: "destructive",
           title: "Image too large",
-          description: "Please select an image smaller than 2MB.",
+          description: "Please select an image smaller than 5MB.",
         });
         return;
       }
       const reader = new FileReader();
       reader.onloadend = () => {
-        setAvatar(reader.result as string);
+        setImageToCrop(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
+    // Reset file input to allow selecting the same file again
+    event.target.value = '';
   };
 
   const handleAvatarClick = () => {
@@ -136,7 +141,7 @@ export default function ProfilePage() {
               type="file"
               ref={fileInputRef}
               className="hidden"
-              accept="image/png, image/jpeg, image/gif"
+              accept="image/png, image/jpeg, image/gif, image/webp"
               onChange={handleFileChange}
             />
           </div>
@@ -147,8 +152,6 @@ export default function ProfilePage() {
             <Label htmlFor="name">Name</Label>
             <div className="relative">
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" />
-              {/* This could be shown for verified users in the future */}
-              {/* <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" /> */}
             </div>
           </div>
           <div>
@@ -168,6 +171,14 @@ export default function ProfilePage() {
      <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
+      />
+      <ImageCropperDialog 
+        imageSrc={imageToCrop}
+        onClose={() => setImageToCrop(null)}
+        onSave={(croppedImage) => {
+            setAvatar(croppedImage);
+            setImageToCrop(null);
+        }}
       />
     </>
   )
