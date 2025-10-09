@@ -45,14 +45,14 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const { data: userProfile } = useDoc(userDocRef);
 
   const menuItems = [
-    { icon: User, label: 'My Profile', href: '/profile' },
-    { icon: Users, label: 'Connections', href: '/connections' },
-    { icon: Settings, label: 'Settings', href: '/settings' },
-    { icon: Info, label: 'About Us', href: '/about' },
-    { icon: Heart, label: 'Support Us', href: '/support' },
-    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '/feedback' },
-    { icon: Code, label: 'Developer', href: '/readme' },
-    { icon: Shield, label: 'Admin', href: '/admin' },
+    { icon: User, label: 'My Profile', href: '/profile', show: true },
+    { icon: Users, label: 'Connections', href: '/connections', show: true },
+    { icon: Settings, label: 'Settings', href: '/settings', show: true },
+    { icon: Info, label: 'About Us', href: '/about', show: true },
+    { icon: Heart, label: 'Support Us', href: '/support', show: true },
+    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '/feedback', show: true },
+    { icon: Code, label: 'Developer', href: '/readme', show: true },
+    { icon: Shield, label: 'Admin', href: '/admin', show: userProfile?.verified },
   ]
   
   const handleAvatarClick = () => {
@@ -79,19 +79,21 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
             </button>
              <div className="flex items-center justify-center gap-2">
                 <p className="font-bold text-xl drop-shadow-sm text-foreground">{userProfile?.name || 'User'}</p>
-                {/* <BadgeCheck className="h-6 w-6 text-primary drop-shadow-sm" /> */}
+                {userProfile?.verified && <BadgeCheck className="h-6 w-6 text-primary drop-shadow-sm" />}
               </div>
         </div>
         <div className="flex-1 space-y-2 p-4">
           {menuItems.map((item, index) => (
-            <div key={index}>
-              <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => {
-                onOpenChange(false);
-              }}>
-                <item.icon className="h-6 w-6 mr-4 text-primary" />
-                <span className="flex-1 font-medium">{item.label}</span>
-              </Link>
-            </div>
+            item.show && (
+                <div key={index}>
+                <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => {
+                    onOpenChange(false);
+                }}>
+                    <item.icon className="h-6 w-6 mr-4 text-primary" />
+                    <span className="flex-1 font-medium">{item.label}</span>
+                </Link>
+                </div>
+            )
           ))}
         </div>
       </SheetContent>
