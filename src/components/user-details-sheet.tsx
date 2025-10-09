@@ -17,7 +17,7 @@ import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-p
 type UserDetailsSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
-  contact: Contact
+  contact: Contact & { profilePictureUrl?: string };
 }
 
 const placeholderMedia = {
@@ -29,9 +29,10 @@ const placeholderMedia = {
 
 export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsSheetProps) {
   const [imagePreview, setImagePreview] = React.useState<ImagePreviewState>(null);
+  const avatarUrl = contact.profilePictureUrl || contact.avatar;
 
-  const handleAvatarClick = (avatarUrl: string) => {
-    setImagePreview({ urls: [avatarUrl], startIndex: 0 });
+  const handleAvatarClick = (url: string) => {
+    setImagePreview({ urls: [url], startIndex: 0 });
   };
 
   return (
@@ -47,9 +48,9 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
               <Drawer.Description className="sr-only">Detailed information and shared media for {contact.name}.</Drawer.Description>
               <ScrollArea className="h-[calc(100vh_-_150px)] md:h-[calc(100vh_-_174px)]">
                 <div className="flex flex-col items-center text-center p-4">
-                  <button onClick={() => handleAvatarClick(contact.avatar)}>
+                  <button onClick={() => handleAvatarClick(avatarUrl)}>
                     <Avatar className="w-24 h-24 mb-4">
-                        <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
+                        <AvatarImage src={avatarUrl} alt={contact.name} data-ai-hint="person portrait" />
                         <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
                     </Avatar>
                   </button>

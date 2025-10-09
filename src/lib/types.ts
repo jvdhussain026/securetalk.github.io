@@ -31,6 +31,7 @@ export type Contact = {
   liveTranslationEnabled?: boolean;
   lastConnection?: string; // UID of the last user who connected with this user
   lastMessageTimestamp?: Timestamp;
+  profilePictureUrl?: string;
 };
 
 export type UserProfile = {
