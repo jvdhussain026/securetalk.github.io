@@ -1,17 +1,18 @@
 
 'use client';
 
-import { Suspense, useMemo } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useMemo } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import type { Contact } from '@/lib/types';
 import { IncomingCall } from '@/components/call/incoming-call';
 import { ActiveCall } from '@/components/call/active-call';
 import { Loader2 } from 'lucide-react';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, updateDoc } from 'firebase/firestore';
 
 function CallPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const { firestore, user } = useFirebase();
 
   const contactId = searchParams.get('contactId');
@@ -22,8 +23,57 @@ function CallPageContent() {
     if (!firestore || !user || !contactId) return null;
     return doc(firestore, 'users', user.uid, 'contacts', contactId);
   }, [firestore, user, contactId]);
-
+  
   const { data: contact, isLoading } = useDoc<Contact>(contactDocRef);
+
+  const recipientUserDocRef = useMemoFirebase(() => {
+      if (!firestore || !contactId) return null;
+      return doc(firestore, 'users', contactId);
+  }, [firestore, contactId]);
+
+  useEffect(() => {
+    // If this user is the one making the call, set the incomingCall field on the recipient's doc
+    if (status === 'outgoing' && recipientUserDocRef && user) {
+        updateDoc(recipientUserDocRef, {
+            incomingCall: { from: user.uid, type: type }
+        });
+    }
+
+    // Cleanup: when this call page is left for any reason, clear the incoming call signal.
+    return () => {
+      if (status === 'outgoing' && recipientUserDocRef) {
+        // Caller hangs up before receiver answers
+        updateDoc(recipientUserDocRef, { incomingCall: null });
+      }
+    };
+  }, [status, recipientUserDocRef, user, type]);
+
+
+  const handleAccept = () => {
+    if (!recipientUserDocRef || !user) return;
+    // The recipient (current user) accepts the call.
+    // Update the caller's user doc to let them know the call was accepted.
+    const callerDocRef = doc(firestore, 'users', contactId!);
+    updateDoc(callerDocRef, { callStatus: 'connected', callWith: user.uid });
+    
+    // Also clear my own incoming call signal
+    updateDoc(doc(firestore, 'users', user.uid), { incomingCall: null });
+
+    router.replace(`/call?contactId=${contactId}&type=${type}&status=connected`);
+  };
+
+  const handleDecline = () => {
+    if (!user) return;
+    // Clear my own incoming call signal
+    const currentUserDocRef = doc(firestore, 'users', user.uid);
+    updateDoc(currentUserDocRef, { incomingCall: null });
+
+    // Let the caller know it was declined
+    const callerDocRef = doc(firestore, 'users', contactId!);
+    updateDoc(callerDocRef, { callStatus: 'declined' });
+    
+    router.back();
+  };
 
   if (!contactId || !type || !status) {
     return (
@@ -53,10 +103,10 @@ function CallPageContent() {
   }
 
   if (status === 'incoming') {
-    return <IncomingCall contact={contact} callType={type} />;
+    return <IncomingCall contact={contact} callType={type} onAccept={handleAccept} onDecline={handleDecline} />;
   }
 
-  return <ActiveCall contact={contact} callType={type} />;
+  return <ActiveCall contact={contact} callType={type} initialStatus={status} />;
 }
 
 

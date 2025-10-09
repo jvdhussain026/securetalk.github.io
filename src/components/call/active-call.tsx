@@ -9,15 +9,22 @@ import { Mic, MicOff, Video, VideoOff, PhoneMissed, Volume2, RefreshCw } from 'l
 import type { Contact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { useFirebase, useMemoFirebase } from '@/firebase';
 
 type ActiveCallProps = {
   contact: Contact;
   callType: 'voice' | 'video';
+  initialStatus: 'ringing' | 'connected' | 'outgoing';
 };
 
-export function ActiveCall({ contact, callType }: ActiveCallProps) {
+export function ActiveCall({ contact, callType, initialStatus }: ActiveCallProps) {
   const router = useRouter();
-  const [status, setStatus] = useState<'ringing' | 'connected' | 'ended'>('ringing');
+  const { firestore, user } = useFirebase();
+
+  const [status, setStatus] = useState<'ringing' | 'connected' | 'ended'>(
+    initialStatus === 'connected' ? 'connected' : 'ringing'
+  );
   const [callDuration, setCallDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
@@ -28,20 +35,37 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
+  const currentUserDocRef = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+
+  useEffect(() => {
+    if (!currentUserDocRef) return;
+    // Listen for call status changes from the other user
+    const unsubscribe = onSnapshot(currentUserDocRef, (snapshot) => {
+        const data = snapshot.data();
+        if (data?.callStatus === 'connected' && status !== 'connected') {
+            setStatus('connected');
+            // Clear the status so we don't get stuck in a loop
+            updateDoc(currentUserDocRef, { callStatus: null, callWith: null });
+        }
+        if (data?.callStatus === 'declined' || data?.callStatus === 'ended') {
+            handleEndCall(false); // End call without signaling back
+        }
+    });
+
+    return () => unsubscribe();
+  }, [currentUserDocRef, status]);
+
+
   const stopStream = (streamToStop: MediaStream | null) => {
     if (streamToStop) {
       streamToStop.getTracks().forEach(track => track.stop());
     }
   };
 
-  useEffect(() => {
-    // Simulate call connection
-    const connectTimer = setTimeout(() => {
-      setStatus('connected');
-    }, 4000);
-
-    return () => clearTimeout(connectTimer);
-  }, []);
 
   useEffect(() => {
     if (status === 'connected') {
@@ -80,16 +104,22 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
     setupCamera();
 
     return () => {
-      // This cleanup runs when isVideoEnabled changes or component unmounts
       stopStream(stream);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isVideoEnabled]);
 
 
-  const handleEndCall = () => {
+  const handleEndCall = (signal = true) => {
     stopStream(stream);
     setStatus('ended');
+    
+    if (signal && firestore) {
+      // Signal to the other user that the call has ended
+      const otherUserDocRef = doc(firestore, 'users', contact.id);
+      updateDoc(otherUserDocRef, { callStatus: 'ended', incomingCall: null });
+    }
+    
     setTimeout(() => {
       router.back();
     }, 1500);
@@ -104,7 +134,7 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
   const CallStatus = () => {
     switch (status) {
       case 'ringing':
-        return <p className="text-lg text-white/80 animate-pulse">Ringing...</p>;
+        return <p className="text-lg text-white/80 animate-pulse">{initialStatus === 'outgoing' ? 'Ringing...' : 'Connecting...'}</p>;
       case 'connected':
         return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
       case 'ended':
@@ -226,7 +256,7 @@ export function ActiveCall({ contact, callType }: ActiveCallProps) {
           size="lg"
           variant="destructive"
           className="w-full h-16 rounded-full text-lg flex items-center justify-center gap-2"
-          onClick={handleEndCall}
+          onClick={() => handleEndCall()}
         >
           <PhoneMissed className="w-7 h-7 transform -rotate-[135deg]" />
           <span>End Call</span>

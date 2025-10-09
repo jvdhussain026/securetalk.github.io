@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -222,7 +223,6 @@ export default function ChatPage() {
 
   const contactDocRef = useMemoFirebase(() => {
     if (!firestore || !currentUserId || !contactId) return null;
-    // Fetch contact details from the current user's contact subcollection
     return doc(firestore, 'users', currentUserId, 'contacts', contactId);
   }, [firestore, currentUserId, contactId]);
   

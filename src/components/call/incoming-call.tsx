@@ -1,7 +1,6 @@
 
 'use client';
 
-import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -12,21 +11,11 @@ import { motion } from 'framer-motion';
 type IncomingCallProps = {
   contact: Contact;
   callType: 'voice' | 'video';
+  onAccept: () => void;
+  onDecline: () => void;
 };
 
-export function IncomingCall({ contact, callType }: IncomingCallProps) {
-  const router = useRouter();
-
-  const handleAccept = () => {
-    // Navigate to the active call screen
-    router.replace(`/call?contactId=${contact.id}&type=${callType}&status=connected`);
-  };
-
-  const handleDecline = () => {
-    // Go back to the previous page
-    router.back();
-  };
-
+export function IncomingCall({ contact, callType, onAccept, onDecline }: IncomingCallProps) {
   return (
     <div className="h-full flex flex-col items-center justify-between p-8 text-white bg-gray-800">
       <div className="flex-1 flex flex-col justify-center items-center text-center">
@@ -62,7 +51,7 @@ export function IncomingCall({ contact, callType }: IncomingCallProps) {
           <Button
             size="icon"
             className="w-20 h-20 bg-destructive hover:bg-destructive/80 rounded-full"
-            onClick={handleDecline}
+            onClick={onDecline}
           >
             <PhoneMissed className="w-9 h-9" />
           </Button>
@@ -72,7 +61,7 @@ export function IncomingCall({ contact, callType }: IncomingCallProps) {
           <Button
             size="icon"
             className="w-20 h-20 bg-green-600 hover:bg-green-700 rounded-full"
-            onClick={handleAccept}
+            onClick={onAccept}
           >
             {callType === 'video' ? <Video className="w-9 h-9" /> : <Phone className="w-9 h-9" />}
           </Button>

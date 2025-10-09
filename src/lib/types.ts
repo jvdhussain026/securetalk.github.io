@@ -29,7 +29,6 @@ export type Contact = {
   bio?: string;
   verified?: boolean;
   liveTranslationEnabled?: boolean;
-  lastConnection?: string; // UID of the last user who connected with this user
   lastMessageTimestamp?: Timestamp;
   profilePictureUrl?: string;
   call?: {
@@ -38,6 +37,11 @@ export type Contact = {
     timestamp: Timestamp;
     duration?: number;
   };
+  incomingCall?: {
+    from: string;
+    type: 'voice' | 'video';
+  } | null;
+  lastConnection?: string | null;
 };
 
 export type UserProfile = {
