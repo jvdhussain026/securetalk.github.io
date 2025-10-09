@@ -157,6 +157,22 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
 };
 
 
+// Function to convert VAPID public key string to a Uint8Array
+function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
 // Step 4: Notification Permission
 const NotificationsStep = ({ onNext, onBack, user, firestore }: { onNext: () => void; onBack: () => void; user: any; firestore: any; }) => {
     const { toast } = useToast();
@@ -189,10 +205,12 @@ const NotificationsStep = ({ onNext, onBack, user, firestore }: { onNext: () => 
                 if (!vapidPublicKey) {
                     throw new Error("VAPID public key not found. Cannot subscribe to push notifications.");
                 }
+                
+                const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
 
                 const newSubscription = await serviceWorkerRegistration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: vapidPublicKey,
+                    applicationServerKey,
                 });
                 
                 toast({ title: 'Notifications enabled!' });
