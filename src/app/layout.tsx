@@ -1,10 +1,10 @@
 import type { Metadata, Viewport } from 'next';
 import { PT_Sans } from 'next/font/google';
+import Script from 'next/script';
 import { Toaster } from "@/components/ui/toaster"
 import { ThemeProvider } from '@/components/theme-provider';
 import { FirebaseClientProvider } from '@/firebase';
 import './globals.css';
-import { GoogleAnalytics } from '@/components/google-analytics';
 import { Suspense } from 'react';
 
 const ptSans = PT_Sans({
@@ -17,6 +17,7 @@ const APP_NAME = "Secure Talk";
 const APP_DEFAULT_TITLE = "Secure Talk";
 const APP_TITLE_TEMPLATE = "%s - Secure Talk";
 const APP_DESCRIPTION = "A secure real-time messaging application.";
+const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
 
 
 export const metadata: Metadata = {
@@ -53,7 +54,28 @@ export default function RootLayout({
     <html lang="en" className="h-full" suppressHydrationWarning>
       <body className={`${ptSans.variable} font-body antialiased h-full`}>
         <Suspense>
-          <GoogleAnalytics />
+          {GA_MEASUREMENT_ID && (
+            <>
+              <Script
+                strategy="afterInteractive"
+                src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+              />
+              <Script
+                id="google-analytics"
+                strategy="afterInteractive"
+                dangerouslySetInnerHTML={{
+                  __html: `
+                    window.dataLayer = window.dataLayer || [];
+                    function gtag(){dataLayer.push(arguments);}
+                    gtag('js', new Date());
+                    gtag('config', '${GA_MEASUREMENT_ID}', {
+                      page_path: window.location.pathname,
+                    });
+                  `,
+                }}
+              />
+            </>
+          )}
         </Suspense>
         <ThemeProvider
             attribute="class"
