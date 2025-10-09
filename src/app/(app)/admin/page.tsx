@@ -1,9 +1,9 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
@@ -11,26 +11,44 @@ import { collection, query, orderBy } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { useToast } from '@/hooks/use-toast';
 
 function UserCard({ user }: { user: Contact }) {
-  return (
-    <Card>
-      <CardContent className="p-4 flex items-center gap-4">
-        <Avatar className="w-12 h-12">
-          <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
-          <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 overflow-hidden">
-          <div className="flex items-center gap-2">
-            <h3 className="font-bold truncate">{user.name}</h3>
-            {user.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
-          </div>
-          <p className="text-sm text-muted-foreground truncate">ID: {user.id}</p>
-          <p className="text-xs text-muted-foreground">Lang: {user.language || 'en'}</p>
-        </div>
-      </CardContent>
-    </Card>
-  );
+    const [copied, setCopied] = useState(false);
+    const { toast } = useToast();
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(user.id);
+        setCopied(true);
+        toast({ title: "User ID Copied!" });
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    return (
+        <Card>
+        <CardContent className="p-4 flex items-center gap-4">
+            <Avatar className="w-12 h-12">
+            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
+            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+            </Avatar>
+            <div className="flex-1 overflow-hidden">
+            <div className="flex items-center gap-2">
+                <h3 className="font-bold truncate">{user.name}</h3>
+                {user.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
+            </div>
+            <div className="flex items-center gap-2">
+                <p className="text-sm text-muted-foreground truncate">
+                    ID: {user.id.substring(0, 10)}...
+                </p>
+                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopy}>
+                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                </Button>
+            </div>
+            <p className="text-xs text-muted-foreground">Lang: {user.language || 'en'}</p>
+            </div>
+        </CardContent>
+        </Card>
+    );
 }
 
 export default function AdminPage() {
