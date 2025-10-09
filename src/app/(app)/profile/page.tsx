@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Camera, BadgeCheck, LoaderCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -18,6 +18,7 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 export default function ProfilePage() {
   const { toast } = useToast()
   const { firestore, user } = useFirebase();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const userDocRef = useMemoFirebase(() => {
       if (!firestore || !user) return null;
@@ -64,11 +65,27 @@ export default function ProfilePage() {
   }
   
   const handleAvatarChange = () => {
-    toast({
-        title: 'Feature not implemented',
-        description: 'You cannot change the avatar yet.',
-    })
+    fileInputRef.current?.click();
   }
+
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        toast({
+          variant: "destructive",
+          title: "Image too large",
+          description: "Please select an image smaller than 2MB.",
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleAvatarClick = () => {
     if (avatar) {
@@ -115,6 +132,13 @@ export default function ProfilePage() {
               <Camera className="h-5 w-5" />
                <span className="sr-only">Change profile picture</span>
             </Button>
+            <input
+              type="file"
+              ref={fileInputRef}
+              className="hidden"
+              accept="image/png, image/jpeg, image/gif"
+              onChange={handleFileChange}
+            />
           </div>
         </div>
 
