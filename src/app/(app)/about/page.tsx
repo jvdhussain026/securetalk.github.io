@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,7 +12,7 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 import React, { useState, useCallback } from 'react';
 import type { Contact } from '@/lib/types';
 import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
-import { useFirebase } from '@/firebase/provider';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase/provider';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
@@ -22,21 +22,18 @@ export default function AboutUsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { firestore, user: currentUser, userProfile } = useFirebase();
+  const developerId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDeveloper, setSelectedDeveloper] = useState<Contact | null>(null);
 
-  const teamMembers: Contact[] = [
-    { 
-      id: '4YaPPGcDw2NLe31LwT05h3TihTz1',
-      name: 'Javed Hussain', 
-      avatar: 'https://picsum.photos/seed/user/200/200', 
-      bio: 'Lead Developer & Creator of Secure Talk. Passionate about privacy, security, and building user-centric applications.',
-      verified: true,
-      language: 'en',
-    },
-  ];
-  
+  const developerDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'users', developerId);
+  }, [firestore]);
+
+  const { data: developer, isLoading: isDeveloperLoading } = useDoc<Contact>(developerDocRef);
+
 
   const corePrinciples = [
     { 
@@ -74,9 +71,9 @@ export default function AboutUsPage() {
     setDocumentNonBlocking(userContactRef, {
         id: devToConnect.id,
         name: devToConnect.name,
-        avatar: devToConnect.avatar,
+        avatar: devToConnect.profilePictureUrl, // Use profilePictureUrl from the main user doc
         bio: devToConnect.bio,
-        language: devToConnect.language,
+        language: devToConnect.language || 'en',
         verified: devToConnect.verified,
         liveTranslationEnabled: false,
         lastMessageTimestamp: currentTimestamp,
@@ -183,22 +180,27 @@ export default function AboutUsPage() {
               <CardTitle>Meet The Team</CardTitle>
             </CardHeader>
             <CardContent>
-              {teamMembers.map((member, index) => (
+              {isDeveloperLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+                </div>
+              ) : developer ? (
                 <button 
-                  key={index} 
                   className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
-                  onClick={() => setSelectedDeveloper(member)}
+                  onClick={() => setSelectedDeveloper(developer)}
                 >
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src={member.avatar} alt={member.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{member.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarImage src={developer.profilePictureUrl || developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
+                    <AvatarFallback>{developer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="font-semibold">{member.name}</h3>
+                    <h3 className="font-semibold">{developer.name}</h3>
                     <p className="text-sm text-muted-foreground">Lead Developer</p>
                   </div>
                 </button>
-              ))}
+              ) : (
+                <p className="text-center text-muted-foreground p-4">Could not load team information.</p>
+              )}
             </CardContent>
           </Card>
           
@@ -219,3 +221,4 @@ export default function AboutUsPage() {
     </>
   );
 }
+
