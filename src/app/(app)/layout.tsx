@@ -89,14 +89,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             updateDoc(userDocRef, { lastConnection: null });
           }
           // New incoming call
-          if (data.incomingCall && data.incomingCall.from) {
+          if (data.incomingCall && data.incomingCall.from && !pathname.startsWith('/call')) {
              router.push(`/call?contactId=${data.incomingCall.from}&type=${data.incomingCall.type}&status=incoming`);
           }
         }
       });
       return () => unsubscribe();
     }
-  }, [userDocRef, router]);
+  }, [userDocRef, router, pathname]);
   
   // Listener for new messages to show in-app notifications
   useEffect(() => {
