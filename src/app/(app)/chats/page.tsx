@@ -138,7 +138,7 @@ function ChatListItem({ contact }: { contact: Contact }) {
                     <p className={cn("text-sm truncate", lastMessage ? 'text-muted-foreground' : 'text-muted-foreground italic')}>
                         {lastMessageText}
                     </p>
-                     {contact.unreadCount && contact.unreadCount > 0 && (
+                     {contact.unreadCount > 0 && (
                         <Badge className="h-5 shrink-0">{contact.unreadCount}</Badge>
                      )}
                 </div>
