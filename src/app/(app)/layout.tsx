@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
-import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp as firestoreServerTimestamp } from 'firebase/firestore'
 import { getDatabase, ref, onValue, onDisconnect, set, serverTimestamp as rtdbServerTimestamp } from 'firebase/database';
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
@@ -36,8 +36,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     if (!user || !firestore) return;
 
     const db = getDatabase();
-    const myConnectionsRef = ref(db, `status/${user.uid}`);
-    const lastOnlineRef = ref(db, `status/${user.uid}/lastOnline`);
+    const myStatusRef = ref(db, `status/${user.uid}`);
     const connectedRef = ref(db, '.info/connected');
 
     const userStatusFirestoreRef = doc(firestore, `users/${user.uid}`);
@@ -45,21 +44,22 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
             // We're connected (or reconnected).
-            set(myConnectionsRef, { isOnline: true, lastOnline: rtdbServerTimestamp() });
+            // Set RTDB presence
+            set(myStatusRef, { isOnline: true, lastOnline: rtdbServerTimestamp() });
 
-            // When I disconnect, remove my presence.
-            onDisconnect(myConnectionsRef).set({ isOnline: false, lastOnline: rtdbServerTimestamp() });
+            // When I disconnect, update RTDB
+            onDisconnect(myStatusRef).set({ isOnline: false, lastOnline: rtdbServerTimestamp() });
             
-            // Also update Firestore on connect
+            // Update Firestore status to 'online'
              updateDoc(userStatusFirestoreRef, {
                 status: 'online',
-                lastSeen: serverTimestamp()
+                lastSeen: firestoreServerTimestamp()
             });
 
-            // When I disconnect, update Firestore.
+            // When I disconnect, update Firestore status to 'offline'.
             onDisconnect(userStatusFirestoreRef).update({
                 status: 'offline',
-                lastSeen: serverTimestamp()
+                lastSeen: firestoreServerTimestamp()
             });
         }
     });
