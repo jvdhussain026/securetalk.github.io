@@ -1,23 +1,28 @@
 
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck, Copy, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
+import { AdminUserDetailSheet } from '@/components/admin-user-detail-sheet';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { serverTimestamp } from 'firebase/firestore';
 
-function UserCard({ user }: { user: Contact }) {
+function UserCard({ user, onUserSelect }: { user: Contact, onUserSelect: (user: Contact) => void }) {
     const [copied, setCopied] = useState(false);
     const { toast } = useToast();
 
-    const handleCopy = () => {
+    const handleCopy = (e: React.MouseEvent) => {
+        e.stopPropagation(); // Prevent the drawer from opening
         navigator.clipboard.writeText(user.id);
         setCopied(true);
         toast({ title: "User ID Copied!" });
@@ -25,46 +30,98 @@ function UserCard({ user }: { user: Contact }) {
     };
 
     return (
-        <Card>
-        <CardContent className="p-4 flex items-center gap-4">
-            <Avatar className="w-12 h-12">
-            <AvatarImage src={user.avatar} alt={user.name} data-ai-hint="person portrait" />
-            <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 overflow-hidden">
-            <div className="flex items-center gap-2">
-                <h3 className="font-bold truncate">{user.name}</h3>
-                {user.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
-            </div>
-            <div className="flex items-center gap-2">
-                <p className="text-sm text-muted-foreground truncate">
-                    ID: {user.id.substring(0, 10)}...
-                </p>
-                <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopy}>
-                    {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
-                </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">Lang: {user.language || 'en'}</p>
-            </div>
-        </CardContent>
+        <Card className="cursor-pointer hover:bg-accent/50 transition-colors" onClick={() => onUserSelect(user)}>
+            <CardContent className="p-4 flex items-center gap-4">
+                <Avatar className="w-12 h-12">
+                <AvatarImage src={user.avatar || user.profilePictureUrl} alt={user.name} data-ai-hint="person portrait" />
+                <AvatarFallback>{user.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1 overflow-hidden">
+                <div className="flex items-center gap-2">
+                    <h3 className="font-bold truncate">{user.name}</h3>
+                    {user.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
+                </div>
+                <div className="flex items-center gap-2">
+                    <p className="text-sm text-muted-foreground truncate">
+                        ID: {user.id.substring(0, 10)}...
+                    </p>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={handleCopy}>
+                        {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">Lang: {user.language || 'en'}</p>
+                </div>
+            </CardContent>
         </Card>
     );
 }
 
 export default function AdminPage() {
-  const { firestore } = useFirebase();
+  const { firestore, user: adminUser, userProfile: adminProfile } = useFirebase();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const [selectedUser, setSelectedUser] = useState<Contact | null>(null);
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Removed orderBy to prevent query failure due to missing index
-    return query(collection(firestore, 'users'));
+    return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
   const { data: users, isLoading, error } = useCollection<Contact>(usersQuery);
 
   const totalUsers = useMemo(() => users?.length || 0, [users]);
 
+  const handleConnect = useCallback(async (userToConnect: Contact) => {
+    if (!firestore || !adminUser || !adminProfile) {
+        toast({ variant: 'destructive', title: 'Could not connect', description: 'Admin user data not available.' });
+        return;
+    }
+    
+    const currentTimestamp = serverTimestamp();
+
+    // 1. Add user to admin's contact list
+    const adminContactRef = doc(firestore, 'users', adminUser.uid, 'contacts', userToConnect.id);
+    setDocumentNonBlocking(adminContactRef, {
+        id: userToConnect.id,
+        name: userToConnect.name,
+        avatar: userToConnect.avatar || userToConnect.profilePictureUrl,
+        bio: userToConnect.bio,
+        language: userToConnect.language || 'en',
+        verified: userToConnect.verified || false,
+        liveTranslationEnabled: false,
+        lastMessageTimestamp: currentTimestamp,
+    }, { merge: true });
+
+    // 2. Add admin to user's contact list
+    const userContactRef = doc(firestore, 'users', userToConnect.id, 'contacts', adminUser.uid);
+     setDocumentNonBlocking(userContactRef, {
+        id: adminUser.uid,
+        name: adminProfile.name,
+        avatar: adminProfile.profilePictureUrl,
+        bio: adminProfile.bio,
+        language: adminProfile.language || 'en',
+        verified: adminProfile.verified || false,
+        liveTranslationEnabled: false,
+        lastMessageTimestamp: currentTimestamp,
+    }, { merge: true });
+    
+    // 3. Trigger realtime update for the other user to see the new chat
+    const otherUserDocForUpdate = doc(firestore, 'users', userToConnect.id);
+    updateDocumentNonBlocking(otherUserDocForUpdate, { lastConnection: adminUser.uid });
+
+    toast({
+        title: 'Connection Added!',
+        description: `You are now connected with ${userToConnect.name}.`,
+    });
+    
+    setSelectedUser(null);
+    router.push(`/chats/${userToConnect.id}`);
+
+  }, [firestore, adminUser, adminProfile, toast, router]);
+
   return (
+    <>
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
       <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
         <Button variant="ghost" size="icon" asChild>
@@ -110,7 +167,7 @@ export default function AdminPage() {
             ) : (
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-3">
-                  {users?.map(user => <UserCard key={user.id} user={user} />)}
+                  {users?.map(user => <UserCard key={user.id} user={user} onUserSelect={setSelectedUser} />)}
                 </div>
               </ScrollArea>
             )}
@@ -118,5 +175,16 @@ export default function AdminPage() {
         </Card>
       </main>
     </div>
+    {selectedUser && (
+        <AdminUserDetailSheet
+            open={!!selectedUser}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) setSelectedUser(null);
+            }}
+            user={selectedUser}
+            onConnect={handleConnect}
+        />
+    )}
+    </>
   );
 }

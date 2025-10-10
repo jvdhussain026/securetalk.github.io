@@ -31,6 +31,7 @@ export type Contact = {
   liveTranslationEnabled?: boolean;
   lastMessageTimestamp?: Timestamp;
   profilePictureUrl?: string;
+  createdAt?: Timestamp; // Added this field
   call?: {
     type: 'incoming' | 'outgoing' | 'missed';
     callType: 'voice' | 'video';
