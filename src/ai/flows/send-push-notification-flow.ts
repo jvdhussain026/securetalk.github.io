@@ -10,7 +10,8 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
 import { getMessaging } from 'firebase-admin/messaging';
 
-// Ensure Firebase Admin is initialized
+// Ensure Firebase Admin is initialized.
+// In a Google Cloud environment, this will use Application Default Credentials.
 if (!getApps().length) {
   initializeApp();
 }
@@ -64,6 +65,10 @@ const sendPushNotificationFlow = ai.defineFlow(
 
       const tokens = snapshot.docs.map(doc => doc.id);
       
+      if (tokens.length === 0) {
+        return { successCount: 0, failureCount: 0 };
+      }
+      
       const message = {
         notification: {
           title: payload.title,
@@ -84,8 +89,10 @@ const sendPushNotificationFlow = ai.defineFlow(
       console.log(`${response.successCount} messages were sent successfully`);
 
       if (response.failureCount > 0) {
+        const failedTokens: string[] = [];
         response.responses.forEach((resp, idx) => {
           if (!resp.success) {
+            failedTokens.push(tokens[idx]);
             console.error(`Failed to send to token ${tokens[idx]}:`, resp.error);
             // Optional: Handle device token cleanup for certain errors
             if (resp.error.code === 'messaging/registration-token-not-registered') {
@@ -93,13 +100,14 @@ const sendPushNotificationFlow = ai.defineFlow(
             }
           }
         });
+        console.log("List of failed tokens:", failedTokens);
       }
 
       return { successCount: response.successCount, failureCount: response.failureCount };
 
     } catch (error) {
       console.error('Failed to send push notifications:', error);
-      return { successCount: 0, failureCount: 0 };
+      return { successCount: 0, failureCount: response.failureCount > 0 ? response.failureCount : tokens.length };
     }
   }
 );
