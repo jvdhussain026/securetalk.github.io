@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientOnly } from '@/components/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
@@ -48,6 +48,8 @@ import {
 import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase'
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
+import { Switch } from '@/components/ui/switch'
+import { Label } from '@/components/ui/label'
 
 
 const LinkifiedText = ({ text }: { text: string }) => {
@@ -1180,13 +1182,17 @@ export default function ChatPage() {
                                             <Palette className="mr-2 h-4 w-4" />
                                             <span>Chat Theme</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuCheckboxItem
-                                            checked={contact.liveTranslationEnabled}
-                                            onCheckedChange={handleLiveTranslationToggle}
-                                        >
-                                            <Languages className="mr-2 h-4 w-4" />
-                                            <span>Live Translation</span>
-                                        </DropdownMenuCheckboxItem>
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                                            <div className="flex items-center gap-2">
+                                                <Languages className="mr-2 h-4 w-4" />
+                                                <Label htmlFor="live-translation-switch">Live Translation</Label>
+                                            </div>
+                                            <Switch
+                                                id="live-translation-switch"
+                                                checked={!!contact.liveTranslationEnabled}
+                                                onCheckedChange={handleLiveTranslationToggle}
+                                            />
+                                        </DropdownMenuItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem onSelect={() => setMenuPage(2)}>
                                             <span>More</span>
@@ -1344,14 +1350,14 @@ export default function ChatPage() {
                 <Plus className="h-6 w-6" />
                 <span className="sr-only">Add media</span>
             </Button>
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted">
+            <div className="flex-1 relative">
                 <div
                     ref={contentEditableRef}
                     contentEditable
                     onInput={handleInput}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
-                    className="relative flex-1 bg-transparent px-4 py-2 pr-12 text-base min-h-[40px] max-h-32 overflow-y-auto z-10"
+                    className="relative flex-1 bg-muted rounded-lg px-4 py-2 pr-12 text-base min-h-[40px] max-h-32 overflow-y-auto z-10"
                     style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
                     data-placeholder="Type a message..."
                 />
@@ -1484,6 +1490,7 @@ export default function ChatPage() {
 }
 
     
+
 
 
 
