@@ -35,10 +35,10 @@ const SettingsItem = ({ href, icon: Icon, title, comingSoon = false }: { href: s
     };
 
     return (
-        <Link href={href} onClick={handleClick} className="flex items-center p-4 hover:bg-white/5 transition-colors rounded-lg">
+        <Link href={href} onClick={handleClick} className="flex items-center p-4 hover:bg-accent/50 transition-colors rounded-lg">
             <Icon className="h-6 w-6 mr-4" />
             <span className="flex-1 font-medium">{title}</span>
-            <ChevronRight className="h-5 w-5 text-neutral-400" />
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
         </Link>
     );
 };
@@ -78,9 +78,9 @@ export default function SettingsPage() {
     }
 
   return (
-    <div className="flex flex-col h-full bg-[#021425] text-white">
-      <header className="flex items-center gap-4 p-4 shrink-0 border-b border-white/10">
-        <Button variant="ghost" size="icon" asChild className="hover:bg-white/10">
+    <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
+      <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
+        <Button variant="ghost" size="icon" asChild>
           <Link href="/chats">
             <ArrowLeft className="h-6 w-6" />
             <span className="sr-only">Back to Chats</span>
@@ -95,52 +95,52 @@ export default function SettingsPage() {
                 <LoaderCircle className="h-6 w-6 animate-spin" />
             </div>
         ) : (
-            <Link href="/profile" className="flex items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
-                <Avatar className="h-14 w-14 border-2 border-white/20">
+            <Link href="/profile" className="flex items-center gap-4 p-4 rounded-lg bg-card hover:bg-accent/50 transition-colors">
+                <Avatar className="h-14 w-14 border-2">
                     <AvatarImage src={userProfile?.profilePictureUrl} alt={userProfile?.name} data-ai-hint="person portrait" />
                     <AvatarFallback>{userProfile?.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1">
                     <div className="flex items-center gap-2">
                         <p className="font-bold text-lg">{userProfile?.name}</p>
-                        {userProfile?.verified && <BadgeCheck className="h-5 w-5 text-blue-400" />}
+                        {userProfile?.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
                     </div>
-                    <p className="text-sm text-neutral-300">{userProfile?.bio}</p>
+                    <p className="text-sm text-muted-foreground">{userProfile?.bio}</p>
                 </div>
-                 <ChevronRight className="h-5 w-5 text-neutral-400" />
+                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
             </Link>
         )}
 
         <div>
-            <h2 className="px-4 pb-2 font-semibold text-neutral-400">General Settings</h2>
-            <div className="rounded-lg bg-white/5">
+            <h2 className="px-4 pb-2 font-semibold text-muted-foreground">General Settings</h2>
+            <div className="rounded-lg bg-card">
                 {generalSettings.map((item, index) => (
                     <div key={item.title}>
                         <SettingsItem {...item} />
-                        {index < generalSettings.length - 1 && <Separator className="bg-white/10" />}
+                        {index < generalSettings.length - 1 && <Separator />}
                     </div>
                 ))}
             </div>
         </div>
         
         <div>
-            <h2 className="px-4 pb-2 font-semibold text-neutral-400">About & Support</h2>
-            <div className="rounded-lg bg-white/5">
+            <h2 className="px-4 pb-2 font-semibold text-muted-foreground">About & Support</h2>
+            <div className="rounded-lg bg-card">
                 {aboutAndSupport.map((item, index) => (
                     <div key={item.title}>
                         <SettingsItem {...item} />
-                        {index < aboutAndSupport.length - 1 && <Separator className="bg-white/10" />}
+                        {index < aboutAndSupport.length - 1 && <Separator />}
                     </div>
                 ))}
             </div>
         </div>
 
         <div>
-            <h2 className="px-4 pb-2 font-semibold text-red-400">Danger Zone</h2>
-             <div className="rounded-lg bg-white/5 p-4 space-y-3">
+            <h2 className="px-4 pb-2 font-semibold text-destructive">Danger Zone</h2>
+             <div className="rounded-lg bg-card p-4 space-y-3">
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                        <Button variant="outline" className="w-full justify-between bg-transparent hover:bg-white/10 hover:text-white border-white/20">
+                        <Button variant="outline" className="w-full justify-between">
                             <span>Reset Onboarding Tour</span>
                             <RefreshCw className="h-5 w-5" />
                         </Button>
@@ -160,7 +160,7 @@ export default function SettingsPage() {
                 </AlertDialog>
                 <AlertDialog>
                     <AlertDialogTrigger asChild>
-                         <Button variant="destructive" className="w-full justify-between bg-red-600/80 hover:bg-red-600/100 text-white">
+                         <Button variant="destructive" className="w-full justify-between">
                             <span>Reset All App Data</span>
                             <Trash2 className="h-5 w-5" />
                         </Button>
