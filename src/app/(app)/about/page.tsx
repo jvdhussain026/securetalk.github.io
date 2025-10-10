@@ -9,15 +9,32 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ComingSoonDialog } from '@/components/coming-soon-dialog';
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
+import type { Contact } from '@/lib/types';
+import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
+import { useFirebase } from '@/firebase/provider';
+import { doc, serverTimestamp } from 'firebase/firestore';
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { useRouter } from 'next/navigation';
 
 
 export default function AboutUsPage() {
   const { toast } = useToast();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter();
+  const { firestore, user: currentUser, userProfile } = useFirebase();
 
-  const teamMembers = [
-    { name: 'Javed Hussain', role: 'Lead Developer', avatar: 'https://picsum.photos/seed/user/200/200' },
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedDeveloper, setSelectedDeveloper] = useState<Contact | null>(null);
+
+  const teamMembers: Contact[] = [
+    { 
+      id: '4YaPPGcDw2NLe31LwT05h3TihTz1',
+      name: 'Javed Hussain', 
+      avatar: 'https://picsum.photos/seed/user/200/200', 
+      bio: 'Lead Developer & Creator of Secure Talk. Passionate about privacy, security, and building user-centric applications.',
+      verified: true,
+      language: 'en',
+    },
   ];
   
 
@@ -43,6 +60,55 @@ export default function AboutUsPage() {
       description: 'Encrypted messages immediately vanish from our servers the moment they reach their destination. We store nothing.' 
     },
   ];
+
+  const handleConnect = useCallback(async (devToConnect: Contact) => {
+    if (!firestore || !currentUser || !userProfile) {
+        toast({ variant: 'destructive', title: 'Could not connect', description: 'You must be logged in to connect.' });
+        return;
+    }
+    
+    const currentTimestamp = serverTimestamp();
+
+    // 1. Add dev to user's contact list
+    const userContactRef = doc(firestore, 'users', currentUser.uid, 'contacts', devToConnect.id);
+    setDocumentNonBlocking(userContactRef, {
+        id: devToConnect.id,
+        name: devToConnect.name,
+        avatar: devToConnect.avatar,
+        bio: devToConnect.bio,
+        language: devToConnect.language,
+        verified: devToConnect.verified,
+        liveTranslationEnabled: false,
+        lastMessageTimestamp: currentTimestamp,
+    }, { merge: true });
+
+    // 2. Add user to dev's contact list
+    const devContactRef = doc(firestore, 'users', devToConnect.id, 'contacts', currentUser.uid);
+     setDocumentNonBlocking(devContactRef, {
+        id: currentUser.uid,
+        name: userProfile.name,
+        avatar: userProfile.profilePictureUrl,
+        bio: userProfile.bio,
+        language: userProfile.language || 'en',
+        verified: userProfile.verified || false,
+        liveTranslationEnabled: false,
+        lastMessageTimestamp: currentTimestamp,
+    }, { merge: true });
+    
+    // 3. Trigger realtime update for the dev to see the new chat
+    const otherUserDocForUpdate = doc(firestore, 'users', devToConnect.id);
+    updateDocumentNonBlocking(otherUserDocForUpdate, { lastConnection: currentUser.uid });
+
+    toast({
+        title: 'Connection Added!',
+        description: `You are now connected with ${devToConnect.name}.`,
+    });
+    
+    setSelectedDeveloper(null);
+    router.push(`/chats/${devToConnect.id}`);
+
+  }, [firestore, currentUser, userProfile, toast, router]);
+
 
   return (
     <>
@@ -118,16 +184,20 @@ export default function AboutUsPage() {
             </CardHeader>
             <CardContent>
               {teamMembers.map((member, index) => (
-                <div key={index} className="flex items-center gap-4">
+                <button 
+                  key={index} 
+                  className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
+                  onClick={() => setSelectedDeveloper(member)}
+                >
                   <Avatar className="w-12 h-12">
                     <AvatarImage src={member.avatar} alt={member.name} data-ai-hint="person portrait" />
                     <AvatarFallback>{member.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div>
                     <h3 className="font-semibold">{member.name}</h3>
-                    <p className="text-sm text-muted-foreground">{member.role}</p>
+                    <p className="text-sm text-muted-foreground">Lead Developer</p>
                   </div>
-                </div>
+                </button>
               ))}
             </CardContent>
           </Card>
@@ -138,6 +208,14 @@ export default function AboutUsPage() {
         </main>
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
+      {selectedDeveloper && (
+        <DeveloperDetailSheet 
+            open={!!selectedDeveloper}
+            onOpenChange={(isOpen) => !isOpen && setSelectedDeveloper(null)}
+            developer={selectedDeveloper}
+            onConnect={handleConnect}
+        />
+      )}
     </>
   );
 }
