@@ -71,9 +71,6 @@
   .bg-chat {
     background-color: hsl(var(--muted));
   }
-  .secure-mode {
-    @apply blur-xl;
-  }
 }
 
 

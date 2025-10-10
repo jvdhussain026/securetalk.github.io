@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useFirebase, useMemoFirebase } from '@/firebase'
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore'
@@ -10,21 +10,7 @@ import { cn } from '@/lib/utils'
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { firestore, user } = useFirebase();
   const router = useRouter();
-  const [isWindowFocused, setIsWindowFocused] = useState(true);
-
-  useEffect(() => {
-    const handleFocus = () => setIsWindowFocused(true);
-    const handleBlur = () => setIsWindowFocused(false);
-
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('blur', handleBlur);
-
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('blur', handleBlur);
-    };
-  }, []);
-
+  
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
     return doc(firestore, 'users', user.uid);
@@ -52,5 +38,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [userDocRef, router]);
 
-  return <div className={cn("h-full md:max-w-md md:mx-auto md:border-x", !isWindowFocused && "secure-mode")}>{children}</div>
+  return <div className={cn("h-full md:max-w-md md:mx-auto md:border-x")}>{children}</div>
 }
