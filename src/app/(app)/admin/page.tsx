@@ -65,10 +65,31 @@ export default function AdminPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
+    // Fetch all users without server-side ordering
+    return query(collection(firestore, 'users'));
   }, [firestore]);
 
   const { data: users, isLoading, error } = useCollection<Contact>(usersQuery);
+  
+  const sortedUsers = useMemo(() => {
+    if (!users) return [];
+    return [...users].sort((a, b) => {
+      const aDate = a.createdAt?.toDate();
+      const bDate = b.createdAt?.toDate();
+
+      if (aDate && bDate) {
+        return bDate.getTime() - aDate.getTime(); // Newest first
+      }
+      if (aDate && !bDate) {
+        return -1; // a comes first
+      }
+      if (!aDate && bDate) {
+        return 1; // b comes first
+      }
+      return 0; // Both have no date
+    });
+  }, [users]);
+
 
   const totalUsers = useMemo(() => users?.length || 0, [users]);
 
@@ -167,7 +188,7 @@ export default function AdminPage() {
             ) : (
               <ScrollArea className="h-[400px] pr-4">
                 <div className="space-y-3">
-                  {users?.map(user => <UserCard key={user.id} user={user} onUserSelect={setSelectedUser} />)}
+                  {sortedUsers.map(user => <UserCard key={user.id} user={user} onUserSelect={setSelectedUser} />)}
                 </div>
               </ScrollArea>
             )}
