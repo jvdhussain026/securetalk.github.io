@@ -18,18 +18,8 @@ import { Label } from '@/components/ui/label';
 import { ToneSelectionDialog } from '@/components/tone-selection-dialog';
 import type { Tone } from '@/lib/audio';
 import { tones } from '@/lib/audio';
-
-// Helper function to convert VAPID public key string to a Uint8Array
-function urlBase64ToUint8Array(base64String: string) {
-  const padding = '='.repeat((4 - base64String.length % 4) % 4);
-  const base64 = (base64String + padding).replace(/\-/g, '+').replace(/_/g, '/');
-  const rawData = window.atob(base64);
-  const outputArray = new Uint8Array(rawData.length);
-  for (let i = 0; i < rawData.length; ++i) {
-    outputArray[i] = rawData.charCodeAt(i);
-  }
-  return outputArray;
-}
+import { getMessaging, getToken } from 'firebase/messaging';
+import { initializeFirebase } from '@/firebase';
 
 export default function NotificationsPage() {
   const { toast } = useToast();
@@ -67,24 +57,23 @@ export default function NotificationsPage() {
     }
   }, []);
   
-  const saveSubscription = useCallback(async (subscription: PushSubscription) => {
+  const saveFcmToken = useCallback(async (token: string) => {
     if (!firestore || !user) {
-        console.error("Firestore or user not available to save subscription.");
+        console.error("Firestore or user not available to save FCM token.");
         toast({ variant: 'destructive', title: 'Could not save notification preferences.' });
         return;
     }
     try {
-        const subscriptionJson = subscription.toJSON();
         const subscriptionsRef = collection(firestore, 'users', user.uid, 'subscriptions');
-        const docId = btoa(subscriptionJson.endpoint!).replace(/[/+=]/g, '');
-        const subscriptionDocRef = doc(subscriptionsRef, docId);
+        // Use the token itself as the document ID to prevent duplicates
+        const tokenDocRef = doc(subscriptionsRef, token);
         
-        const docSnap = await getDocumentNonBlocking(subscriptionDocRef);
+        const docSnap = await getDocumentNonBlocking(tokenDocRef);
         if (!docSnap || !docSnap.exists()) {
-            setDocumentNonBlocking(subscriptionDocRef, subscriptionJson, { merge: true });
+            setDocumentNonBlocking(tokenDocRef, { createdAt: new Date() }, { merge: true });
         }
     } catch (error) {
-        console.error("Failed to save push subscription to Firestore:", error);
+        console.error("Failed to save FCM token to Firestore:", error);
         toast({ variant: 'destructive', title: 'Could not save notification preferences.' });
     }
   }, [firestore, user, toast]);
@@ -105,28 +94,20 @@ export default function NotificationsPage() {
     
     setIsSubscribing(true);
     try {
-      const serviceWorkerRegistration = await navigator.serviceWorker.ready;
-      const existingSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
-
-      if (existingSubscription) {
-        toast({ title: 'You are already subscribed to notifications.' });
-        await saveSubscription(existingSubscription);
-      } else {
-        const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-        if (!vapidPublicKey) {
-            throw new Error("VAPID public key not found.");
+        const { firebaseApp } = initializeFirebase();
+        const messaging = getMessaging(firebaseApp);
+        const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+        if (!vapidKey) {
+            throw new Error("VAPID public key not found in environment variables.");
         }
-        
-        const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
+        const fcmToken = await getToken(messaging, { vapidKey });
 
-        const newSubscription = await serviceWorkerRegistration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey,
-        });
-        
-        toast({ title: 'Notifications enabled successfully!' });
-        await saveSubscription(newSubscription);
-      }
+        if (fcmToken) {
+            toast({ title: 'Notifications enabled successfully!' });
+            await saveFcmToken(fcmToken);
+        } else {
+            throw new Error("Could not retrieve FCM token.");
+        }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
       toast({ variant: 'destructive', title: 'Failed to subscribe', description: 'Could not set up push notifications.' });

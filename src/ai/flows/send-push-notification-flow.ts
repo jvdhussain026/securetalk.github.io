@@ -1,14 +1,14 @@
 
 'use server';
 /**
- * @fileOverview A flow for sending a push notification to a user.
+ * @fileOverview A flow for sending a push notification to a user via FCM.
  */
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import webpush from 'web-push';
+import { getMessaging } from 'firebase-admin/messaging';
 
 // Ensure Firebase Admin is initialized
 if (!getApps().length) {
@@ -16,22 +16,7 @@ if (!getApps().length) {
 }
 
 const db = getFirestore();
-
-// Safely configure web-push
-const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-const vapidPrivateKey = process.env.VAPID_PRIVATE_KEY;
-
-if (vapidPublicKey && vapidPrivateKey && vapidPrivateKey !== 'your_private_key_here') {
-  try {
-    webpush.setVapidDetails(
-      'mailto:your-email@example.com',
-      vapidPublicKey,
-      vapidPrivateKey
-    );
-  } catch (error) {
-    console.error("Error setting VAPID details, likely due to invalid keys:", error);
-  }
-}
+const messaging = getMessaging();
 
 const PushPayloadSchema = z.object({
     title: z.string(),
@@ -49,12 +34,8 @@ const SendPushNotificationInputSchema = z.object({
 export type SendPushNotificationInput = z.infer<typeof SendPushNotificationInputSchema>;
 
 const SendPushNotificationOutputSchema = z.object({
-  success: z.boolean(),
-  results: z.array(z.object({
-    subscription: z.string(),
-    success: z.boolean(),
-    error: z.string().optional(),
-  })),
+  successCount: z.number(),
+  failureCount: z.number(),
 });
 export type SendPushNotificationOutput = z.infer<typeof SendPushNotificationOutputSchema>;
 
@@ -71,44 +52,54 @@ const sendPushNotificationFlow = ai.defineFlow(
     outputSchema: SendPushNotificationOutputSchema,
   },
   async ({ userId, payload }) => {
-    if (!vapidPublicKey || !vapidPrivateKey || vapidPrivateKey === 'your_private_key_here') {
-        console.error("VAPID keys not configured. Skipping push notification. Please run 'npm run generate-vapid-keys' and update your .env file.");
-        return { success: false, results: [] };
-    }
 
     try {
       const subscriptionsRef = db.collection('users').doc(userId).collection('subscriptions');
       const snapshot = await subscriptionsRef.get();
 
       if (snapshot.empty) {
-        console.log('No push subscriptions found for user:', userId);
-        return { success: true, results: [] };
+        console.log('No FCM tokens found for user:', userId);
+        return { successCount: 0, failureCount: 0 };
       }
 
-      const notificationPayload = JSON.stringify(payload);
+      const tokens = snapshot.docs.map(doc => doc.id);
       
-      const sendPromises = snapshot.docs.map(doc => {
-        const subscription = doc.data();
-        return webpush.sendNotification(subscription as webpush.PushSubscription, notificationPayload)
-            .then(response => ({ subscription: subscription.endpoint, success: true }))
-            .catch(error => {
-                console.error('Error sending push notification:', error.body);
-                // Optionally handle expired subscriptions by deleting them
-                if (error.statusCode === 410) {
-                    doc.ref.delete();
-                }
-                return { subscription: subscription.endpoint, success: false, error: error.body };
-            });
-      });
+      const message = {
+        notification: {
+          title: payload.title,
+          body: payload.body,
+        },
+        webpush: {
+          notification: {
+            icon: payload.icon || '/icon-192x192.png',
+            badge: payload.badge,
+            tag: payload.tag,
+          }
+        },
+        tokens: tokens,
+      };
 
-      const results = await Promise.all(sendPromises);
-      const isOverallSuccess = results.every(r => r.success);
+      const response = await messaging.sendEachForMulticast(message);
+      
+      console.log(`${response.successCount} messages were sent successfully`);
 
-      return { success: isOverallSuccess, results };
+      if (response.failureCount > 0) {
+        response.responses.forEach((resp, idx) => {
+          if (!resp.success) {
+            console.error(`Failed to send to token ${tokens[idx]}:`, resp.error);
+            // Optional: Handle device token cleanup for certain errors
+            if (resp.error.code === 'messaging/registration-token-not-registered') {
+              subscriptionsRef.doc(tokens[idx]).delete();
+            }
+          }
+        });
+      }
+
+      return { successCount: response.successCount, failureCount: response.failureCount };
 
     } catch (error) {
       console.error('Failed to send push notifications:', error);
-      return { success: false, results: [] };
+      return { successCount: 0, failureCount: 0 };
     }
   }
 );
