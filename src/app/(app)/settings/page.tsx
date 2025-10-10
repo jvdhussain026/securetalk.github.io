@@ -2,72 +2,185 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, User, Bell, Palette, Languages, HelpCircle, Info } from 'lucide-react';
+import { ArrowLeft, ChevronRight, User, Bell, Palette, Languages, HardDrive, Lock, Shield, Info, Heart, MessageSquareWarning, FileText, RefreshCw, Trash2, BadgeCheck, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { useFirebase } from '@/firebase';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
-const SettingsItem = ({ href, icon: Icon, title, description }: { href: string, icon: React.ElementType, title: string, description: string }) => (
-    <Link href={href} className="block hover:bg-accent p-4 rounded-lg">
-        <div className="flex items-center gap-4">
-            <Icon className="h-6 w-6 text-primary" />
-            <div className="flex-1">
-                <h3 className="font-semibold">{title}</h3>
-                <p className="text-sm text-muted-foreground">{description}</p>
-            </div>
-        </div>
-    </Link>
-);
 
+const SettingsItem = ({ href, icon: Icon, title, comingSoon = false }: { href: string, icon: React.ElementType, title: string, comingSoon?: boolean }) => {
+    const { toast } = useToast();
+    const router = useRouter();
+
+    const handleClick = (e: React.MouseEvent) => {
+        if (comingSoon) {
+            e.preventDefault();
+            toast({ title: 'Feature coming soon!' });
+        }
+    };
+
+    return (
+        <Link href={href} onClick={handleClick} className="flex items-center p-4 hover:bg-white/5 transition-colors rounded-lg">
+            <Icon className="h-6 w-6 mr-4" />
+            <span className="flex-1 font-medium">{title}</span>
+            <ChevronRight className="h-5 w-5 text-neutral-400" />
+        </Link>
+    );
+};
 
 export default function SettingsPage() {
-  const settingsSections = [
-    {
-      title: 'Account',
-      items: [
-        { href: '/profile', icon: User, title: 'Profile', description: 'Update your name, bio, and avatar' },
-      ]
-    },
-    {
-      title: 'Preferences',
-      items: [
-        { href: '/settings/notifications', icon: Bell, title: 'Notifications', description: 'Manage push notifications and sounds' },
-        { href: '/settings/chat-customization', icon: Palette, title: 'Chat Customization', description: 'Change app theme and chat wallpaper' },
-        { href: '/settings/translation', icon: Languages, title: 'Translation', description: 'Set your preferred language for translation' },
-      ]
-    },
-     {
-      title: 'Help & About',
-      items: [
-        { href: '/feedback', icon: HelpCircle, title: 'Report & Feedback', description: 'Report a problem or share feedback' },
-        { href: '/about', icon: Info, title: 'About Us', description: 'Learn about our mission and team' },
-      ]
+    const { user, userProfile, isUserLoading } = useFirebase();
+    const { toast } = useToast();
+    const router = useRouter();
+
+    const generalSettings = [
+        { href: '/settings/notifications', icon: Bell, title: 'Notifications' },
+        { href: '/settings/chat-customization', icon: Palette, title: 'Chat Customization' },
+        { href: '/settings/translation', icon: Languages, title: 'Translation' },
+        { href: '#', icon: HardDrive, title: 'Data & Storage', comingSoon: true },
+        { href: '#', icon: Lock, title: 'Privacy', comingSoon: true },
+        { href: '#', icon: Shield, title: 'Security', comingSoon: true },
+    ];
+
+    const aboutAndSupport = [
+        { href: '/about', icon: Info, title: 'About Us' },
+        { href: '/support', icon: Heart, title: 'Support Us' },
+        { href: '/feedback', icon: MessageSquareWarning, title: 'Report / Feedback' },
+        { href: '/readme', icon: FileText, title: 'Developer README' },
+    ];
+    
+    const handleResetTour = () => {
+        if (user) {
+            localStorage.removeItem(`onboarding_completed_${user.uid}`);
+            toast({ title: 'Onboarding Tour Reset', description: 'The tour will start the next time you open the app.' });
+            router.push('/chats');
+            router.refresh();
+        }
+    };
+    
+    const handleResetData = () => {
+        toast({ title: 'This feature is not yet implemented.' });
     }
-  ];
 
   return (
-    <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
-      <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
-        <Button variant="ghost" size="icon" asChild>
+    <div className="flex flex-col h-full bg-[#021425] text-white">
+      <header className="flex items-center gap-4 p-4 shrink-0 border-b border-white/10">
+        <Button variant="ghost" size="icon" asChild className="hover:bg-white/10">
           <Link href="/chats">
             <ArrowLeft className="h-6 w-6" />
             <span className="sr-only">Back to Chats</span>
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold font-headline">Settings</h1>
+        <h1 className="text-xl font-bold">Settings</h1>
       </header>
-      <main className="flex-1 overflow-y-auto">
-        {settingsSections.map((section, index) => (
-            <div key={section.title}>
-                 <h2 className="text-lg font-semibold px-4 pt-6 pb-2">{section.title}</h2>
-                 <div className="space-y-1 px-2">
-                    {section.items.map(item => (
-                        <SettingsItem key={item.href} {...item} />
-                    ))}
-                 </div>
-                 {index < settingsSections.length - 1 && <Separator className="my-4" />}
+      <main className="flex-1 overflow-y-auto p-4 space-y-8">
+        
+        {isUserLoading ? (
+            <div className="flex items-center justify-center p-6">
+                <LoaderCircle className="h-6 w-6 animate-spin" />
             </div>
-        ))}
+        ) : (
+            <Link href="/profile" className="flex items-center gap-4 p-4 rounded-lg bg-white/5 hover:bg-white/10 transition-colors">
+                <Avatar className="h-14 w-14 border-2 border-white/20">
+                    <AvatarImage src={userProfile?.profilePictureUrl} alt={userProfile?.name} data-ai-hint="person portrait" />
+                    <AvatarFallback>{userProfile?.name?.charAt(0)}</AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                        <p className="font-bold text-lg">{userProfile?.name}</p>
+                        {userProfile?.verified && <BadgeCheck className="h-5 w-5 text-blue-400" />}
+                    </div>
+                    <p className="text-sm text-neutral-300">{userProfile?.bio}</p>
+                </div>
+                 <ChevronRight className="h-5 w-5 text-neutral-400" />
+            </Link>
+        )}
+
+        <div>
+            <h2 className="px-4 pb-2 font-semibold text-neutral-400">General Settings</h2>
+            <div className="rounded-lg bg-white/5">
+                {generalSettings.map((item, index) => (
+                    <div key={item.title}>
+                        <SettingsItem {...item} />
+                        {index < generalSettings.length - 1 && <Separator className="bg-white/10" />}
+                    </div>
+                ))}
+            </div>
+        </div>
+        
+        <div>
+            <h2 className="px-4 pb-2 font-semibold text-neutral-400">About & Support</h2>
+            <div className="rounded-lg bg-white/5">
+                {aboutAndSupport.map((item, index) => (
+                    <div key={item.title}>
+                        <SettingsItem {...item} />
+                        {index < aboutAndSupport.length - 1 && <Separator className="bg-white/10" />}
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <div>
+            <h2 className="px-4 pb-2 font-semibold text-red-400">Danger Zone</h2>
+             <div className="rounded-lg bg-white/5 p-4 space-y-3">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between bg-transparent hover:bg-white/10 hover:text-white border-white/20">
+                            <span>Reset Onboarding Tour</span>
+                            <RefreshCw className="h-5 w-5" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Reset Onboarding Tour?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to see the initial onboarding tour again?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetTour}>Yes, Reset</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                         <Button variant="destructive" className="w-full justify-between bg-red-600/80 hover:bg-red-600/100 text-white">
+                            <span>Reset All App Data</span>
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete all your app data, including chats and connections, from our servers.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetData} className="bg-destructive hover:bg-destructive/90">Yes, delete everything</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+             </div>
+        </div>
+
       </main>
     </div>
   );
