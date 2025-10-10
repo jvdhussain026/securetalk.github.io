@@ -864,7 +864,7 @@ export default function ChatPage() {
     }
   };
   
-  const handlePaste = (event: React.ClipboardEvent) => {
+  const handlePaste = (event: React.ClipboardEvent<HTMLDivElement>) => {
     event.preventDefault();
     const items = event.clipboardData.items;
     let foundImage = false;
@@ -875,15 +875,17 @@ export default function ChatPage() {
             if (file) {
                 foundImage = true;
                 const reader = new FileReader();
-                reader.onloadend = () => {
-                    const url = reader.result as string;
-                    const newAttachment: Attachment = {
-                        type: 'image',
-                        url,
-                        name: file.name || `pasted_image_${Date.now()}.png`,
-                        size: `${(file.size / 1024).toFixed(2)} KB`
-                    };
-                    setAttachmentsToSend(prev => [...prev, newAttachment]);
+                reader.onload = (e) => {
+                    const url = e.target?.result as string;
+                    if (url) {
+                      const newAttachment: Attachment = {
+                          type: 'image',
+                          url,
+                          name: file.name || `pasted_image_${Date.now()}.png`,
+                          size: `${(file.size / 1024).toFixed(2)} KB`
+                      };
+                      setAttachmentsToSend(prev => [...prev, newAttachment]);
+                    }
                 };
                 reader.readAsDataURL(file);
             }
@@ -893,6 +895,7 @@ export default function ChatPage() {
     if (!foundImage) {
         const text = event.clipboardData.getData('text/plain');
         document.execCommand('insertText', false, text);
+        setNewMessage(current => current + text);
     }
   };
 
