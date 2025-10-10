@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -896,22 +897,7 @@ export default function ChatPage() {
   };
 
   const handleInput = (event: React.FormEvent<HTMLDivElement>) => {
-    const editor = event.currentTarget;
-    setNewMessage(editor.textContent || '');
-
-    const images = Array.from(editor.getElementsByTagName('img'));
-    if (images.length > 0) {
-      const newAttachments: Attachment[] = images.map((img, index) => ({
-        type: 'image',
-        url: img.src,
-        name: `pasted_image_${Date.now()}_${index}.png`,
-        size: 'N/A'
-      }));
-      setAttachmentsToSend(prev => [...prev, ...newAttachments]);
-      // Clear the editor after processing to avoid re-adding on next input
-      editor.innerHTML = '';
-      setNewMessage('');
-    }
+    setNewMessage(event.currentTarget.textContent || '');
   };
 
 
