@@ -151,11 +151,11 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   };
 
   const renderDoc = (attachment: Attachment) => (
-    <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
+    <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden" style={{ wordBreak: 'break-word' }}>
       <div className="p-2 bg-black/10 rounded-md mr-3">
         <FileText className="w-6 h-6 flex-shrink-0" />
       </div>
-      <div className="flex-1 overflow-hidden" style={{ wordBreak: 'break-word' }}>
+      <div className="flex-1 overflow-hidden">
         <p className="text-sm font-medium line-clamp-2">{attachment.name}</p>
         <p className="text-xs opacity-80">{attachment.size}</p>
       </div>
@@ -840,12 +840,11 @@ export default function ChatPage() {
   };
   
   const handleAction = (action: 'find' | 'mute' | 'theme' | 'more' | 'block' | 'clear' | 'export') => {
+    setIsMenuOpen(false);
     if (action === 'find') {
       setIsSearchOpen(true);
-      setIsMenuOpen(false);
     } else {
       setIsComingSoonOpen(true);
-      setIsMenuOpen(false);
     }
   }
 
@@ -979,6 +978,7 @@ export default function ChatPage() {
   };
 
   const handleLiveTranslationToggle = (checked: boolean) => {
+    setIsMenuOpen(false);
     if (!contactDocRef) return;
     updateDocumentNonBlocking(contactDocRef, { liveTranslationEnabled: checked });
     toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.` });
@@ -1166,7 +1166,7 @@ export default function ChatPage() {
                             >
                                 {menuPage === 1 ? (
                                     <>
-                                        <DropdownMenuItem onSelect={() => { setIsUserDetailsOpen(true); setIsMenuOpen(false); }}>
+                                        <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
                                             <User className="mr-2 h-4 w-4" />
                                             <span>View Profile</span>
                                         </DropdownMenuItem>
@@ -1185,12 +1185,13 @@ export default function ChatPage() {
                                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <Languages className="mr-2 h-4 w-4" />
-                                                <Label htmlFor="live-translation-switch">Live Translation</Label>
+                                                <Label htmlFor="live-translation-switch" className="cursor-pointer">Live Translation</Label>
                                             </div>
                                             <Switch
                                                 id="live-translation-switch"
                                                 checked={!!contact.liveTranslationEnabled}
                                                 onCheckedChange={handleLiveTranslationToggle}
+                                                onClick={() => handleLiveTranslationToggle(!contact.liveTranslationEnabled)}
                                             />
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
@@ -1490,6 +1491,7 @@ export default function ChatPage() {
 }
 
     
+
 
 
 
