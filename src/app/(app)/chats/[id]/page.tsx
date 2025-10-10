@@ -152,7 +152,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
     <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
       <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
       <div className="flex-1 overflow-hidden">
-        <p className="text-sm font-medium line-clamp-2" style={{ wordBreak: 'break-word' }}>{attachment.name}</p>
+        <p className="text-sm font-medium line-clamp-2" style={{ wordBreak: 'break-all' }}>{attachment.name}</p>
         <p className="text-xs opacity-80">{attachment.size}</p>
       </div>
       <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
@@ -172,7 +172,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
 
     if (!isSearchOpen || searchQuery.length <= 1) {
       return (
-        <p className="text-sm break-words px-2 pt-1 whitespace-pre-wrap">
+        <p className="text-sm px-2 pt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
           {renderContent()}
         </p>
       );
@@ -182,7 +182,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
     const parts = currentText.split(regex);
 
     return (
-      <p className="text-sm break-words px-2 pt-1">
+      <p className="text-sm px-2 pt-1" style={{ wordBreak: 'break-word' }}>
         {parts.map((part, i) => {
           if (i % 2 === 1) { // It's a match
             const isCurrent = searchMatches.some(
