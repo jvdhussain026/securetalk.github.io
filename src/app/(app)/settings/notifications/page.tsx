@@ -26,6 +26,7 @@ export default function NotificationsPage() {
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isClientTesting, setIsClientTesting] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [messageAlerts, setMessageAlerts] = useState(true);
 
@@ -135,16 +136,50 @@ export default function NotificationsPage() {
         if (result.successCount > 0) {
             toast({ title: 'Test notification sent!', description: 'You should receive it shortly.' });
         } else {
-            throw new Error('The notification was not sent successfully.');
+             throw new Error('The notification was not sent successfully.');
         }
     } catch (error) {
         console.error("Failed to send test notification:", error);
-        toast({ variant: 'destructive', title: 'Test Failed', description: 'Could not send the notification. Check console for errors.' });
+        const errorMessage = error instanceof Error ? error.message : 'Could not send the notification. Check console for errors.';
+        toast({ variant: 'destructive', title: 'Test Failed', description: errorMessage });
     } finally {
         setIsTesting(false);
     }
   };
   
+    const handleClientSideTest = async () => {
+    if (!isSupported || permission !== 'granted') {
+      toast({
+        variant: 'destructive',
+        title: 'Permissions Not Granted',
+        description: 'Please enable push notifications first.',
+      });
+      return;
+    }
+
+    setIsClientTesting(true);
+    try {
+      const registration = await navigator.serviceWorker.ready;
+      await registration.showNotification('Client-Side Test', {
+        body: 'Success! Your browser can receive notifications.',
+        icon: '/icons/icon-192x192.png',
+      });
+      toast({
+        title: 'Client Test Sent!',
+        description: 'Check your device notifications.',
+      });
+    } catch (error) {
+      console.error('Client-side notification test failed:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Client Test Failed',
+        description: 'Could not display the notification.',
+      });
+    } finally {
+      setIsClientTesting(false);
+    }
+  };
+
   const handleOpenToneDialog = (type: 'message' | 'call') => {
     setToneDialogType(type);
     setIsToneDialogOpen(true);
@@ -186,10 +221,16 @@ export default function NotificationsPage() {
                 You can manage this permission in your browser's site settings.
               </AlertDescription>
             </Alert>
-             <Button onClick={handleSendTestNotification} disabled={isTesting} className="w-full">
-                {isTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <BellRing className="mr-2" />}
-                {isTesting ? 'Sending...' : 'Send Test Notification'}
-            </Button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Button onClick={handleClientSideTest} disabled={isClientTesting} variant="outline">
+                    {isClientTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <BellRing className="mr-2" />}
+                    {isClientTesting ? 'Sending...' : 'Send Client-Side Test'}
+                </Button>
+                <Button onClick={handleSendTestNotification} disabled={isTesting}>
+                    {isTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <BellRing className="mr-2" />}
+                    {isTesting ? 'Sending...' : 'Send Test Notification'}
+                </Button>
+            </div>
           </div>
         );
       case 'denied':
