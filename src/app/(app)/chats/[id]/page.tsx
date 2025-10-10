@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useParams } from 'next/navigation'
@@ -403,7 +403,6 @@ export default function ChatPage() {
         toast({
             title: `New message from ${contact?.name}`,
             description: lastMessage.text || 'Sent an attachment',
-            duration: 3000,
         });
     }
 
@@ -1207,7 +1206,6 @@ export default function ChatPage() {
                                                 checked={!!contact.liveTranslationEnabled}
                                                 onCheckedChange={(checked) => {
                                                     handleLiveTranslationToggle(checked);
-                                                    setIsMenuOpen(false);
                                                 }}
                                             />
                                         </DropdownMenuItem>
