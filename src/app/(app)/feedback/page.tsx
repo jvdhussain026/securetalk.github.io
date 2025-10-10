@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Send, MessageSquareWarning, Github, Twitter, Mail, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquareWarning, Github, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,8 +16,9 @@ export default function FeedbackPage() {
   const { toast } = useToast();
   const [subject, setSubject] = useState('');
   const [message, setMessage] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject || !message) {
       toast({
@@ -27,13 +28,41 @@ export default function FeedbackPage() {
       });
       return;
     }
-    console.log({ subject, message });
-    toast({
-      title: 'Feedback Sent!',
-      description: 'Thank you for your feedback. We appreciate you helping us improve.',
-    });
-    setSubject('');
-    setMessage('');
+
+    setIsSubmitting(true);
+
+    const formData = new FormData();
+    formData.append('subject', subject);
+    formData.append('message', message);
+
+    try {
+      const response = await fetch('https://formspree.io/f/myznnpjr', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Accept': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        toast({
+          title: 'Feedback Sent!',
+          description: 'Thank you for your feedback. We appreciate you helping us improve.',
+        });
+        setSubject('');
+        setMessage('');
+      } else {
+        throw new Error('Form submission failed');
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Submission Error',
+        description: 'Could not send feedback. Please try again later.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const socialLinks = [
@@ -73,6 +102,7 @@ export default function FeedbackPage() {
                 <Label htmlFor="subject">Subject</Label>
                 <Input
                   id="subject"
+                  name="subject"
                   placeholder="e.g., UI glitch on chat screen"
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
@@ -82,15 +112,16 @@ export default function FeedbackPage() {
                 <Label htmlFor="message">Message</Label>
                 <Textarea
                   id="message"
+                  name="message"
                   placeholder="Please describe the issue or your suggestion in detail."
                   rows={6}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                 />
               </div>
-              <Button type="submit" className="w-full">
+              <Button type="submit" className="w-full" disabled={isSubmitting}>
                 <Send className="mr-2" />
-                Send Feedback
+                {isSubmitting ? 'Sending...' : 'Send Feedback'}
               </Button>
             </form>
           </CardContent>
