@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -18,7 +17,7 @@ import { Label } from '@/components/ui/label';
 import { ToneSelectionDialog } from '@/components/tone-selection-dialog';
 import type { Tone } from '@/lib/audio';
 import { tones } from '@/lib/audio';
-import { getMessaging, getToken } from 'firebase/messaging';
+import { getToken } from 'firebase/messaging';
 import { initializeFirebase } from '@/firebase';
 
 export default function NotificationsPage() {
@@ -94,8 +93,10 @@ export default function NotificationsPage() {
     
     setIsSubscribing(true);
     try {
-        const { firebaseApp } = initializeFirebase();
-        const messaging = getMessaging(firebaseApp);
+        const { messaging } = initializeFirebase();
+        if (!messaging) {
+            throw new Error("Firebase Messaging is not available on this device.");
+        }
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) {
             throw new Error("VAPID public key not found in environment variables.");
@@ -110,7 +111,8 @@ export default function NotificationsPage() {
         }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
-      toast({ variant: 'destructive', title: 'Failed to subscribe', description: 'Could not set up push notifications.' });
+      const errorMessage = error instanceof Error ? error.message : 'Could not set up push notifications.';
+      toast({ variant: 'destructive', title: 'Failed to subscribe', description: errorMessage });
     } finally {
       setIsSubscribing(false);
     }
