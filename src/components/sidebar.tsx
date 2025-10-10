@@ -51,7 +51,6 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Settings, label: 'Settings', href: '/settings', show: true },
     { icon: Info, label: 'About Us', href: '/about', show: true },
     { icon: Heart, label: 'Support Us', href: '/support', show: true },
-    { icon: MessageSquareWarning, label: 'Report / Feedback', href: '/feedback', show: true },
     { icon: Code, label: 'Developer', href: '/readme', show: true },
     { icon: Shield, label: 'Admin', href: '/admin', show: userProfile?.verified },
   ]
