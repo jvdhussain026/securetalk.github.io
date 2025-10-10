@@ -368,6 +368,7 @@ export default function ChatPage() {
   const [enterToSend, setEnterToSend] = useState(false);
   const [menuPage, setMenuPage] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [unreadCountOnLoad, setUnreadCountOnLoad] = useState(0);
 
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -380,12 +381,13 @@ export default function ChatPage() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    // When entering the chat, reset the unread count for this contact
-    if (contactDocRef) {
+    // When entering the chat, store the unread count and then reset it
+    if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
+        setUnreadCountOnLoad(contact.unreadCount);
         updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contactId]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contact?.id]); // Only run when contact is first loaded
 
 
   useEffect(() => {
@@ -401,6 +403,7 @@ export default function ChatPage() {
         toast({
             title: `New message from ${contact?.name}`,
             description: lastMessage.text || 'Sent an attachment',
+            duration: 3000,
         });
     }
 
@@ -1082,6 +1085,7 @@ export default function ChatPage() {
     }
   };
 
+  const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
   return (
     <>
@@ -1177,28 +1181,23 @@ export default function ChatPage() {
                             >
                                 {menuPage === 1 ? (
                                     <>
-                                        <DropdownMenuItem onSelect={() => setIsUserDetailsOpen(true)}>
+                                        <DropdownMenuItem onSelect={() => {setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
                                             <User className="mr-2 h-4 w-4" />
                                             <span>View Profile</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleAction('find')}>
+                                        <DropdownMenuItem onSelect={() => {handleAction('find'); setIsMenuOpen(false);}}>
                                             <Search className="mr-2 h-4 w-4" />
                                             <span>Find</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleAction('mute')}>
+                                        <DropdownMenuItem onSelect={() => {handleAction('mute'); setIsMenuOpen(false);}}>
                                             <BellOff className="mr-2 h-4 w-4" />
                                             <span>Mute Notifications</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleAction('theme')}>
+                                        <DropdownMenuItem onSelect={() => {handleAction('theme'); setIsMenuOpen(false);}}>
                                             <Palette className="mr-2 h-4 w-4" />
                                             <span>Chat Theme</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem
-                                            onSelect={(e) => {
-                                                e.preventDefault();
-                                            }}
-                                            className="flex items-center justify-between"
-                                        >
+                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                                             <Label htmlFor="live-translation-switch" className="flex items-center gap-2 cursor-pointer">
                                                 <Languages className="mr-2 h-4 w-4" />
                                                 Live Translation
@@ -1206,7 +1205,10 @@ export default function ChatPage() {
                                             <Switch
                                                 id="live-translation-switch"
                                                 checked={!!contact.liveTranslationEnabled}
-                                                onCheckedChange={handleLiveTranslationToggle}
+                                                onCheckedChange={(checked) => {
+                                                    handleLiveTranslationToggle(checked);
+                                                    setIsMenuOpen(false);
+                                                }}
                                             />
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
@@ -1222,15 +1224,15 @@ export default function ChatPage() {
                                             <span>Back</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onSelect={() => handleAction('block')}>
+                                        <DropdownMenuItem onSelect={() => {handleAction('block'); setIsMenuOpen(false);}}>
                                             <UserX className="mr-2 h-4 w-4" />
                                             <span>Block</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleAction('clear')} className="text-destructive focus:text-destructive">
+                                        <DropdownMenuItem onSelect={() => {handleAction('clear'); setIsMenuOpen(false);}} className="text-destructive focus:text-destructive">
                                             <Trash2 className="mr-2 h-4 w-4" />
                                             <span>Clear chat</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handleAction('export')}>
+                                        <DropdownMenuItem onSelect={() => {handleAction('export'); setIsMenuOpen(false);}}>
                                             <FileUp className="mr-2 h-4 w-4" />
                                             <span>Export chat</span>
                                         </DropdownMenuItem>
@@ -1253,9 +1255,23 @@ export default function ChatPage() {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
                 
+                const showDivider = unreadCountOnLoad > 0 && messageIndex === dividerIndex;
+
                 return (
+                    <React.Fragment key={message.id}>
+                    {showDivider && (
+                        <div className="relative text-center my-4">
+                            <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                                <div className="w-full border-t border-primary/50" />
+                            </div>
+                            <div className="relative flex justify-center">
+                                <span className="bg-chat px-2 text-sm font-medium text-primary">
+                                {unreadCountOnLoad} New Message{unreadCountOnLoad > 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        </div>
+                    )}
                   <div 
-                    key={message.id} 
                     ref={el => { if(el) messageRefs.current[message.id] = el }}
                     className={cn("flex items-end gap-2", message.senderId === currentUserId ? "justify-end" : "justify-start")}
                     onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
@@ -1309,6 +1325,7 @@ export default function ChatPage() {
                         )}
                     </div>
                   </div>
+                  </React.Fragment>
                 );
               })}
             </div>
