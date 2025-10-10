@@ -10,10 +10,11 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Image from "next/image"
-import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe } from "lucide-react"
+import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe, Shield } from "lucide-react"
 
 import type { Contact, Message } from "@/lib/types"
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { Badge } from "./ui/badge"
 
 
 type UserDetailsSheetProps = {
@@ -113,6 +114,12 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
                     {contact.verified && <BadgeCheck className="h-6 w-6 text-primary" />}
                   </div>
                   <p className="text-muted-foreground">{statusText}</p>
+                   {contact.verified && (
+                        <Badge variant="outline" className="mt-4 border-primary/50 text-primary font-semibold">
+                            <Shield className="mr-2 h-4 w-4" />
+                            Secure Talk Developer
+                        </Badge>
+                   )}
                   <p className="text-sm mt-4 text-left w-full p-4 bg-muted rounded-lg">{contact.bio || 'No bio available.'}</p>
                 </div>
 
