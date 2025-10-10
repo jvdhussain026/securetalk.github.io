@@ -4,7 +4,7 @@
 
 import * as React from "react"
 import { Drawer } from "vaul"
-import { formatDistanceToNowStrict } from 'date-fns'
+import { formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -43,9 +43,12 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
       return 'Active now';
     }
     if (contact.lastSeen) {
-      return `Active ${formatDistanceToNowStrict(contact.lastSeen.toDate(), { addSuffix: true })}`;
+      const minsSinceLastSeen = differenceInMinutes(new Date(), contact.lastSeen.toDate());
+      if (minsSinceLastSeen <= 15) {
+        return `Active ${formatDistanceToNowStrict(contact.lastSeen.toDate(), { addSuffix: true })}`;
+      }
     }
-    return 'Offline';
+    return ''; // Show nothing if offline for more than 15 mins
   }, [contact.status, contact.lastSeen]);
 
   const sharedMedia = React.useMemo(() => {
