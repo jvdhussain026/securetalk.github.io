@@ -4,7 +4,8 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
-import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp } from 'firebase/firestore'
+import { getDatabase, ref, onValue, onDisconnect, set, serverTimestamp as rtdbServerTimestamp } from 'firebase/database';
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import type { Contact, Message } from '@/lib/types'
@@ -29,6 +30,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [firestore, user]);
 
   const { data: contacts } = useCollection<Contact>(contactsQuery);
+
+  // Presence management using Realtime Database for reliable disconnect handling
+  useEffect(() => {
+    if (!user || !firestore) return;
+
+    const db = getDatabase();
+    const myConnectionsRef = ref(db, `status/${user.uid}`);
+    const lastOnlineRef = ref(db, `status/${user.uid}/lastOnline`);
+    const connectedRef = ref(db, '.info/connected');
+
+    const userStatusFirestoreRef = doc(firestore, `users/${user.uid}`);
+
+    onValue(connectedRef, (snap) => {
+        if (snap.val() === true) {
+            // We're connected (or reconnected).
+            set(myConnectionsRef, { isOnline: true, lastOnline: rtdbServerTimestamp() });
+
+            // When I disconnect, remove my presence.
+            onDisconnect(myConnectionsRef).set({ isOnline: false, lastOnline: rtdbServerTimestamp() });
+            
+            // Also update Firestore on connect
+             updateDoc(userStatusFirestoreRef, {
+                status: 'online',
+                lastSeen: serverTimestamp()
+            });
+
+            // When I disconnect, update Firestore.
+            onDisconnect(userStatusFirestoreRef).update({
+                status: 'offline',
+                lastSeen: serverTimestamp()
+            });
+        }
+    });
+  }, [user, firestore]);
 
   // Listener for new connections and incoming calls on the user document
   useEffect(() => {

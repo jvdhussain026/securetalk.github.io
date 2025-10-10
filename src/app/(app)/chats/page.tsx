@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -50,6 +51,12 @@ function ChatListItem({ contact }: { contact: Contact }) {
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+  
+  const remoteUserDocRef = useMemoFirebase(() => {
+    if(!firestore || !contact.id) return null;
+    return doc(firestore, 'users', contact.id);
+  }, [firestore, contact.id]);
+  const { data: remoteUser } = useDoc<Contact>(remoteUserDocRef);
 
 
   const chatId = useMemo(() => {
@@ -104,12 +111,15 @@ function ChatListItem({ contact }: { contact: Contact }) {
   return (
       <>
         <Link href={`/chats/${contact.id}`} className="flex items-center gap-4 p-4">
-            <button onClick={handleAvatarClick} className="relative">
-                <Avatar className="h-12 w-12">
+            <div className="relative">
+                <Avatar className="h-12 w-12" onClick={handleAvatarClick}>
                     <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
                     <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
                 </Avatar>
-            </button>
+                 {remoteUser?.status === 'online' && (
+                    <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card" />
+                 )}
+            </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">
                     <div className="flex items-center gap-1">

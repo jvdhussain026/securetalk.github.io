@@ -45,6 +45,7 @@ export type Contact = {
   // New fields for call state management
   callStatus?: 'connected' | 'declined' | 'ended' | null;
   callWith?: string | null; // UID of the person they are in a call with
+  lastSeen?: Timestamp;
 };
 
 export type UserProfile = {

@@ -33,6 +33,16 @@
           "type": "string",
           "format": "date-time",
           "description": "Timestamp of when the user account was created."
+        },
+        "status": {
+          "type": "string",
+          "enum": ["online", "offline"],
+          "description": "The user's online status."
+        },
+        "lastSeen": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Timestamp of when the user was last active."
         }
       },
       "required": [
@@ -57,6 +67,13 @@
           "additionalProperties": {
             "type": "boolean"
           }
+        },
+        "typing": {
+            "type": "object",
+            "description": "Map of user UIDs to indicate who is currently typing.",
+            "additionalProperties": {
+                "type": "boolean"
+            }
         },
         "createdAt": {
           "type": "string",

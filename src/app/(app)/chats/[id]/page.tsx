@@ -6,7 +6,7 @@ import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { format, differenceInMinutes } from 'date-fns'
+import { format, formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion } from "firebase/firestore";
 import Image from 'next/image'
 
@@ -230,6 +230,13 @@ export default function ChatPage() {
   
   const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
+  const remoteUserDocRef = useMemoFirebase(() => {
+    if(!firestore || !contactId) return null;
+    return doc(firestore, 'users', contactId);
+  }, [firestore, contactId]);
+
+  const { data: remoteUser } = useDoc<Contact>(remoteUserDocRef);
+
   const chatId = useMemo(() => {
     if (!currentUserId || !contactId) return null;
     return createChatId(currentUserId, contactId);
@@ -255,6 +262,10 @@ export default function ChatPage() {
               participants: {
                 [currentUserId]: true,
                 [contactId]: true,
+              },
+              typing: {
+                [currentUserId]: false,
+                [contactId]: false,
               },
               createdAt: serverTimestamp(),
             };
@@ -321,6 +332,8 @@ export default function ChatPage() {
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
   const prevMessagesCountRef = useRef(messages?.length || 0);
+
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!messages || messages.length <= prevMessagesCountRef.current) {
@@ -899,7 +912,25 @@ export default function ChatPage() {
   };
 
   const handleInput = (event: React.FormEvent<HTMLDivElement>) => {
-    setNewMessage(event.currentTarget.textContent || '');
+    const currentText = event.currentTarget.textContent || '';
+    setNewMessage(currentText);
+
+    if (chatDocRef && currentUserId) {
+        // Set typing status to true
+        if (currentText.length > 0) {
+            updateDocumentNonBlocking(chatDocRef, { [`typing.${currentUserId}`]: true });
+        }
+        
+        // Clear previous timeout
+        if (typingTimeoutRef.current) {
+            clearTimeout(typingTimeoutRef.current);
+        }
+
+        // Set a new timeout to set typing status to false
+        typingTimeoutRef.current = setTimeout(() => {
+            updateDocumentNonBlocking(chatDocRef, { [`typing.${currentUserId}`]: false });
+        }, 3000); // 3 seconds
+    }
   };
 
 
@@ -927,6 +958,20 @@ export default function ChatPage() {
       return !message.deletedFor || !message.deletedFor.includes(currentUserId!);
     });
   }, [messages, currentUserId]);
+
+
+  const getStatusText = () => {
+    if (chat?.typing?.[contactId]) {
+      return <span className="text-primary animate-pulse">Typing...</span>;
+    }
+    if (remoteUser?.status === 'online') {
+      return 'Active now';
+    }
+    if (remoteUser?.lastSeen) {
+      return `Active ${formatDistanceToNowStrict(remoteUser.lastSeen.toDate(), { addSuffix: true })}`;
+    }
+    return 'Offline';
+  }
 
 
   if (isLoading && !messages) {
@@ -1014,11 +1059,12 @@ export default function ChatPage() {
                     <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
                 </Avatar>
                 </button>
-                <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 text-left">
+                <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0 text-left">
+                  <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold truncate">{contact.name}</h2>
                     {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
-                </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground truncate">{getStatusText()}</p>
                 </button>
                 <div className="ml-auto flex items-center">
                 <DropdownMenu>
