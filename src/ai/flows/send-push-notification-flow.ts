@@ -5,10 +5,10 @@
  */
 
 import { ai } from '@/ai/genkit';
-import { z } from 'genkit';
+import { z } from 'zod';
 import { getFirestore } from 'firebase-admin/firestore';
 import { initializeApp, getApps } from 'firebase-admin/app';
-import { getMessaging } from 'firebase-admin/messaging';
+import { getMessaging, MulticastMessage, BatchResponse } from 'firebase-admin/messaging';
 
 // Ensure Firebase Admin is initialized.
 // In a Google Cloud environment, this will use Application Default Credentials.
@@ -53,6 +53,8 @@ const sendPushNotificationFlow = ai.defineFlow(
     outputSchema: SendPushNotificationOutputSchema,
   },
   async ({ userId, payload }) => {
+    let tokens: string[] = [];
+    let response: BatchResponse | null = null;
 
     try {
       const subscriptionsRef = db.collection('users').doc(userId).collection('subscriptions');
@@ -63,13 +65,13 @@ const sendPushNotificationFlow = ai.defineFlow(
         return { successCount: 0, failureCount: 0 };
       }
 
-      const tokens = snapshot.docs.map(doc => doc.id);
+      tokens = snapshot.docs.map(doc => doc.id);
       
       if (tokens.length === 0) {
         return { successCount: 0, failureCount: 0 };
       }
       
-      const message = {
+      const message: MulticastMessage = {
         notification: {
           title: payload.title,
           body: payload.body,
@@ -84,7 +86,7 @@ const sendPushNotificationFlow = ai.defineFlow(
         tokens: tokens,
       };
 
-      const response = await messaging.sendEachForMulticast(message);
+      response = await messaging.sendEachForMulticast(message);
       
       console.log(`${response.successCount} messages were sent successfully`);
 
@@ -107,7 +109,8 @@ const sendPushNotificationFlow = ai.defineFlow(
 
     } catch (error) {
       console.error('Failed to send push notifications:', error);
-      return { successCount: 0, failureCount: response.failureCount > 0 ? response.failureCount : tokens.length };
+      const failureCount = response ? response.failureCount : tokens.length;
+      return { successCount: 0, failureCount: failureCount > 0 ? failureCount : tokens.length };
     }
   }
 );
