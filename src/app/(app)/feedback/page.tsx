@@ -10,6 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
+import { Instagram } from 'lucide-react';
 
 export default function FeedbackPage() {
   const { toast } = useToast();
@@ -36,9 +37,9 @@ export default function FeedbackPage() {
   };
 
   const socialLinks = [
-    { icon: Github, href: '#', label: 'GitHub' },
-    { icon: Twitter, href: '#', label: 'Twitter' },
-    { icon: Mail, href: '#', label: 'Email' },
+    { icon: Github, href: 'https://github.com/JavedHussain15', label: 'GitHub' },
+    { icon: Instagram, href: 'https://www.instagram.com/javedhussain15', label: 'Instagram' },
+    { icon: Mail, href: 'mailto:javed.hussain.15.11.2002@gmail.com', label: 'Email' },
   ];
 
   return (
