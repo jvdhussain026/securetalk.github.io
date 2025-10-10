@@ -35,7 +35,7 @@ export function IncomingCall({ contact, callType, onAccept, onDecline }: Incomin
 
     // Start the pulse animation
     controls.start({
-        y: [0, -10, 0],
+        scale: [1, 1.05, 1],
         transition: {
             duration: 1.5,
             repeat: Infinity,
@@ -66,13 +66,13 @@ export function IncomingCall({ contact, callType, onAccept, onDecline }: Incomin
   
   const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: PanInfo, action: 'accept' | 'decline') => {
       const threshold = -50; // How far up the user needs to drag
-      if (action === 'accept' && info.offset.y < threshold) {
-          handleAccept();
-      }
       
-      const declineThreshold = 50; // How far down user needs to drag
-      if(action === 'decline' && info.offset.y > declineThreshold) {
+      if (info.offset.y < threshold) {
+        if (action === 'accept') {
+          handleAccept();
+        } else {
           handleDecline();
+        }
       }
   }
 
@@ -110,7 +110,8 @@ export function IncomingCall({ contact, callType, onAccept, onDecline }: Incomin
         <div className="flex flex-col items-center gap-2">
             <motion.div
                 drag="y"
-                dragConstraints={{ top: 0, bottom: 80 }}
+                dragConstraints={{ top: -80, bottom: 0 }}
+                dragElastic={0.2}
                 onDragEnd={(e, info) => handleDragEnd(e, info, 'decline')}
                 className="cursor-grab"
             >
@@ -129,6 +130,7 @@ export function IncomingCall({ contact, callType, onAccept, onDecline }: Incomin
                 animate={controls}
                 drag="y"
                 dragConstraints={{ top: -80, bottom: 0 }}
+                dragElastic={0.2}
                 onDragEnd={(e, info) => handleDragEnd(e, info, 'accept')}
                 className="cursor-grab"
              >
