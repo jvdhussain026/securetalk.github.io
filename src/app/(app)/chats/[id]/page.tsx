@@ -50,6 +50,34 @@ import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 
 
+const LinkifiedText = ({ text }: { text: string }) => {
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+    const parts = text.split(urlRegex);
+
+    return (
+        <>
+            {parts.map((part, index) => {
+                if (part.match(urlRegex)) {
+                    return (
+                        <a
+                            key={index}
+                            href={part}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-blue-500 hover:underline"
+                            onClick={(e) => e.stopPropagation()} // Prevent message long press
+                        >
+                            {part}
+                        </a>
+                    );
+                }
+                return part;
+            })}
+        </>
+    );
+};
+
+
 type MessageContentProps = {
   message: Message;
   isSearchOpen: boolean;
@@ -138,36 +166,56 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   );
   
   const highlightedText = useMemo(() => {
-    if (!currentText || !isSearchOpen || searchQuery.length <= 1) {
+    if (!currentText) return null;
+
+    const renderContent = () => <LinkifiedText text={currentText} />;
+
+    if (!isSearchOpen || searchQuery.length <= 1) {
       return (
         <p className="text-sm break-words px-2 pt-1 whitespace-pre-wrap">
-          {currentText}
+          {renderContent()}
         </p>
       );
     }
+
     const regex = new RegExp(`(${searchQuery})`, 'gi');
     const parts = currentText.split(regex);
+
     return (
       <p className="text-sm break-words px-2 pt-1">
         {parts.map((part, i) => {
-            const isMatch = part.toLowerCase() === searchQuery.toLowerCase();
-            const isCurrent = isMatch && searchMatches.some(m => m.messageId === message.id && m.index === currentText.indexOf(part, (i > 0 ? currentText.indexOf(parts[i-1]) + parts[i-1].length : 0))) && searchMatches[currentMatchIndex]?.messageId === message.id;
-            
+          if (i % 2 === 1) { // It's a match
+            const isCurrent = searchMatches.some(
+              (m) =>
+                m.messageId === message.id &&
+                m.index ===
+                  currentText.indexOf(
+                    part,
+                    i > 0
+                      ? currentText.indexOf(parts[i - 1]) + parts[i - 1].length
+                      : 0
+                  ) &&
+                searchMatches[currentMatchIndex]?.messageId === message.id
+            );
+
             return (
               <span
                 key={i}
                 className={cn({
-                  'bg-yellow-300 text-black rounded': isMatch,
+                  'bg-yellow-300 text-black rounded': true,
                   'bg-yellow-500': isCurrent,
                 })}
               >
-                {part}
+                <LinkifiedText text={part} />
               </span>
             );
+          }
+          return <LinkifiedText key={i} text={part} />;
         })}
       </p>
     );
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
+
 
   return (
       <div className="space-y-2">
@@ -446,7 +494,7 @@ export default function ChatPage() {
           const regex = new RegExp(searchQuery, 'gi');
           let match;
           while ((match = regex.exec(message.text)) !== null) {
-            matches.push({ messageId: string, index: match.index });
+            matches.push({ messageId: message.id, index: match.index });
           }
         }
       });
