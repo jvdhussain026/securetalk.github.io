@@ -26,6 +26,7 @@ import { ComingSoonDialog } from './coming-soon-dialog';
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { Badge } from './ui/badge';
 
 type SidebarProps = {
   open: boolean
@@ -81,6 +82,12 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
                 <p className="font-bold text-xl drop-shadow-sm text-foreground">{userProfile?.name || 'User'}</p>
                 {userProfile?.verified && <BadgeCheck className="h-6 w-6 text-primary drop-shadow-sm" />}
               </div>
+              {userProfile?.verified && (
+                  <Badge variant="outline" className="mt-2 border-primary/50 text-primary font-semibold">
+                    <Shield className="mr-2 h-4 w-4" />
+                    Secure Talk Developer
+                  </Badge>
+              )}
         </div>
         <div className="flex-1 space-y-2 p-4">
           {menuItems.map((item, index) => (
