@@ -1426,6 +1426,7 @@ export default function ChatPage() {
             setIsMessageOptionsOpen(true);
           }}
           contactName={contact.name}
+          messageSenderId={selectedMessage.senderId}
         />
       )}
       <ImagePreviewDialog
