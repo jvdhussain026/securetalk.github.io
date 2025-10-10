@@ -4,9 +4,10 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Reply, Copy, Trash2, Forward, Star, MoreHorizontal, Languages, Share2, Pin } from 'lucide-react';
+import { Reply, Copy, Trash2, Forward, Star, MoreHorizontal, Languages, Share2, Pencil } from 'lucide-react';
 import type { Message } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
 
 type MessageOptionsProps = {
   isOpen: boolean;
@@ -23,6 +24,7 @@ type MessageOptionsProps = {
 
 export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, onReply, onStar, onTranslate, isTranslated, onClose }: MessageOptionsProps) {
   const { toast } = useToast();
+  const { user } = useFirebase();
   const [showMore, setShowMore] = useState(false);
 
   useEffect(() => {
@@ -79,6 +81,8 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
     handleClose();
   };
 
+  const isMyMessage = message.senderId === user?.uid;
+
   const primaryItems = [
     { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: true },
     { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: true },
@@ -87,8 +91,8 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
 
   const secondaryItems = [
     { label: 'Share', icon: Share2, action: handleShare, show: true },
+    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: isMyMessage && !!message.text },
     { label: message.isStarred ? 'Unstar' : 'Star', icon: Star, action: handleActionWithClose(onStar), show: true },
-    { label: 'Pin', icon: Pin, action: () => handleAction('Pin'), show: true },
     { label: 'Copy', icon: Copy, action: handleActionWithClose(() => {
         if(message.text) {
             navigator.clipboard.writeText(message.text)
