@@ -1340,11 +1340,12 @@ export default function ChatPage() {
                     onInput={handleInput}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
-                    className="flex-1 bg-transparent px-4 pr-12 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap break-words"
+                    className="relative flex-1 bg-transparent px-4 py-2 pr-12 text-base min-h-[40px] max-h-32 overflow-y-auto z-10"
+                    style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
                     data-placeholder="Type a message..."
                 />
                  {isRecording && (
-                    <div className="absolute inset-0 flex items-center justify-between w-full h-10 px-4 bg-muted rounded-lg">
+                    <div className="absolute inset-0 flex items-center justify-between w-full h-10 px-4 bg-muted rounded-lg z-20">
                         <div className="flex items-center gap-2 text-red-600 animate-pulse">
                             <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
                             <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
@@ -1354,7 +1355,7 @@ export default function ChatPage() {
                         </Button>
                     </div>
                 )}
-                 <div className="absolute right-1 bottom-1 flex items-center self-end">
+                 <div className="absolute right-1 bottom-1 flex items-center self-end z-20">
                     {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
                         <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                         {isOutboundTranslating ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Languages className="h-5 w-5" />}
@@ -1472,4 +1473,5 @@ export default function ChatPage() {
 }
 
     
+
 
