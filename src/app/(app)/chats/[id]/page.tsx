@@ -7,7 +7,7 @@ import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
 import Image from 'next/image'
 
 import type { Message, Attachment, Contact } from '@/lib/types'
@@ -360,7 +360,6 @@ export default function ChatPage() {
   
   const [showOutboundTranslate, setShowOutboundTranslate] = useState(false);
   const [isOutboundTranslating, setIsOutboundTranslating] = useState(false);
-  const [inputLang, setInputLang] = useState<string | null>(null);
   const debouncedNewMessage = useDebounce(newMessage, 500);
 
   const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
@@ -381,6 +380,15 @@ export default function ChatPage() {
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
+    // When entering the chat, reset the unread count for this contact
+    if (contactDocRef) {
+        updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [contactId]);
+
+
+  useEffect(() => {
     if (!messages || messages.length <= prevMessagesCountRef.current) {
         prevMessagesCountRef.current = messages?.length || 0;
         return;
@@ -393,7 +401,6 @@ export default function ChatPage() {
         toast({
             title: `New message from ${contact?.name}`,
             description: lastMessage.text || 'Sent an attachment',
-            duration: 3000,
         });
     }
 
@@ -542,7 +549,6 @@ export default function ChatPage() {
                 variant: "destructive",
                 title: "Translation Failed",
                 description: "Message was not translated. Sending original.",
-                duration: 3000,
             });
         } finally {
             setIsOutboundTranslating(false);
@@ -558,7 +564,7 @@ export default function ChatPage() {
             isEdited: true,
         });
         setEditingMessage(null);
-        toast({ title: "Message updated", duration: 3000 });
+        toast({ title: "Message updated" });
     } else {
         // Add message to Firestore
         const collectionRef = collection(firestore, "chats", chatId, "messages");
@@ -586,12 +592,15 @@ export default function ChatPage() {
         });
     }
 
-    // Update last message timestamp for both users
+    // Update last message timestamp for both users and increment unread count for the other user
     const userContactRef = doc(firestore, 'users', currentUserId, 'contacts', contactId);
     updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
     
     const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', currentUserId);
-    updateDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp });
+    updateDocumentNonBlocking(otherUserContactRef, { 
+      lastMessageTimestamp: currentTimestamp,
+      unreadCount: increment(1)
+    });
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -644,7 +653,6 @@ export default function ChatPage() {
           variant: "destructive",
           title: "Error Reading Files",
           description: "There was a problem reading the selected files.",
-          duration: 3000,
         });
       });
     }
@@ -683,7 +691,6 @@ export default function ChatPage() {
         variant: 'destructive',
         title: 'Microphone access denied',
         description: 'Please allow microphone access in your browser settings.',
-        duration: 3000,
       });
     }
   };
@@ -777,7 +784,7 @@ export default function ChatPage() {
   }
   
   const openDeleteDialog = () => {
-    setIsMessageOptionsOpen(false);
+    setIsOpen(false);
     setIsDeleteAlertOpen(true);
   }
 
@@ -786,7 +793,7 @@ export default function ChatPage() {
     setEditingMessage(selectedMessage);
     const messageText = selectedMessage.text || '';
     setNewMessage(messageText);
-    setIsMessageOptionsOpen(false);
+    setIsOpen(false);
     if (contentEditableRef.current) {
         contentEditableRef.current.textContent = messageText;
         contentEditableRef.current.focus();
@@ -796,7 +803,7 @@ export default function ChatPage() {
   const handleReply = () => {
     if (!selectedMessage) return;
     setReplyingTo(selectedMessage);
-    setIsMessageOptionsOpen(false);
+    setIsOpen(false);
     contentEditableRef.current?.focus();
   }
 
@@ -806,8 +813,8 @@ export default function ChatPage() {
     await updateDoc(messageRef, {
         isStarred: !selectedMessage.isStarred
     });
-    toast({ title: selectedMessage.isStarred ? "Message unstarred" : "Message starred", duration: 3000 });
-    setIsMessageOptionsOpen(false);
+    toast({ title: selectedMessage.isStarred ? "Message unstarred" : "Message starred" });
+    setIsOpen(false);
   }
 
   const handleDeleteMessage = async ({ forEveryone }: { forEveryone: boolean }) => {
@@ -818,13 +825,13 @@ export default function ChatPage() {
     if (forEveryone) {
       // Hard delete for everyone
       await deleteDoc(messageRef);
-      toast({ title: "Message deleted for everyone.", duration: 3000 });
+      toast({ title: "Message deleted for everyone." });
     } else {
       // Soft delete for the current user
       await updateDoc(messageRef, {
         deletedFor: arrayUnion(currentUserId)
       });
-      toast({ title: "Message deleted for you.", duration: 3000 });
+      toast({ title: "Message deleted for you." });
     }
 
     setSelectedMessage(null);
@@ -844,7 +851,7 @@ export default function ChatPage() {
   };
   
   const handleAction = (action: 'find' | 'mute' | 'theme' | 'more' | 'block' | 'clear' | 'export') => {
-    setIsMenuOpen(false);
+    setIsOpen(false);
     if (action === 'find') {
       setIsSearchOpen(true);
     } else {
@@ -860,7 +867,7 @@ export default function ChatPage() {
         delete newTranslations[selectedMessage.id];
         return newTranslations;
       });
-      setIsMessageOptionsOpen(false);
+      setIsOpen(false);
       return;
     }
 
@@ -873,10 +880,10 @@ export default function ChatPage() {
   
   const handleInboundTranslate = async (langToUse: string) => {
     setIsLangSelectOpen(false);
-    setIsMessageOptionsOpen(false);
+    setIsOpen(false);
 
     if (!selectedMessage || !selectedMessage.text) {
-      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.', duration: 3000 });
+      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
       return;
     }
 
@@ -888,7 +895,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error("Translation error:", error);
-      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.', duration: 3000 });
+      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
     } finally {
       setIsTranslating(null);
     }
@@ -905,11 +912,11 @@ export default function ChatPage() {
           contentEditableRef.current.textContent = result.translatedText;
         }
         setShowOutboundTranslate(false);
-        toast({ title: `Translated to ${new Intl.DisplayNames(['en'], { type: 'language' }).of(contact.language)}`, duration: 3000 });
+        toast({ title: `Translated to ${new Intl.DisplayNames(['en'], { type: 'language' }).of(contact.language)}` });
       }
     } catch (error) {
       console.error("Outbound translation error:", error);
-      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.', duration: 3000 });
+      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
     } finally {
       setIsOutboundTranslating(false);
     }
@@ -982,10 +989,10 @@ export default function ChatPage() {
   };
 
   const handleLiveTranslationToggle = (checked: boolean) => {
-    setIsMenuOpen(false);
+    setIsOpen(false);
     if (!contactDocRef) return;
     updateDocumentNonBlocking(contactDocRef, { liveTranslationEnabled: checked });
-    toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.`, duration: 3000 });
+    toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.` });
     if(checked) {
         setIsLiveTranslateInfoOpen(true);
     }
@@ -1152,7 +1159,7 @@ export default function ChatPage() {
                     </DropdownMenuContent>
                 </DropdownMenu>
 
-                <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
+                <DropdownMenu open={isMenuOpen} onOpenChange={setIsOpen}>
                     <DropdownMenuTrigger asChild>
                     <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12 ml-1">
                         <MoreVertical className="h-6 w-6" />
@@ -1186,11 +1193,16 @@ export default function ChatPage() {
                                             <Palette className="mr-2 h-4 w-4" />
                                             <span>Chat Theme</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleLiveTranslationToggle(!contact.liveTranslationEnabled); }} className="flex items-center justify-between">
-                                            <div className="flex items-center gap-2">
+                                        <DropdownMenuItem
+                                            onSelect={(e) => {
+                                                e.preventDefault(); // Keep menu open for interaction
+                                            }}
+                                            className="flex items-center justify-between"
+                                        >
+                                            <Label htmlFor="live-translation-switch" className="flex items-center gap-2 cursor-pointer">
                                                 <Languages className="mr-2 h-4 w-4" />
-                                                <Label htmlFor="live-translation-switch" className="cursor-pointer">Live Translation</Label>
-                                            </div>
+                                                Live Translation
+                                            </Label>
                                             <Switch
                                                 id="live-translation-switch"
                                                 checked={!!contact.liveTranslationEnabled}
@@ -1420,7 +1432,7 @@ export default function ChatPage() {
         {selectedMessage && (
             <MessageOptions
             isOpen={isMessageOptionsOpen}
-            setIsOpen={setIsMessageOptionsOpen}
+            setIsOpen={setIsOpen}
             message={selectedMessage}
             onDelete={openDeleteDialog}
             onEdit={handleEdit}
@@ -1429,6 +1441,7 @@ export default function ChatPage() {
             onTranslate={triggerInboundTranslate}
             isTranslated={!!translatedMessages[selectedMessage.id]}
             onClose={() => {
+                setIsOpen(false);
                 setSelectedMessage(null);
             }}
             />
@@ -1441,7 +1454,7 @@ export default function ChatPage() {
           onConfirm={handleDeleteMessage}
           onCancel={() => {
             setIsDeleteAlertOpen(false);
-            setIsMessageOptionsOpen(true);
+            setIsOpen(true);
           }}
           contactName={contact.name}
           messageSenderId={selectedMessage.senderId}
@@ -1456,7 +1469,7 @@ export default function ChatPage() {
         onClose={() => setIsAttachmentSheetOpen(false)}
         chatId={chatId || ''}
         onSelect={(option) => {
-            setIsAttachmentSheetOpen(false);
+            setIsOpen(false);
             if (fileInputRef.current) {
                 let accept = 'image/*,video/*';
                 if (option === 'document') accept = 'application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
@@ -1494,6 +1507,7 @@ export default function ChatPage() {
 }
 
     
+
 
 
 

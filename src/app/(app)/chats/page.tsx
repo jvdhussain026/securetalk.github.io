@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
 
@@ -127,18 +127,21 @@ function ChatListItem({ contact }: { contact: Contact }) {
                         {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                     </div>
                     <ClientOnly>
-                        {!lastMessage && !isLoading ? (
-                           <Badge variant="secondary" className="text-primary font-bold">New</Badge>
-                        ) : (
-                             <p className="text-xs text-muted-foreground whitespace-nowrap">
-                                {contact.lastMessageTimestamp ? formatLastMessageTimestamp(contact.lastMessageTimestamp) : ''}
-                            </p>
-                        )}
+                      {contact.lastMessageTimestamp && (
+                        <p className="text-xs text-muted-foreground whitespace-nowrap">
+                            {formatLastMessageTimestamp(contact.lastMessageTimestamp)}
+                        </p>
+                      )}
                     </ClientOnly>
                 </div>
-                <p className={cn("text-sm truncate", lastMessage ? 'text-muted-foreground' : 'text-muted-foreground italic')}>
-                    {lastMessageText}
-                </p>
+                 <div className="flex items-baseline justify-between mt-1">
+                    <p className={cn("text-sm truncate", lastMessage ? 'text-muted-foreground' : 'text-muted-foreground italic')}>
+                        {lastMessageText}
+                    </p>
+                     {contact.unreadCount && contact.unreadCount > 0 && (
+                        <Badge className="h-5 shrink-0">{contact.unreadCount}</Badge>
+                     )}
+                </div>
             </div>
         </Link>
         <ImagePreviewDialog

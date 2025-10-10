@@ -46,10 +46,6 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
   const handleActionWithClose = (action: () => void) => {
     return () => {
       action();
-      // Keep sheet open for translate, it closes itself
-      if (action !== onTranslate) {
-        handleClose();
-      }
     };
   };
 
