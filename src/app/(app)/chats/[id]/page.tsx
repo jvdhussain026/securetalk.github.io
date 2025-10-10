@@ -218,7 +218,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
 
 
   return (
-      <div className="space-y-2">
+      <div className="space-y-2" style={{ wordBreak: 'break-word' }}>
           {renderMediaGrid()}
           {currentText && highlightedText}
           {docAttachments.map(renderDoc)}
@@ -1329,20 +1329,18 @@ export default function ChatPage() {
             </div>
           )}
           <form onSubmit={isRecording ? stopRecordingAndSend : handleSend} className="flex items-end gap-2">
-            <div className="flex items-end gap-2">
-              <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                  <Plus className="h-6 w-6" />
-                  <span className="sr-only">Add media</span>
-              </Button>
-            </div>
-            <div className="flex-1 relative flex items-center rounded-lg bg-muted overflow-hidden">
+            <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                <Plus className="h-6 w-6" />
+                <span className="sr-only">Add media</span>
+            </Button>
+            <div className="flex-1 relative flex items-center rounded-lg bg-muted">
                 <div
                     ref={contentEditableRef}
                     contentEditable
                     onInput={handleInput}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
-                    className="flex-1 bg-transparent px-4 pr-20 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap break-words"
+                    className="flex-1 bg-transparent px-4 pr-12 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap break-words"
                     data-placeholder="Type a message..."
                 />
                  {isRecording && (
@@ -1356,7 +1354,7 @@ export default function ChatPage() {
                         </Button>
                     </div>
                 )}
-                 <div className="absolute right-1 flex items-center self-end p-1">
+                 <div className="absolute right-1 bottom-1 flex items-center self-end">
                     {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
                         <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
                         {isOutboundTranslating ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Languages className="h-5 w-5" />}
@@ -1372,20 +1370,18 @@ export default function ChatPage() {
                 </div>
             </div>
             
-            <div className="flex items-center self-end">
-                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={handleButtonAction}>
-                    {isOutboundTranslating ? (
-                         <LoaderCircle className="h-5 w-5 animate-spin" />
-                    ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
-                        <Send className="h-5 w-5" />
-                    ) : isRecording ? (
-                        <Send className="h-5 w-5" />
-                    ) : (
-                        <Mic className="h-5 w-5" />
-                    )}
-                    <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
-                </Button>
-            </div>
+            <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={handleButtonAction}>
+                {isOutboundTranslating ? (
+                     <LoaderCircle className="h-5 w-5 animate-spin" />
+                ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
+                    <Send className="h-5 w-5" />
+                ) : isRecording ? (
+                    <Send className="h-5 w-5" />
+                ) : (
+                    <Mic className="h-5 w-5" />
+                )}
+                <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
+            </Button>
             <input
                 type="file"
                 ref={fileInputRef}
@@ -1476,3 +1472,4 @@ export default function ChatPage() {
 }
 
     
+
