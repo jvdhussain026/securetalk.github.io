@@ -136,7 +136,7 @@ export default function FeedbackPage() {
           </CardHeader>
           <CardContent>
             <Button asChild className="w-full">
-                <Link href="/chats/support-javed">
+                <Link href="/chats/4YaPPGcDw2NLe31LwT05h3TihTz1">
                     <MessageSquare className="mr-2" />
                     Start a Chat with Us
                 </Link>
