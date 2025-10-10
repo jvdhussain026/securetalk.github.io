@@ -168,17 +168,23 @@ export default function ProfilePage() {
         </div>
 
         <div className="space-y-4">
-          <div>
-            <Label htmlFor="name">Name</Label>
-            <div className="relative">
-              <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" />
-               {userProfile?.verified && <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />}
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <Label htmlFor="name">Name</Label>
+                <span className="text-xs text-muted-foreground">{name.length} / 50</span>
+              </div>
+              <div className="relative">
+                <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" maxLength={50} />
+                {userProfile?.verified && <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />}
+              </div>
             </div>
-          </div>
-          <div>
-            <Label htmlFor="bio">Bio</Label>
-            <Textarea id="bio" placeholder="Tell us a little about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} rows={4} />
-          </div>
+            <div>
+              <div className="flex justify-between items-center mb-1">
+                <Label htmlFor="bio">Bio</Label>
+                <span className="text-xs text-muted-foreground">{bio.length} / 160</span>
+              </div>
+              <Textarea id="bio" placeholder="Tell us a little about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} rows={4} maxLength={160} />
+            </div>
         </div>
         
         <div className="pt-4">
