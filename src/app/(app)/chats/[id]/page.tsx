@@ -1346,7 +1346,7 @@ export default function ChatPage() {
           </form>
         </footer>
       </div>
-      {contact && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={contact} />}
+      {contact && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={remoteUser || contact} messages={messages || []} />}
        <AnimatePresence>
         {selectedMessage && (
             <MessageOptions

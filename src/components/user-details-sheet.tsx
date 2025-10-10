@@ -1,16 +1,18 @@
 
+
 "use client"
 
 import * as React from "react"
 import { Drawer } from "vaul"
+import { formatDistanceToNowStrict } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Image from "next/image"
-import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck } from "lucide-react"
+import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe } from "lucide-react"
 
-import type { Contact } from "@/lib/types"
+import type { Contact, Message } from "@/lib/types"
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 
 
@@ -18,22 +20,71 @@ type UserDetailsSheetProps = {
   open: boolean
   onOpenChange: (open: boolean) => void
   contact: Contact & { profilePictureUrl?: string };
+  messages: Message[];
 }
 
-const placeholderMedia = {
-  images: Array.from({ length: 8 }, (_, i) => `https://picsum.photos/seed/img${i}/400/400`),
-  videos: Array.from({ length: 2 }, (_, i) => `https://picsum.photos/seed/vid${i}/400/400`),
-  docs: [{ name: "Project_Proposal.pdf", size: "2.3MB" }, { name: "Quarterly_Report.docx", size: "850KB" }],
-  links: [{ title: "Figma Design Mockup", url: "figma.com" }, { title: "Project Brief", url: "notion.so" }],
-}
+const EmptyState = ({ icon: Icon, text }: { icon: React.ElementType, text: string }) => (
+    <div className="flex flex-col items-center justify-center text-center p-8 text-muted-foreground">
+        <Icon className="h-12 w-12 mb-4" />
+        <p>{text}</p>
+    </div>
+);
 
-export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsSheetProps) {
+export function UserDetailsSheet({ open, onOpenChange, contact, messages }: UserDetailsSheetProps) {
   const [imagePreview, setImagePreview] = React.useState<ImagePreviewState>(null);
   const avatarUrl = contact.profilePictureUrl || contact.avatar;
 
   const handleAvatarClick = (url: string) => {
     setImagePreview({ urls: [url], startIndex: 0 });
   };
+
+  const statusText = React.useMemo(() => {
+    if (contact.status === 'online') {
+      return 'Active now';
+    }
+    if (contact.lastSeen) {
+      return `Active ${formatDistanceToNowStrict(contact.lastSeen.toDate(), { addSuffix: true })}`;
+    }
+    return 'Offline';
+  }, [contact.status, contact.lastSeen]);
+
+  const sharedMedia = React.useMemo(() => {
+    const images: string[] = [];
+    const videos: string[] = [];
+    const docs: { name: string, size: string, url: string }[] = [];
+    const links: { title: string, url: string }[] = [];
+
+    const urlRegex = /(https?:\/\/[^\s]+)/g;
+
+    messages.forEach(message => {
+        // Find attachments
+        message.attachments?.forEach(attachment => {
+            switch(attachment.type) {
+                case 'image': images.push(attachment.url); break;
+                case 'video': videos.push(attachment.url); break;
+                case 'document': docs.push({ name: attachment.name || 'Document', size: attachment.size || 'N/A', url: attachment.url }); break;
+            }
+        });
+
+        // Find links in text
+        if (message.text) {
+            const foundUrls = message.text.match(urlRegex);
+            if (foundUrls) {
+                foundUrls.forEach(url => {
+                    try {
+                        const hostname = new URL(url).hostname;
+                        links.push({ title: hostname, url });
+                    } catch (e) {
+                        // Ignore invalid URLs
+                    }
+                });
+            }
+        }
+    });
+
+    return { images, videos, docs, links };
+
+  }, [messages]);
 
   return (
       <>
@@ -58,9 +109,8 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
                     <h2 className="text-2xl font-bold">{contact.name}</h2>
                     {contact.verified && <BadgeCheck className="h-6 w-6 text-primary" />}
                   </div>
-                  <p className="text-muted-foreground">Online</p>
-                  <p className="text-sm text-muted-foreground mt-2">"{contact.status || 'Available for a chat!'}"</p>
-                  <p className="text-sm mt-4 text-left w-full p-4 bg-muted rounded-lg">{contact.bio || 'Digital nomad, coffee enthusiast, and lifelong learner. Exploring the world one city at a time.'}</p>
+                  <p className="text-muted-foreground">{statusText}</p>
+                  <p className="text-sm mt-4 text-left w-full p-4 bg-muted rounded-lg">{contact.bio || 'No bio available.'}</p>
                 </div>
 
                 <Tabs defaultValue="images" className="w-full mt-4">
@@ -71,50 +121,66 @@ export function UserDetailsSheet({ open, onOpenChange, contact }: UserDetailsShe
                     <TabsTrigger value="links">Links</TabsTrigger>
                   </TabsList>
                   <TabsContent value="images" className="mt-4">
-                    <div className="grid grid-cols-3 gap-2">
-                      {placeholderMedia.images.map((src, i) => (
-                        <Image key={i} src={src} alt={`Shared image ${i + 1}`} width={200} height={200} className="rounded-lg aspect-square object-cover" data-ai-hint="landscape abstract" />
-                      ))}
-                    </div>
+                     {sharedMedia.images.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2">
+                            {sharedMedia.images.map((src, i) => (
+                                <Image key={i} src={src} alt={`Shared image ${i + 1}`} width={200} height={200} className="rounded-lg aspect-square object-cover" data-ai-hint="landscape abstract" />
+                            ))}
+                        </div>
+                     ) : (
+                        <EmptyState icon={ImageIcon} text="No photos shared yet." />
+                     )}
                   </TabsContent>
                   <TabsContent value="videos" className="mt-4">
-                     <div className="grid grid-cols-3 gap-2">
-                       {placeholderMedia.videos.map((src, i) => (
-                        <div key={i} className="relative">
-                           <Image src={src} alt={`Shared video ${i + 1}`} width={200} height={200} className="rounded-lg aspect-square object-cover" data-ai-hint="nature video" />
-                           <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                             <PlayCircle className="w-8 h-8 text-white" />
-                           </div>
+                     {sharedMedia.videos.length > 0 ? (
+                         <div className="grid grid-cols-3 gap-2">
+                           {sharedMedia.videos.map((src, i) => (
+                            <div key={i} className="relative">
+                               <Image src={src} alt={`Shared video ${i + 1}`} width={200} height={200} className="rounded-lg aspect-square object-cover" data-ai-hint="nature video" />
+                               <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                                 <PlayCircle className="w-8 h-8 text-white" />
+                               </div>
+                             </div>
+                           ))}
                          </div>
-                       ))}
-                     </div>
+                     ) : (
+                         <EmptyState icon={Video} text="No videos shared yet." />
+                     )}
                   </TabsContent>
                   <TabsContent value="docs" className="mt-4 space-y-2">
-                    {placeholderMedia.docs.map((doc, i) => (
-                      <div key={i} className="flex items-center p-3 bg-muted rounded-lg">
-                        <div className="p-2 bg-background rounded-md mr-3">
-                           <FileText className="w-6 h-6" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-semibold text-sm">{doc.name}</p>
-                          <p className="text-xs text-muted-foreground">{doc.size}</p>
-                        </div>
-                         <Button variant="ghost" size="icon"><Download className="w-5 h-5" /></Button>
-                      </div>
-                    ))}
+                    {sharedMedia.docs.length > 0 ? (
+                        sharedMedia.docs.map((doc, i) => (
+                            <a key={i} href={doc.url} download={doc.name} className="flex items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+                                <div className="p-2 bg-background rounded-md mr-3">
+                                <FileText className="w-6 h-6" />
+                                </div>
+                                <div className="flex-1">
+                                <p className="font-semibold text-sm">{doc.name}</p>
+                                <p className="text-xs text-muted-foreground">{doc.size}</p>
+                                </div>
+                                <Button variant="ghost" size="icon"><Download className="w-5 h-5" /></Button>
+                            </a>
+                        ))
+                    ) : (
+                         <EmptyState icon={FileUp} text="No documents shared yet." />
+                    )}
                   </TabsContent>
                   <TabsContent value="links" className="mt-4 space-y-2">
-                    {placeholderMedia.links.map((link, i) => (
-                      <a key={i} href={`https://${link.url}`} target="_blank" rel="noopener noreferrer" className="flex items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
-                         <div className="p-2 bg-background rounded-md mr-3">
-                            <LinkIcon className="w-6 h-6" />
-                         </div>
-                         <div>
-                          <p className="font-semibold text-sm">{link.title}</p>
-                          <p className="text-xs text-primary">{link.url}</p>
-                        </div>
-                      </a>
-                    ))}
+                    {sharedMedia.links.length > 0 ? (
+                        sharedMedia.links.map((link, i) => (
+                            <a key={i} href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center p-3 bg-muted rounded-lg hover:bg-muted/80">
+                                <div className="p-2 bg-background rounded-md mr-3">
+                                    <LinkIcon className="w-6 h-6" />
+                                </div>
+                                <div>
+                                <p className="font-semibold text-sm line-clamp-1">{link.title}</p>
+                                <p className="text-xs text-primary line-clamp-1">{link.url}</p>
+                                </div>
+                            </a>
+                        ))
+                    ) : (
+                         <EmptyState icon={Globe} text="No links shared yet." />
+                    )}
                   </TabsContent>
                 </Tabs>
               </ScrollArea>
