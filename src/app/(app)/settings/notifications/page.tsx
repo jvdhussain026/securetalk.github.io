@@ -17,12 +17,11 @@ import { Label } from '@/components/ui/label';
 import { ToneSelectionDialog } from '@/components/tone-selection-dialog';
 import type { Tone } from '@/lib/audio';
 import { tones } from '@/lib/audio';
-import { getToken } from 'firebase/messaging';
-import { initializeFirebase } from '@/firebase';
+import { getToken, getMessaging } from 'firebase/messaging';
 
 export default function NotificationsPage() {
   const { toast } = useToast();
-  const { firestore, user } = useFirebase();
+  const { firestore, user, firebaseApp } = useFirebase();
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
@@ -78,8 +77,8 @@ export default function NotificationsPage() {
   }, [firestore, user, toast]);
 
   const handleRequestPermission = async () => {
-    if (!isSupported) {
-      toast({ variant: 'destructive', title: 'Push notifications are not supported in this browser.' });
+    if (!isSupported || !firebaseApp) {
+      toast({ variant: 'destructive', title: 'Push notifications are not supported on this device.' });
       return;
     }
 
@@ -93,10 +92,8 @@ export default function NotificationsPage() {
     
     setIsSubscribing(true);
     try {
-        const { messaging } = initializeFirebase();
-        if (!messaging) {
-            throw new Error("Firebase Messaging is not available on this device.");
-        }
+        // Initialize messaging only when needed and on the client
+        const messaging = getMessaging(firebaseApp);
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) {
             throw new Error("VAPID public key not found in environment variables.");
