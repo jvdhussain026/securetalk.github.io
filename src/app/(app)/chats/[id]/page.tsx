@@ -432,7 +432,7 @@ export default function ChatPage() {
           const regex = new RegExp(searchQuery, 'gi');
           let match;
           while ((match = regex.exec(message.text)) !== null) {
-            matches.push({ messageId: message.id, index: match.index });
+            matches.push({ messageId: string, index: match.index });
           }
         }
       });
@@ -463,6 +463,7 @@ export default function ChatPage() {
     setAttachmentsToSend([]);
     if (contentEditableRef.current) {
         contentEditableRef.current.textContent = '';
+        contentEditableRef.current.innerHTML = '';
     }
     setReplyingTo(null);
     setShowOutboundTranslate(false);
@@ -894,6 +895,25 @@ export default function ChatPage() {
     }
   };
 
+  const handleInput = (event: React.FormEvent<HTMLDivElement>) => {
+    const editor = event.currentTarget;
+    setNewMessage(editor.textContent || '');
+
+    const images = Array.from(editor.getElementsByTagName('img'));
+    if (images.length > 0) {
+      const newAttachments: Attachment[] = images.map((img, index) => ({
+        type: 'image',
+        url: img.src,
+        name: `pasted_image_${Date.now()}_${index}.png`,
+        size: 'N/A'
+      }));
+      setAttachmentsToSend(prev => [...prev, ...newAttachments]);
+      // Clear the editor after processing to avoid re-adding on next input
+      editor.innerHTML = '';
+      setNewMessage('');
+    }
+  };
+
 
   const renderFooterAttachmentPreview = (attachment: Attachment) => {
     switch (attachment.type) {
@@ -1234,8 +1254,7 @@ export default function ChatPage() {
                 <div
                     ref={contentEditableRef}
                     contentEditable
-                    inputMode="text"
-                    onInput={(e) => setNewMessage(e.currentTarget.textContent || '')}
+                    onInput={handleInput}
                     onKeyDown={handleKeyDown}
                     onPaste={handlePaste}
                     className="flex-1 bg-transparent px-4 pr-20 py-2 text-base min-h-[40px] max-h-32 overflow-y-auto whitespace-pre-wrap break-words"
