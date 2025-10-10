@@ -55,15 +55,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 status: 'online',
                 lastSeen: firestoreServerTimestamp()
             });
-
-            // When I disconnect, update Firestore status to 'offline'.
-            onDisconnect(userStatusFirestoreRef).update({
-                status: 'offline',
-                lastSeen: firestoreServerTimestamp()
-            });
         }
     });
+
+    // Firestore onDisconnect is not as reliable as RTDB's for web clients.
+    // We'll rely on the RTDB listener to update Firestore for other users.
+    // However, we can set a fallback for when the browser tab is closed gracefully.
+    const handleBeforeUnload = () => {
+        updateDoc(userStatusFirestoreRef, {
+            status: 'offline',
+            lastSeen: firestoreServerTimestamp()
+        });
+    };
+    
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+        window.removeEventListener('beforeunload', handleBeforeUnload);
+    }
   }, [user, firestore]);
+
 
   // Listener for new connections and incoming calls on the user document
   useEffect(() => {
