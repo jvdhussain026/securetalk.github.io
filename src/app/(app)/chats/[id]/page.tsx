@@ -393,6 +393,7 @@ export default function ChatPage() {
         toast({
             title: `New message from ${contact?.name}`,
             description: lastMessage.text || 'Sent an attachment',
+            duration: 3000,
         });
     }
 
@@ -541,6 +542,7 @@ export default function ChatPage() {
                 variant: "destructive",
                 title: "Translation Failed",
                 description: "Message was not translated. Sending original.",
+                duration: 3000,
             });
         } finally {
             setIsOutboundTranslating(false);
@@ -556,7 +558,7 @@ export default function ChatPage() {
             isEdited: true,
         });
         setEditingMessage(null);
-        toast({ title: "Message updated" });
+        toast({ title: "Message updated", duration: 3000 });
     } else {
         // Add message to Firestore
         const collectionRef = collection(firestore, "chats", chatId, "messages");
@@ -642,6 +644,7 @@ export default function ChatPage() {
           variant: "destructive",
           title: "Error Reading Files",
           description: "There was a problem reading the selected files.",
+          duration: 3000,
         });
       });
     }
@@ -680,6 +683,7 @@ export default function ChatPage() {
         variant: 'destructive',
         title: 'Microphone access denied',
         description: 'Please allow microphone access in your browser settings.',
+        duration: 3000,
       });
     }
   };
@@ -802,7 +806,7 @@ export default function ChatPage() {
     await updateDoc(messageRef, {
         isStarred: !selectedMessage.isStarred
     });
-    toast({ title: selectedMessage.isStarred ? "Message unstarred" : "Message starred" });
+    toast({ title: selectedMessage.isStarred ? "Message unstarred" : "Message starred", duration: 3000 });
     setIsMessageOptionsOpen(false);
   }
 
@@ -814,13 +818,13 @@ export default function ChatPage() {
     if (forEveryone) {
       // Hard delete for everyone
       await deleteDoc(messageRef);
-      toast({ title: "Message deleted for everyone." });
+      toast({ title: "Message deleted for everyone.", duration: 3000 });
     } else {
       // Soft delete for the current user
       await updateDoc(messageRef, {
         deletedFor: arrayUnion(currentUserId)
       });
-      toast({ title: "Message deleted for you." });
+      toast({ title: "Message deleted for you.", duration: 3000 });
     }
 
     setSelectedMessage(null);
@@ -872,7 +876,7 @@ export default function ChatPage() {
     setIsMessageOptionsOpen(false);
 
     if (!selectedMessage || !selectedMessage.text) {
-      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.' });
+      toast({ variant: 'destructive', title: 'Cannot translate empty or media messages.', duration: 3000 });
       return;
     }
 
@@ -884,7 +888,7 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error("Translation error:", error);
-      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
+      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.', duration: 3000 });
     } finally {
       setIsTranslating(null);
     }
@@ -901,11 +905,11 @@ export default function ChatPage() {
           contentEditableRef.current.textContent = result.translatedText;
         }
         setShowOutboundTranslate(false);
-        toast({ title: `Translated to ${new Intl.DisplayNames(['en'], { type: 'language' }).of(contact.language)}` });
+        toast({ title: `Translated to ${new Intl.DisplayNames(['en'], { type: 'language' }).of(contact.language)}`, duration: 3000 });
       }
     } catch (error) {
       console.error("Outbound translation error:", error);
-      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
+      toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.', duration: 3000 });
     } finally {
       setIsOutboundTranslating(false);
     }
@@ -981,7 +985,7 @@ export default function ChatPage() {
     setIsMenuOpen(false);
     if (!contactDocRef) return;
     updateDocumentNonBlocking(contactDocRef, { liveTranslationEnabled: checked });
-    toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.` });
+    toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.`, duration: 3000 });
     if(checked) {
         setIsLiveTranslateInfoOpen(true);
     }
@@ -1182,7 +1186,7 @@ export default function ChatPage() {
                                             <Palette className="mr-2 h-4 w-4" />
                                             <span>Chat Theme</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleLiveTranslationToggle(!contact.liveTranslationEnabled); }} className="flex items-center justify-between">
                                             <div className="flex items-center gap-2">
                                                 <Languages className="mr-2 h-4 w-4" />
                                                 <Label htmlFor="live-translation-switch" className="cursor-pointer">Live Translation</Label>
@@ -1191,7 +1195,6 @@ export default function ChatPage() {
                                                 id="live-translation-switch"
                                                 checked={!!contact.liveTranslationEnabled}
                                                 onCheckedChange={handleLiveTranslationToggle}
-                                                onClick={() => handleLiveTranslationToggle(!contact.liveTranslationEnabled)}
                                             />
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
@@ -1491,6 +1494,7 @@ export default function ChatPage() {
 }
 
     
+
 
 
 
