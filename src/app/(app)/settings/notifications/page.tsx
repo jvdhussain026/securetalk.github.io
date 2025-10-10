@@ -18,12 +18,14 @@ import { ToneSelectionDialog } from '@/components/tone-selection-dialog';
 import type { Tone } from '@/lib/audio';
 import { tones } from '@/lib/audio';
 import { getToken, getMessaging } from 'firebase/messaging';
+import { sendPushNotification } from '@/ai/flows/send-push-notification-flow';
 
 export default function NotificationsPage() {
   const { toast } = useToast();
   const { firestore, user, firebaseApp } = useFirebase();
   const [permission, setPermission] = useState<NotificationPermission>('default');
   const [isSubscribing, setIsSubscribing] = useState(false);
+  const [isTesting, setIsTesting] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [messageAlerts, setMessageAlerts] = useState(true);
 
@@ -63,7 +65,6 @@ export default function NotificationsPage() {
     }
     try {
         const subscriptionsRef = collection(firestore, 'users', user.uid, 'subscriptions');
-        // Use the token itself as the document ID to prevent duplicates
         const tokenDocRef = doc(subscriptionsRef, token);
         
         const docSnap = await getDocumentNonBlocking(tokenDocRef);
@@ -98,8 +99,7 @@ export default function NotificationsPage() {
             throw new Error("VAPID public key not found in environment variables.");
         }
         
-        // Correctly pass the VAPID key in the options object
-        const fcmToken = await getToken(messaging, { vapidKey: vapidKey });
+        const fcmToken = await getToken(messaging, { vapidKey });
 
         if (fcmToken) {
             toast({ title: 'Notifications enabled successfully!' });
@@ -113,6 +113,34 @@ export default function NotificationsPage() {
       toast({ variant: 'destructive', title: 'Failed to subscribe', description: errorMessage });
     } finally {
       setIsSubscribing(false);
+    }
+  };
+
+  const handleSendTestNotification = async () => {
+    if (!user) {
+        toast({ variant: 'destructive', title: 'You must be logged in to send a test notification.' });
+        return;
+    }
+    setIsTesting(true);
+    try {
+        const result = await sendPushNotification({
+            userId: user.uid,
+            payload: {
+                title: 'Test Notification',
+                body: 'If you can see this, push notifications are working!',
+            }
+        });
+
+        if (result.successCount > 0) {
+            toast({ title: 'Test notification sent!', description: 'You should receive it shortly.' });
+        } else {
+            throw new Error('The notification was not sent successfully.');
+        }
+    } catch (error) {
+        console.error("Failed to send test notification:", error);
+        toast({ variant: 'destructive', title: 'Test Failed', description: 'Could not send the notification. Check console for errors.' });
+    } finally {
+        setIsTesting(false);
     }
   };
   
@@ -149,13 +177,19 @@ export default function NotificationsPage() {
     switch(permission) {
       case 'granted':
         return (
-          <Alert>
-            <BellRing className="h-4 w-4" />
-            <AlertTitle>Push Notifications Enabled</AlertTitle>
-            <AlertDescription>
-              You can manage this permission in your browser's site settings.
-            </AlertDescription>
-          </Alert>
+          <div className="space-y-4">
+            <Alert>
+              <BellRing className="h-4 w-4" />
+              <AlertTitle>Push Notifications Enabled</AlertTitle>
+              <AlertDescription>
+                You can manage this permission in your browser's site settings.
+              </AlertDescription>
+            </Alert>
+             <Button onClick={handleSendTestNotification} disabled={isTesting} className="w-full">
+                {isTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <BellRing className="mr-2" />}
+                {isTesting ? 'Sending...' : 'Send Test Notification'}
+            </Button>
+          </div>
         );
       case 'denied':
         return (
