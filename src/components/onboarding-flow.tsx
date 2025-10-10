@@ -174,7 +174,7 @@ function urlBase64ToUint8Array(base64String: string) {
 }
 
 // Step 4: Notification Permission
-const NotificationsStep = ({ onNext, onBack, user, firestore }: { onNext: () => void; onBack: () => void; user: any; firestore: any; }) => {
+const NotificationsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void; }) => {
     const { toast } = useToast();
     const [isSubscribing, setIsSubscribing] = useState(false);
 
@@ -192,61 +192,11 @@ const NotificationsStep = ({ onNext, onBack, user, firestore }: { onNext: () => 
             return;
         }
 
-        setIsSubscribing(true);
-        try {
-            const serviceWorkerRegistration = await navigator.serviceWorker.ready;
-            const existingSubscription = await serviceWorkerRegistration.pushManager.getSubscription();
-
-            if (existingSubscription) {
-                toast({ title: 'You are already subscribed to notifications.' });
-                await saveSubscription(existingSubscription);
-            } else {
-                const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-                if (!vapidPublicKey) {
-                    throw new Error("VAPID public key not found. Cannot subscribe to push notifications.");
-                }
-                
-                const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-
-                const newSubscription = await serviceWorkerRegistration.pushManager.subscribe({
-                    userVisibleOnly: true,
-                    applicationServerKey,
-                });
-                
-                toast({ title: 'Notifications enabled!' });
-                await saveSubscription(newSubscription);
-            }
-        } catch (error) {
-            console.error('Error subscribing to push notifications:', error);
-            toast({ variant: 'destructive', title: 'Failed to subscribe to notifications.' });
-        } finally {
-            setIsSubscribing(false);
-            onNext();
-        }
+        // Logic to get and save subscription is now in the main notifications settings page.
+        // We just prompt for permission here.
+        toast({ title: 'Notifications enabled!' });
+        onNext();
     };
-    
-    const saveSubscription = async (subscription: PushSubscription) => {
-        if (!firestore || !user) {
-            console.error("Firestore or user not available to save subscription.");
-            return;
-        }
-        try {
-            const subscriptionJson = subscription.toJSON();
-            const subscriptionsRef = collection(firestore, 'users', user.uid, 'subscriptions');
-            // We can use the endpoint as a unique ID for the document to avoid duplicates
-            const docId = btoa(subscriptionJson.endpoint!).replace(/[/+=]/g, '');
-            const subscriptionDocRef = doc(subscriptionsRef, docId);
-            
-            const docSnap = await getDocumentNonBlocking(subscriptionDocRef);
-            if (!docSnap || !docSnap.exists()) {
-                setDocumentNonBlocking(subscriptionDocRef, subscriptionJson, { merge: true });
-            }
-        } catch (error) {
-            console.error("Failed to save push subscription to Firestore:", error);
-            toast({ variant: 'destructive', title: 'Could not save notification preferences.' });
-        }
-    };
-
 
     return (
         <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
@@ -452,7 +402,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         <WelcomeStep key="welcome" onNext={nextStep} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} />,
         <NameStep key="name" onNext={handleNameNext} isSaving={isSavingProfile} />,
         <TermsStep key="terms" onNext={handleTermsNext} onBack={prevStep} />,
-        <NotificationsStep key="notifs" onNext={handleNotificationsNext} onBack={prevStep} user={user} firestore={firestore} />,
+        <NotificationsStep key="notifs" onNext={handleNotificationsNext} onBack={prevStep} />,
     ];
 
     return (

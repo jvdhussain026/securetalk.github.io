@@ -69,7 +69,8 @@ export default function NotificationsPage() {
         
         const docSnap = await getDocumentNonBlocking(tokenDocRef);
         if (!docSnap || !docSnap.exists()) {
-            setDocumentNonBlocking(tokenDocRef, { createdAt: new Date() }, { merge: true });
+            await setDocumentNonBlocking(tokenDocRef, { createdAt: new Date() }, { merge: true });
+            console.log("FCM token saved successfully.");
         }
     } catch (error) {
         console.error("Failed to save FCM token to Firestore:", error);
