@@ -12,7 +12,7 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 import React, { useState, useCallback } from 'react';
 import type { Contact } from '@/lib/types';
 import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase/provider';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
@@ -221,4 +221,3 @@ export default function AboutUsPage() {
     </>
   );
 }
-
