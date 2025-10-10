@@ -968,9 +968,12 @@ export default function ChatPage() {
       return 'Active now';
     }
     if (remoteUser?.lastSeen) {
-      return `Active ${formatDistanceToNowStrict(remoteUser.lastSeen.toDate(), { addSuffix: true })}`;
+      const minsSinceLastSeen = differenceInMinutes(new Date(), remoteUser.lastSeen.toDate());
+      if (minsSinceLastSeen <= 15) {
+        return `Active ${formatDistanceToNowStrict(remoteUser.lastSeen.toDate(), { addSuffix: true })}`;
+      }
     }
-    return 'Offline';
+    return '';
   }
 
 
@@ -1053,7 +1056,7 @@ export default function ChatPage() {
                     <span className="sr-only">Back</span>
                 </Link>
                 </Button>
-                <button onClick={() => handleAvatarClick(contact.avatar)} className="shrink-0">
+                <button onClick={() => handleAvatarClick(contact.avatar)}>
                 <Avatar className="h-10 w-10">
                     <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
                     <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
@@ -1422,3 +1425,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
