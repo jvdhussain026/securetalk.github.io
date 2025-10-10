@@ -52,7 +52,7 @@ export default function SettingsPage() {
         { href: '/settings/notifications', icon: Bell, title: 'Notifications' },
         { href: '/settings/chat-customization', icon: Palette, title: 'Chat Customization' },
         { href: '/settings/translation', icon: Languages, title: 'Translation' },
-        { href: '#', icon: HardDrive, title: 'Data & Storage', comingSoon: true },
+        { href: '/settings/data-and-storage', icon: HardDrive, title: 'Data & Storage' },
         { href: '#', icon: Lock, title: 'Privacy', comingSoon: true },
         { href: '#', icon: Shield, title: 'Security', comingSoon: true },
     ];
