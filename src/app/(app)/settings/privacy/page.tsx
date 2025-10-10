@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Lock, ChevronRight, UserCircle, Eye, MessageSquareText, Shield, UserX, Info } from 'lucide-react';
+import { ArrowLeft, Lock, ChevronRight, UserCircle, Eye, MessageSquareText, Shield, UserX, Info, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -48,6 +48,7 @@ export default function PrivacyPage() {
   
   const [readReceipts, setReadReceipts] = useState(true);
   const [typingIndicators, setTypingIndicators] = useState(true);
+  const [showInNearby, setShowInNearby] = useState(true);
   const [showSecurityNotifs, setShowSecurityNotifs] = useState(true);
 
   const handleComingSoon = () => {
@@ -94,6 +95,13 @@ export default function PrivacyPage() {
                 <PrivacyItem icon={Eye} title="Last Seen & Online" value="Everyone" onClick={handleComingSoon} />
                 <PrivacyItem icon={UserCircle} title="Profile Photo" value="Everyone" onClick={handleComingSoon} />
                 <PrivacyItem icon={Info} title="Bio" value="Everyone" onClick={handleComingSoon} />
+                <PrivacyToggle 
+                    icon={Users}
+                    title="Visible to Nearby"
+                    description="Allow others to discover you when using the 'Nearby' feature."
+                    isChecked={showInNearby}
+                    onCheckedChange={(checked) => handleToggle(setShowInNearby, showInNearby)}
+                />
             </CardContent>
         </Card>
         
