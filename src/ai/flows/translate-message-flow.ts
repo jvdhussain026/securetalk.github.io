@@ -41,6 +41,29 @@ Text to translate:
 "{{{text}}}"`,
 });
 
+async function runWithRetry(input: TranslateMessageInput, maxRetries = 3, initialDelay = 1000) {
+  let attempt = 0;
+  while (attempt < maxRetries) {
+    try {
+      const { output } = await prompt(input);
+      return output!;
+    } catch (error: any) {
+      attempt++;
+      if (attempt >= maxRetries || !error.message.includes('429')) {
+        console.error(`Translation failed after ${attempt} attempts.`, error);
+        throw error; // Re-throw if it's not a rate limit error or if we've exhausted retries
+      }
+      
+      console.warn(`Rate limit exceeded. Retrying attempt ${attempt} of ${maxRetries}...`);
+      // Exponential backoff with jitter
+      const delay = initialDelay * Math.pow(2, attempt - 1) + Math.random() * 1000;
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  throw new Error("Translation failed after multiple retries.");
+}
+
+
 const translateMessageFlow = ai.defineFlow(
   {
     name: 'translateMessageFlow',
@@ -48,14 +71,6 @@ const translateMessageFlow = ai.defineFlow(
     outputSchema: TranslateMessageOutputSchema,
   },
   async input => {
-    try {
-      const {output} = await prompt(input);
-      return output!;
-    } catch (error) {
-      // If there's an error (e.g., 503), wait 2 seconds and retry once.
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      const {output} = await prompt(input);
-      return output!;
-    }
+    return runWithRetry(input);
   }
 );

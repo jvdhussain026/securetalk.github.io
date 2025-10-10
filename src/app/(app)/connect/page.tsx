@@ -67,7 +67,7 @@ function Connect() {
                 bio: newContactData.bio,
                 language: newContactData.language || 'en',
                 verified: newContactData.verified || false,
-                liveTranslationEnabled: newContactData.liveTranslationEnabled || false,
+                liveTranslationEnabled: false,
                 lastMessageTimestamp: currentTimestamp,
             }, { merge: true });
             
@@ -80,7 +80,7 @@ function Connect() {
                 bio: userProfile.bio,
                 language: userProfile.language || 'en',
                 verified: userProfile.verified || false,
-                liveTranslationEnabled: userProfile.liveTranslationEnabled || false,
+                liveTranslationEnabled: false,
                 lastMessageTimestamp: currentTimestamp,
             }, { merge: true });
 

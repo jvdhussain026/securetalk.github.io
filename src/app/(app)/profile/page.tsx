@@ -172,6 +172,7 @@ export default function ProfilePage() {
             <Label htmlFor="name">Name</Label>
             <div className="relative">
               <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" />
+               {userProfile?.verified && <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />}
             </div>
           </div>
           <div>

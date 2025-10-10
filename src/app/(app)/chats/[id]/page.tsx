@@ -25,7 +25,7 @@ import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { ClientOnly } from '@/components/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuCheckboxItem } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
@@ -55,7 +55,7 @@ const LinkifiedText = ({ text }: { text: string }) => {
     const parts = text.split(urlRegex);
 
     return (
-        <>
+        <p className="text-sm px-2 pt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
             {parts.map((part, index) => {
                 if (part.match(urlRegex)) {
                     return (
@@ -73,7 +73,7 @@ const LinkifiedText = ({ text }: { text: string }) => {
                 }
                 return part;
             })}
-        </>
+        </p>
     );
 };
 
@@ -150,9 +150,11 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
 
   const renderDoc = (attachment: Attachment) => (
     <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden">
-      <FileText className="w-6 h-6 mr-3 flex-shrink-0" />
-      <div className="flex-1 overflow-hidden">
-        <p className="text-sm font-medium line-clamp-2" style={{ wordBreak: 'break-all' }}>{attachment.name}</p>
+      <div className="p-2 bg-black/10 rounded-md mr-3">
+        <FileText className="w-6 h-6 flex-shrink-0" />
+      </div>
+      <div className="flex-1 overflow-hidden" style={{ wordBreak: 'break-word' }}>
+        <p className="text-sm font-medium line-clamp-2">{attachment.name}</p>
         <p className="text-xs opacity-80">{attachment.size}</p>
       </div>
       <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
@@ -167,22 +169,15 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   
   const highlightedText = useMemo(() => {
     if (!currentText) return null;
-
-    const renderContent = () => <LinkifiedText text={currentText} />;
-
     if (!isSearchOpen || searchQuery.length <= 1) {
-      return (
-        <p className="text-sm px-2 pt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
-          {renderContent()}
-        </p>
-      );
+      return <LinkifiedText text={currentText} />;
     }
 
     const regex = new RegExp(`(${searchQuery})`, 'gi');
     const parts = currentText.split(regex);
 
     return (
-      <p className="text-sm px-2 pt-1" style={{ wordBreak: 'break-word' }}>
+      <p className="text-sm px-2 pt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
         {parts.map((part, i) => {
           if (i % 2 === 1) { // It's a match
             const isCurrent = searchMatches.some(
@@ -206,11 +201,11 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
                   'bg-yellow-500': isCurrent,
                 })}
               >
-                <LinkifiedText text={part} />
+                {part}
               </span>
             );
           }
-          return <LinkifiedText key={i} text={part} />;
+          return part;
         })}
       </p>
     );
@@ -981,6 +976,15 @@ export default function ChatPage() {
     }
   };
 
+  const handleLiveTranslationToggle = (checked: boolean) => {
+    if (!contactDocRef) return;
+    updateDocumentNonBlocking(contactDocRef, { liveTranslationEnabled: checked });
+    toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.` });
+    if(checked) {
+        setIsLiveTranslateInfoOpen(true);
+    }
+  }
+
 
   const renderFooterAttachmentPreview = (attachment: Attachment) => {
     switch (attachment.type) {
@@ -1176,6 +1180,13 @@ export default function ChatPage() {
                                             <Palette className="mr-2 h-4 w-4" />
                                             <span>Chat Theme</span>
                                         </DropdownMenuItem>
+                                        <DropdownMenuCheckboxItem
+                                            checked={contact.liveTranslationEnabled}
+                                            onCheckedChange={handleLiveTranslationToggle}
+                                        >
+                                            <Languages className="mr-2 h-4 w-4" />
+                                            <span>Live Translation</span>
+                                        </DropdownMenuCheckboxItem>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem onSelect={() => setMenuPage(2)}>
                                             <span>More</span>
@@ -1473,5 +1484,6 @@ export default function ChatPage() {
 }
 
     
+
 
 
