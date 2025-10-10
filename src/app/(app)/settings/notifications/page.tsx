@@ -92,13 +92,14 @@ export default function NotificationsPage() {
     
     setIsSubscribing(true);
     try {
-        // Initialize messaging only when needed and on the client
         const messaging = getMessaging(firebaseApp);
         const vapidKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
         if (!vapidKey) {
             throw new Error("VAPID public key not found in environment variables.");
         }
-        const fcmToken = await getToken(messaging, { vapidKey });
+        
+        // Correctly pass the VAPID key in the options object
+        const fcmToken = await getToken(messaging, { vapidKey: vapidKey });
 
         if (fcmToken) {
             toast({ title: 'Notifications enabled successfully!' });
