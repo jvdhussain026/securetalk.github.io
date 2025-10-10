@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
-import { formatDistanceToNow, isToday, format } from 'date-fns'
+import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -37,6 +37,9 @@ function formatLastMessageTimestamp(timestamp: any) {
   const date = timestamp.toDate();
   if (isToday(date)) {
     return format(date, 'p');
+  }
+  if (isYesterday(date)) {
+    return 'Yesterday';
   }
   return format(date, 'P');
 }
