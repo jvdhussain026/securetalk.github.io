@@ -37,9 +37,9 @@ export default function FeedbackPage() {
   };
 
   const socialLinks = [
-    { icon: Github, href: 'https://github.com/JavedHussain15', label: 'GitHub' },
-    { icon: Instagram, href: 'https://www.instagram.com/javedhussain15', label: 'Instagram' },
-    { icon: Mail, href: 'mailto:javed.hussain.15.11.2002@gmail.com', label: 'Email' },
+    { icon: Github, href: 'https://github.com/jvdhussain026/secure_talk', label: 'GitHub' },
+    { icon: Instagram, href: 'https://www.instagram.com/secure_talk', label: 'Instagram' },
+    { icon: Mail, href: 'mailto:jvdhussain2008@gmail.com', label: 'Email' },
   ];
 
   return (
