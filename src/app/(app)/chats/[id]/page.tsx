@@ -479,42 +479,38 @@ export default function ChatPage() {
     }
   }, []);
 
-    useEffect(() => {
-        const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
-        if (!viewport || !messages) return;
+  const scrollToBottom = useCallback(() => {
+    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
+    }
+  }, []);
 
-        const scrollToBottom = () => {
-            if (viewport) {
-                viewport.scrollTop = viewport.scrollHeight;
-            }
-        };
+  useEffect(() => {
+    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+    if (!viewport) return;
 
-        const handleScroll = () => {
-            if (viewport) {
-                const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 1;
-                setUserScrolledUp(!isScrolledToBottom);
-            }
-        };
+    const handleScroll = () => {
+      const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 1;
+      setUserScrolledUp(!isScrolledToBottom);
+    };
 
-        // Initial scroll
-        if (!initialScrollDoneRef.current) {
-            if (unreadDividerRef.current) {
-                unreadDividerRef.current.scrollIntoView({ block: 'center' });
-            } else {
-                scrollToBottom();
-            }
-            initialScrollDoneRef.current = true;
-        } else {
-            // Auto-scroll on new message if user is at the bottom
-            if (!userScrolledUp) {
-                scrollToBottom();
-            }
-        }
-        
-        viewport.addEventListener('scroll', handleScroll);
-        return () => viewport.removeEventListener('scroll', handleScroll);
+    if (!initialScrollDoneRef.current) {
+      if (unreadDividerRef.current) {
+        unreadDividerRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      } else {
+        scrollToBottom();
+      }
+      initialScrollDoneRef.current = true;
+    } else {
+      if (!userScrolledUp) {
+        scrollToBottom();
+      }
+    }
 
-    }, [messages, userScrolledUp]);
+    viewport.addEventListener('scroll', handleScroll);
+    return () => viewport.removeEventListener('scroll', handleScroll);
+  }, [messages, userScrolledUp, scrollToBottom]);
 
   useEffect(() => {
     if (!isMenuOpen) {
