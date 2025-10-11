@@ -9,6 +9,8 @@ import { useParams } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
 import Image from 'next/image'
+import ReactMarkdown from 'react-markdown';
+
 
 import type { Message, Attachment, Contact } from '@/lib/types'
 import { cn } from '@/lib/utils'
@@ -172,6 +174,20 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   
   const highlightedText = useMemo(() => {
     if (!currentText) return null;
+
+    if (currentText.startsWith('[Broadcast]')) {
+        const markdownText = currentText.replace('[Broadcast]\n', '`Broadcast`\n');
+         return <ReactMarkdown
+                className="prose prose-sm prose-p:before:content-none prose-p:after:content-none dark:prose-invert"
+                 components={{
+                  p: ({node, ...props}) => <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }} {...props} />,
+                  a: ({node, ...props}) => <a className="text-blue-500 hover:underline" {...props} />
+                 }}
+               >
+                 {markdownText}
+               </ReactMarkdown>;
+    }
+
     if (!isSearchOpen || searchQuery.length <= 1) {
       return <LinkifiedText text={currentText} />;
     }
@@ -220,9 +236,9 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
           {renderMediaGrid()}
            {currentText && (
             <div className="px-2.5 pt-1.5">
-                <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+                <div className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
-                </p>
+                </div>
             </div>
           )}
           {docAttachments.map(renderDoc)}
@@ -1647,8 +1663,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
-
-    
-
