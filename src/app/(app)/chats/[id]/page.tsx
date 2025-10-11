@@ -1031,17 +1031,17 @@ export default function ChatPage() {
     if (chatDocRef && currentUserId) {
         const isTyping = currentText.length > 0;
         
-        // Update typing status only if it has changed
+        // Immediately update if status changes
         if (chat?.typing?.[currentUserId] !== isTyping) {
             updateDocumentNonBlocking(chatDocRef, { [`typing.${currentUserId}`]: isTyping });
         }
 
-        // Clear previous timeout if user is still typing
+        // Clear previous timeout
         if (typingTimeoutRef.current) {
             clearTimeout(typingTimeoutRef.current);
         }
 
-        // If user has stopped typing, set a timeout to update status
+        // Set a new timeout to set typing to false
         if (isTyping) {
             typingTimeoutRef.current = setTimeout(() => {
                 updateDocumentNonBlocking(chatDocRef, { [`typing.${currentUserId}`]: false });
@@ -1096,8 +1096,11 @@ export default function ChatPage() {
     }
     if (remoteUser?.lastSeen) {
       const minsSinceLastSeen = differenceInMinutes(new Date(), remoteUser.lastSeen.toDate());
-      if (minsSinceLastSeen <= 15) {
-        return `Active ${formatDistanceToNowStrict(remoteUser.lastSeen.toDate(), { addSuffix: true })}`;
+      if (minsSinceLastSeen < 1) {
+        return 'Active just now';
+      }
+      if (minsSinceLastSeen <= 5) {
+        return `Active a few minutes ago`;
       }
     }
     return '';
@@ -1626,3 +1629,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    

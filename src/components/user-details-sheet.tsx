@@ -44,12 +44,15 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
       return 'Active now';
     }
     if (contact.lastSeen) {
-      const minsSinceLastSeen = differenceInMinutes(new Date(), contact.lastSeen.toDate());
-      if (minsSinceLastSeen <= 15) {
-        return `Active ${formatDistanceToNowStrict(contact.lastSeen.toDate(), { addSuffix: true })}`;
-      }
+        const minsSinceLastSeen = differenceInMinutes(new Date(), contact.lastSeen.toDate());
+        if (minsSinceLastSeen < 1) {
+            return 'Active just now';
+        }
+        if (minsSinceLastSeen <= 5) {
+            return `Active a few minutes ago`;
+        }
     }
-    return ''; // Show nothing if offline for more than 15 mins
+    return ''; // Show nothing if offline for more than 5 mins
   }, [contact.status, contact.lastSeen]);
 
   const sharedMedia = React.useMemo(() => {
@@ -206,3 +209,5 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
     </>
   )
 }
+
+    
