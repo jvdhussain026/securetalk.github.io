@@ -422,11 +422,15 @@ export default function ChatPage() {
   }, []);
 
   const handleAutoTranslate = useCallback(async (messageToTranslate: Message) => {
-    if (!preferredLang || !contact?.liveTranslationEnabled || translatedMessages[messageToTranslate.id] || isTranslating === messageToTranslate.id) {
-      return;
-    }
-    
-    if (messageToTranslate.senderId !== currentUserId && messageToTranslate.text) {
+      if (!preferredLang || !contact?.liveTranslationEnabled || !messageToTranslate.text || messageToTranslate.senderId === currentUserId) {
+        return;
+      }
+      
+      // Check if it's already translated or is currently being translated
+      if (translatedMessages[messageToTranslate.id] || isTranslating === messageToTranslate.id) {
+          return;
+      }
+
       setIsTranslating(messageToTranslate.id);
       try {
         const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: preferredLang });
@@ -438,8 +442,8 @@ export default function ChatPage() {
       } finally {
         setIsTranslating(null);
       }
-    }
-  }, [preferredLang, contact?.liveTranslationEnabled, translatedMessages, isTranslating, currentUserId]);
+    }, [preferredLang, contact?.liveTranslationEnabled, currentUserId, isTranslating, translatedMessages]);
+
 
   
   useEffect(() => {
