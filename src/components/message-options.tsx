@@ -5,6 +5,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Reply, Copy, Trash2, Forward, Star, MoreHorizontal, Languages, Share2, Pencil } from 'lucide-react';
+import { differenceInHours } from 'date-fns';
 import type { Message } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -78,6 +79,7 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
   };
 
   const isMyMessage = message.senderId === user?.uid;
+  const canEdit = isMyMessage && !!message.text && differenceInHours(new Date(), message.timestamp.toDate()) < 3;
 
   const primaryItems = [
     { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: true },
@@ -87,7 +89,7 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
 
   const secondaryItems = [
     { label: 'Share', icon: Share2, action: handleShare, show: true },
-    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: isMyMessage && !!message.text },
+    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit },
     { label: message.isStarred ? 'Unstar' : 'Star', icon: Star, action: handleActionWithClose(onStar), show: true },
     { label: 'Copy', icon: Copy, action: handleActionWithClose(() => {
         if(message.text) {
