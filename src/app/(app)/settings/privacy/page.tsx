@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Lock, ChevronRight, UserCircle, Eye, MessageSquareText, Shield, UserX, Info, Users } from 'lucide-react';
+import { ArrowLeft, Lock, ChevronRight, UserCircle, Eye, MessageSquareText, Shield, UserX, Info, Users, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Switch } from '@/components/ui/switch';
@@ -50,6 +50,7 @@ export default function PrivacyPage() {
   const [typingIndicators, setTypingIndicators] = useState(true);
   const [showInNearby, setShowInNearby] = useState(true);
   const [showSecurityNotifs, setShowSecurityNotifs] = useState(true);
+  const [receiveBroadcast, setReceiveBroadcast] = useState(true);
 
   const handleComingSoon = () => {
     setIsModalOpen(true);
@@ -123,6 +124,13 @@ export default function PrivacyPage() {
                     description="If turned off, others won't see when you're typing."
                     isChecked={typingIndicators}
                     onCheckedChange={(checked) => handleToggle(setTypingIndicators, typingIndicators)}
+                />
+                 <PrivacyToggle 
+                    icon={Radio}
+                    title="Receive Broadcasts"
+                    description="Allow contacts to send you broadcast messages."
+                    isChecked={receiveBroadcast}
+                    onCheckedChange={(checked) => handleToggle(setReceiveBroadcast, receiveBroadcast)}
                 />
             </CardContent>
         </Card>

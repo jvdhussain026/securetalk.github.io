@@ -221,6 +221,7 @@ export default function ChatsPage() {
   
   const hasMissedCalls = useMemo(() => {
     if (!contacts) return false;
+    // This is a placeholder logic. In a real app, you'd have a separate call log.
     return contacts.some(c => c.call?.type === 'missed');
   }, [contacts]);
 
@@ -232,7 +233,11 @@ export default function ChatsPage() {
   ]
   
   const handleMenuClick = (action: 'newGroup' | 'newBroadcast' ) => {
-    setIsModalOpen(true);
+    if (action === 'newBroadcast') {
+      router.push('/broadcast/new');
+    } else {
+      setIsModalOpen(true);
+    }
   };
 
   const sortedContacts = useMemo(() => {
