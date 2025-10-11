@@ -36,13 +36,14 @@ export default function WallpaperPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     
-    const defaultWallpaper = ChatWallpapers[0]?.imageUrl || null;
+    const defaultWallpaper = null; // No background image by default
 
     useEffect(() => {
-        const savedWallpaper = localStorage.getItem('chatWallpaper') || defaultWallpaper;
-        setActiveWallpaper(savedWallpaper);
-        setSelectedWallpaper(savedWallpaper);
-    }, [defaultWallpaper]);
+        const savedWallpaper = localStorage.getItem('chatWallpaper');
+        const initialWallpaper = savedWallpaper === 'null' ? null : (savedWallpaper || defaultWallpaper);
+        setActiveWallpaper(initialWallpaper);
+        setSelectedWallpaper(initialWallpaper);
+    }, []);
 
     const handleSelectWallpaper = (wallpaperUrl: string | null) => {
         setSelectedWallpaper(wallpaperUrl);
@@ -83,9 +84,8 @@ export default function WallpaperPage() {
             localStorage.setItem('chatWallpaper', selectedWallpaper);
             toast({ title: 'Wallpaper Saved!', description: 'Your new wallpaper has been applied.' });
         } else {
-             // Handling case where 'Default' (null) is saved
             setActiveWallpaper(null);
-            localStorage.removeItem('chatWallpaper');
+            localStorage.setItem('chatWallpaper', 'null'); // Store 'null' string
             toast({ title: 'Wallpaper Reset!', description: 'Default chat background is active.' });
         }
     };
@@ -110,7 +110,7 @@ export default function WallpaperPage() {
                         <div 
                             className={cn(
                                 "relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-muted",
-                                !selectedWallpaper && "bg-chat" // Show default pattern if no image
+                                !selectedWallpaper && "bg-chat"
                             )}
                             style={ selectedWallpaper ? { backgroundImage: `url(${selectedWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                         >
@@ -144,8 +144,10 @@ export default function WallpaperPage() {
                                 <Check className="w-5 h-5" />
                             </div>
                         </div>
+                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <span className="text-white text-xs font-semibold">Default</span>
+                        </div>
                     </button>
-
 
                     {ChatWallpapers.map(wallpaper => (
                         <button key={wallpaper.id} onClick={() => handleSelectWallpaper(wallpaper.imageUrl)} className="relative aspect-square rounded-lg overflow-hidden group">
@@ -154,6 +156,9 @@ export default function WallpaperPage() {
                                 <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === wallpaper.imageUrl ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
                                     <Check className="w-5 h-5" />
                                 </div>
+                            </div>
+                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span className="text-white text-xs font-semibold">{wallpaper.name}</span>
                             </div>
                         </button>
                     ))}

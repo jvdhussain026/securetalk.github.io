@@ -39,55 +39,57 @@
   ],
   "chatWallpapers": [
     {
-      "id": "default",
-      "description": "Default pattern background",
-      "imageUrl": "data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239C92AC' fill-opacity='0.1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E",
-      "imageHint": "default pattern"
-    },
-    {
       "id": "wallpaper1",
+      "name": "Obsidian",
       "description": "Dark texture background",
       "imageUrl": "https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "dark texture"
     },
     {
       "id": "wallpaper2",
+      "name": "Emerald Forest",
       "description": "Soothing nature scene",
       "imageUrl": "https://images.unsplash.com/photo-1444930694458-01babf71870c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "nature forest"
     },
     {
       "id": "wallpaper3",
+      "name": "Aurora",
       "description": "Abstract gradient",
       "imageUrl": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "abstract gradient"
     },
     {
       "id": "wallpaper4",
+      "name": "Starlight",
       "description": "Night sky with stars",
       "imageUrl": "https://images.unsplash.com/photo-1506443432602-ac2fcd6f54e0?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "night sky"
     },
     {
       "id": "wallpaper5",
+      "name": "Watercolor",
       "description": "Geometric pattern",
       "imageUrl": "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?q=80&w=1912&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "geometric pattern"
     },
     {
       "id": "wallpaper6",
+      "name": "Ivory",
       "description": "Minimalist light pattern",
       "imageUrl": "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "white pattern"
     },
     {
       "id": "wallpaper7",
+      "name": "Pastel",
       "description": "Pastel colors",
       "imageUrl": "https://images.unsplash.com/photo-1525909002-1b05e0c869d8?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "pastel color"
     },
     {
       "id": "wallpaper8",
+      "name": "Alpine",
       "description": "Mountain range",
       "imageUrl": "https://images.unsplash.com/photo-1434394354979-a235cd36269d?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
       "imageHint": "mountain range"
