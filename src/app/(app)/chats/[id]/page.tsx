@@ -82,7 +82,6 @@ const LinkifiedText = ({ text }: { text: string }) => {
 
 type MessageContentProps = {
   message: Message;
-  isSender: boolean;
   isSearchOpen: boolean;
   searchQuery: string;
   searchMatches: { messageId: string, index: number }[];
@@ -92,7 +91,7 @@ type MessageContentProps = {
   onShowOriginal: () => void;
 };
 
-function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
+function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
   const { attachments = [], text } = message;
   const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
   const docAttachments = attachments.filter(a => a.type === 'document');
@@ -219,19 +218,10 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
       <div className="space-y-2" style={{ wordBreak: 'break-word' }}>
           {renderMediaGrid()}
            {currentText && (
-            <div className="flex items-end flex-wrap px-3 pt-2 pb-1">
+            <div className="px-3 pt-2 pb-1">
                 <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
                 </p>
-                <span className={cn(
-                    "text-xs relative shrink-0 bottom-0 right-0 ml-2 flex items-center gap-1.5", 
-                    isSender ? "text-primary-foreground/70" : "text-muted-foreground")
-                }>
-                  {translatedText && <Languages className="h-3.5 w-3.5" />}
-                  {message.isEdited && <span>Edited</span>}
-                  {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
-                  {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
-                </span>
             </div>
           )}
           {docAttachments.map(renderDoc)}
@@ -1193,7 +1183,7 @@ export default function ChatPage() {
     return (
       <div 
         ref={el => { if (el) messageRefs.current[message.id] = el }}
-        className="flex items-end gap-2 relative group"
+        className="flex flex-col group"
         onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
         onTouchStart={() => handleTouchStart(message)}
         onTouchEnd={handleTouchEnd}
@@ -1218,11 +1208,11 @@ export default function ChatPage() {
                 style={{ x }}
                 animate={controls}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="max-w-[75%] lg:max-w-[65%]"
+                className="max-w-[75%] lg:max-w-[65%] relative"
             >
               <div
                   className={cn(
-                      "p-1 space-y-1 relative shadow text-sm", 
+                      "p-1 space-y-1 shadow text-sm", 
                       isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
                   )}
               >
@@ -1236,7 +1226,6 @@ export default function ChatPage() {
                   ) : (
                     <MessageContent
                       message={message}
-                      isSender={isSender}
                       isSearchOpen={isSearchOpen}
                       searchQuery={searchQuery}
                       searchMatches={searchMatches}
@@ -1253,13 +1242,22 @@ export default function ChatPage() {
                     />
                   )}
                 </div>
-                {message.isStarred && isSender && (
+              </div>
+               {message.isStarred && isSender && (
                     <div className="absolute -bottom-1 -right-2 text-yellow-400">
                         <Star className="h-3.5 w-3.5 fill-yellow-400" />
                     </div>
                 )}
-              </div>
             </motion.div>
+        </div>
+        <div className={cn(
+            "text-xs mt-1 flex items-center gap-1.5", 
+            isSender ? "text-primary-foreground/70 self-end" : "text-muted-foreground self-start")
+        }>
+            {translatedText && <Languages className="h-3.5 w-3.5" />}
+            {message.isEdited && <span>Edited</span>}
+            {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
+            {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
         </div>
       </div>
     );
@@ -1428,7 +1426,7 @@ export default function ChatPage() {
 
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
-            <div className="p-4 space-y-4">
+            <div className="p-4 space-y-6">
               {filteredMessages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
@@ -1652,7 +1650,3 @@ export default function ChatPage() {
     </>
   )
 }
-
-    
-
-    
