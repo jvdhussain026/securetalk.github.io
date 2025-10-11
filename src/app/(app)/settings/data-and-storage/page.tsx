@@ -33,13 +33,12 @@ export default function DataAndStoragePage() {
 
   // Placeholder data
   const storageData = {
-    total: 1000, // MB
     used: 450, // MB
     breakdown: [
-      { name: 'Photos', size: '150 MB', icon: ImageIcon, color: 'text-pink-500' },
-      { name: 'Videos', size: '220 MB', icon: Video, color: 'text-purple-500' },
-      { name: 'Audio Messages', size: '30 MB', icon: Music, color: 'text-blue-500' },
-      { name: 'Documents', size: '50 MB', icon: FileText, color: 'text-green-500' },
+      { name: 'Photos', size: '150 MB', value: 150, icon: ImageIcon, color: 'bg-pink-500' },
+      { name: 'Videos', size: '220 MB', value: 220, icon: Video, color: 'bg-purple-500' },
+      { name: 'Audio Messages', size: '30 MB', value: 30, icon: Music, color: 'bg-blue-500' },
+      { name: 'Documents', size: '50 MB', value: 50, icon: FileText, color: 'bg-green-500' },
     ],
   };
 
@@ -50,6 +49,7 @@ export default function DataAndStoragePage() {
       description: `All ${clearCategory.toLowerCase()} have been removed from this device. (This is a simulation)`,
     });
     setClearCategory(null);
+    setManageStorageOpen(false); // Close the main dialog after action
   };
   
   const handleResetTour = () => {
@@ -85,19 +85,26 @@ export default function DataAndStoragePage() {
                 <HardDrive className="w-6 h-6" />
                 <CardTitle>Storage Usage</CardTitle>
               </div>
+               <CardDescription>
+                A breakdown of media stored on this device.
+              </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="flex items-end justify-between mb-2">
                 <div>
                   <span className="text-2xl font-bold">{storageData.used} MB</span>
-                  <span className="text-muted-foreground"> / {storageData.total} MB</span>
+                  <span className="text-muted-foreground"> Total Used</span>
                 </div>
               </div>
-              <Progress value={(storageData.used / storageData.total) * 100} className="mb-4" />
+              <div className="flex h-2 rounded-full overflow-hidden bg-muted my-4">
+                {storageData.breakdown.map((item) => (
+                    <div key={item.name} className={item.color} style={{ width: `${(item.value / storageData.used) * 100}%` }} />
+                ))}
+              </div>
               <div className="space-y-3">
                 {storageData.breakdown.map((item) => (
                   <div key={item.name} className="flex items-center">
-                    <item.icon className={`w-5 h-5 mr-3 ${item.color}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full mr-3 ${item.color}`} />
                     <span className="flex-1">{item.name}</span>
                     <span className="font-medium">{item.size}</span>
                   </div>
