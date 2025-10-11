@@ -1183,13 +1183,13 @@ export default function ChatPage() {
     return (
       <div 
         ref={el => { if (el) messageRefs.current[message.id] = el }}
-        className="flex flex-col group"
+        className="flex flex-col group w-full"
         onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
         onTouchStart={() => handleTouchStart(message)}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchEnd}
       >
-        <div className={cn("w-full flex", isSender ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full", isSender ? "justify-end" : "justify-start")}>
             <motion.div
                 style={{ opacity: backgroundOpacity }}
                 className={cn(
@@ -1217,7 +1217,8 @@ export default function ChatPage() {
                   )}
               >
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
-                <div className={cn("min-w-[100px]", (repliedToMessage) ? "pt-1" : "")}>
+                
+                <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
                   {isTranslating.has(message.id) ? (
                     <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-sm text-muted-foreground">
                       <LoaderCircle className="h-4 w-4 animate-spin"/>
@@ -1241,23 +1242,16 @@ export default function ChatPage() {
                       }}
                     />
                   )}
+                   <div className="self-end flex items-center gap-1.5 p-1 text-xs">
+                        {translatedText && <Languages className={cn("h-3.5 w-3.5", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')} />}
+                        {message.isEdited && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>Edited</span>}
+                        {message.timestamp && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{format(message.timestamp.toDate(), 'p')}</span>}
+                        {message.isStarred && <Star className={cn("h-3 w-3", isSender ? 'text-yellow-300 fill-yellow-300': 'text-yellow-400 fill-yellow-400')} />}
+                  </div>
                 </div>
+
               </div>
-               {message.isStarred && isSender && (
-                    <div className="absolute -bottom-1 -right-2 text-yellow-400">
-                        <Star className="h-3.5 w-3.5 fill-yellow-400" />
-                    </div>
-                )}
             </motion.div>
-        </div>
-        <div className={cn(
-            "text-xs mt-1 flex items-center gap-1.5", 
-            isSender ? "text-primary-foreground/70 self-end" : "text-muted-foreground self-start")
-        }>
-            {translatedText && <Languages className="h-3.5 w-3.5" />}
-            {message.isEdited && <span>Edited</span>}
-            {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
-            {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
         </div>
       </div>
     );
@@ -1650,3 +1644,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
