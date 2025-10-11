@@ -71,13 +71,14 @@
 
 @layer components {
   .bg-chat {
-    background-color: hsl(var(--muted));
+    background-color: hsl(var(--muted) / 0.5);
     background-image: var(--chat-wallpaper-url);
     background-size: cover;
     background-position: center;
     background-blend-mode: overlay;
   }
   .dark .bg-chat {
+    background-color: hsl(var(--muted) / 0.7);
     background-blend-mode: luminosity;
   }
 }
