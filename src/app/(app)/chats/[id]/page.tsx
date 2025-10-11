@@ -219,7 +219,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
       <div className="space-y-2" style={{ wordBreak: 'break-word' }}>
           {renderMediaGrid()}
            {currentText && (
-            <div className="px-3 pt-2 pb-1">
+            <div className="px-3 pt-2">
                 <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
                 </p>
@@ -232,7 +232,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
               Translated. Tap to see original.
             </button>
           )}
-           <div className={cn("flex items-center gap-1.5 p-1 text-xs", isSender ? 'self-end' : 'self-start')}>
+           <div className={cn("flex items-center gap-1.5 px-3 pb-1.5 text-xs", isSender ? 'self-end' : 'self-start')}>
                 {translatedText && <Languages className={cn("h-3.5 w-3.5", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')} />}
                 {message.isEdited && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>Edited</span>}
                 {message.timestamp && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{format(message.timestamp.toDate(), 'p')}</span>}
@@ -1111,22 +1111,22 @@ export default function ChatPage() {
 
 
   const getStatusText = () => {
-    if (chat?.typing?.[contactId]) {
-      return <span className="text-primary animate-pulse">Typing...</span>;
-    }
-    if (remoteUser?.status === 'online') {
-      return 'Active now';
-    }
-    if (remoteUser?.lastSeen) {
-      const minsSinceLastSeen = differenceInMinutes(new Date(), remoteUser.lastSeen.toDate());
-      if (minsSinceLastSeen < 1) {
-        return 'Active just now';
+      if (chat?.typing?.[contactId]) {
+        return <span className="text-primary animate-pulse">Typing...</span>;
       }
-      if (minsSinceLastSeen <= 5) {
-        return `Active a few minutes ago`;
+      if (remoteUser?.status === 'online') {
+        return 'Active now';
       }
-    }
-    return '';
+      if (remoteUser?.lastSeen) {
+        const minsSinceLastSeen = differenceInMinutes(new Date(), remoteUser.lastSeen.toDate());
+        if (minsSinceLastSeen < 1) {
+          return 'Active just now';
+        }
+        if (minsSinceLastSeen <= 5) {
+          return `Active a few minutes ago`;
+        }
+      }
+      return '';
   }
 
 
@@ -1219,8 +1219,9 @@ export default function ChatPage() {
             >
               <div
                   className={cn(
-                      "p-1 space-y-1 shadow text-sm flex flex-col", 
+                      "shadow text-sm flex flex-col", 
                       isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
+                      (message.attachments && message.attachments.length > 0 && !message.text) ? "" : "p-1"
                   )}
               >
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
