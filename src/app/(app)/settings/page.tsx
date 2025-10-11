@@ -6,10 +6,12 @@ import { ArrowLeft, ChevronRight, User, Bell, Palette, Languages, HardDrive, Loc
 import { Button } from '@/components/ui/button';
 import { useFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
 
 const SettingsItem = ({ href, icon: Icon, title }: { href: string, icon: React.ElementType, title: string }) => {
     return (
-        <Link href={href} className="flex items-center p-4 hover:bg-accent/50 transition-colors rounded-lg">
+        <Link href={href} className="flex items-center p-4 hover:bg-accent/50 transition-colors">
             <Icon className="h-6 w-6 mr-4 text-muted-foreground" />
             <span className="flex-1 font-medium">{title}</span>
             <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -26,7 +28,6 @@ export default function SettingsPage() {
         { href: '/settings/translation', icon: Languages, title: 'Translation' },
         { href: '/settings/data-and-storage', icon: HardDrive, title: 'Data & Storage' },
         { href: '/settings/privacy', icon: Lock, title: 'Privacy' },
-        { href: '/settings/security', icon: Shield, title: 'Security' },
     ];
 
     const aboutAndSupport = [
@@ -70,23 +71,31 @@ export default function SettingsPage() {
             </Link>
         )}
 
-        <div>
-            <h2 className="px-4 pb-2 font-semibold text-muted-foreground">General Settings</h2>
-            <div className="rounded-lg bg-card divide-y">
-                {generalSettings.map((item) => (
-                    <SettingsItem key={item.title} {...item} />
-                ))}
-            </div>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>General Settings</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+                <div className="divide-y">
+                    {generalSettings.map((item) => (
+                        <SettingsItem key={item.title} {...item} />
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
         
-        <div>
-            <h2 className="px-4 pb-2 font-semibold text-muted-foreground">About & Support</h2>
-            <div className="rounded-lg bg-card divide-y">
-                {aboutAndSupport.map((item) => (
-                    <SettingsItem key={item.title} {...item} />
-                ))}
-            </div>
-        </div>
+        <Card>
+            <CardHeader>
+                <CardTitle>About & Support</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+                <div className="divide-y">
+                    {aboutAndSupport.map((item) => (
+                        <SettingsItem key={item.title} {...item} />
+                    ))}
+                </div>
+            </CardContent>
+        </Card>
 
       </main>
     </div>
