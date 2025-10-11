@@ -216,7 +216,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
 
 
   return (
-      <div className="flex flex-col">
+      <div className={cn("flex flex-col", (mediaAttachments.length > 0 && !text) ? "" : "p-1")}>
           {renderMediaGrid()}
            {currentText && (
             <div className="px-2.5 pt-1.5">
@@ -1438,7 +1438,7 @@ export default function ChatPage() {
                                 <div className="w-full border-t border-primary/50" />
                             </div>
                             <div className="relative flex justify-center">
-                                <span className="bg-chat px-2 text-sm font-medium text-primary">
+                                <span className="bg-card px-2 text-sm font-medium text-primary">
                                 {unreadCountOnLoad} New Message{unreadCountOnLoad > 1 ? 's' : ''}
                                 </span>
                             </div>
@@ -1651,3 +1651,4 @@ export default function ChatPage() {
     
 
     
+
