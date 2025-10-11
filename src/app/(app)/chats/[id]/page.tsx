@@ -377,6 +377,10 @@ export default function ChatPage() {
   const longPressTimerRef = useRef<NodeJS.Timeout | null>(null);
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
   const prevMessagesCountRef = useRef(messages?.length || 0);
+  
+  const userScrolledUpRef = useRef(false);
+  const unreadDividerRef = useRef<HTMLDivElement>(null);
+  const initialScrollDoneRef = useRef(false);
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -476,14 +480,45 @@ export default function ChatPage() {
   }, []);
 
 
-  useEffect(() => {
-    if (scrollAreaRef.current && !isSearchOpen) {
-      const viewport = scrollAreaRef.current.querySelector('div[data-radix-scroll-area-viewport]');
-      if (viewport) {
-        viewport.scrollTop = viewport.scrollHeight;
-      }
-    }
-  }, [messages, isSearchOpen])
+    useEffect(() => {
+        const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+        if (!viewport) return;
+
+        // Only perform initial scroll once
+        if (messages && !initialScrollDoneRef.current) {
+            if (unreadDividerRef.current) {
+                unreadDividerRef.current.scrollIntoView({ block: 'center' });
+            } else {
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+            initialScrollDoneRef.current = true;
+            return;
+        }
+
+        const handleScroll = () => {
+            const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
+            userScrolledUpRef.current = !isScrolledToBottom;
+        };
+
+        handleScroll(); // Check initial position
+        viewport.addEventListener('scroll', handleScroll);
+
+        return () => viewport.removeEventListener('scroll', handleScroll);
+    }, [messages]);
+    
+    
+    useEffect(() => {
+        const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+        if (!viewport || !messages) return;
+    
+        // If the user has not scrolled up, auto-scroll to the bottom
+        if (!userScrolledUpRef.current && !isSearchOpen) {
+             // Use requestAnimationFrame to ensure the scroll happens after the new message is rendered
+            requestAnimationFrame(() => {
+                 viewport.scrollTop = viewport.scrollHeight;
+            });
+        }
+    }, [messages, isSearchOpen]);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -1258,7 +1293,7 @@ export default function ChatPage() {
                 return (
                     <React.Fragment key={message.id}>
                     {showDivider && (
-                        <div className="relative text-center my-4">
+                        <div ref={unreadDividerRef} className="relative text-center my-4">
                             <div className="absolute inset-0 flex items-center" aria-hidden="true">
                                 <div className="w-full border-t border-primary/50" />
                             </div>
