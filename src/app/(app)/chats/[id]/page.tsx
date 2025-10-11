@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -354,7 +355,7 @@ export default function ChatPage() {
   const [isLangSelectOpen, setIsLangSelectOpen] = useState(false);
   const [preferredLang, setPreferredLang] = useState<string | null>(null);
   const [translatedMessages, setTranslatedMessages] = useState<Record<string, string>>({});
-  const [isTranslating, setIsTranslating] = useState<string | null>(null);
+  const [isTranslating, setIsTranslating] = useState<Set<string>>(new Set());
   
   const [showOutboundTranslate, setShowOutboundTranslate] = useState(false);
   const [isOutboundTranslating, setIsOutboundTranslating] = useState(false);
@@ -427,11 +428,11 @@ export default function ChatPage() {
       }
       
       // Check if it's already translated or is currently being translated
-      if (translatedMessages[messageToTranslate.id] || isTranslating === messageToTranslate.id) {
+      if (translatedMessages[messageToTranslate.id] || isTranslating.has(messageToTranslate.id)) {
           return;
       }
 
-      setIsTranslating(messageToTranslate.id);
+      setIsTranslating(prev => new Set(prev).add(messageToTranslate.id));
       try {
         const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: preferredLang });
         if (result.translatedText) {
@@ -440,9 +441,13 @@ export default function ChatPage() {
       } catch (error) {
         console.error("Auto-translation error:", error);
       } finally {
-        setIsTranslating(null);
+        setIsTranslating(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(messageToTranslate.id);
+          return newSet;
+        });
       }
-    }, [preferredLang, contact?.liveTranslationEnabled, currentUserId, isTranslating, translatedMessages]);
+    }, [preferredLang, contact?.liveTranslationEnabled, currentUserId]); // Removed isTranslating and translatedMessages
 
 
   
@@ -500,9 +505,14 @@ export default function ChatPage() {
 
     if (!initialScrollDoneRef.current) {
       if (unreadDividerRef.current) {
-        unreadDividerRef.current.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        unreadDividerRef.current.scrollIntoView({ block: 'center' });
+        // Use a timeout to ensure smooth scrolling is complete before attaching the listener
+        setTimeout(() => {
+            viewport.addEventListener('scroll', handleScroll);
+        }, 1000);
       } else {
         scrollToBottom();
+        viewport.addEventListener('scroll', handleScroll);
       }
       initialScrollDoneRef.current = true;
     } else {
@@ -510,10 +520,15 @@ export default function ChatPage() {
         scrollToBottom();
       }
     }
+    
+    // Make sure to add the listener if it's not the initial scroll
+    if (initialScrollDoneRef.current) {
+         viewport.addEventListener('scroll', handleScroll);
+    }
 
-    viewport.addEventListener('scroll', handleScroll);
     return () => viewport.removeEventListener('scroll', handleScroll);
-  }, [messages, userScrolledUp, scrollToBottom]);
+}, [messages, userScrolledUp, scrollToBottom]);
+
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -919,7 +934,7 @@ export default function ChatPage() {
       return;
     }
 
-    setIsTranslating(selectedMessage.id);
+    setIsTranslating(prev => new Set(prev).add(selectedMessage.id));
     try {
       const result = await translateMessage({ text: selectedMessage.text, targetLanguage: langToUse });
       if (result.translatedText) {
@@ -929,7 +944,11 @@ export default function ChatPage() {
       console.error("Translation error:", error);
       toast({ variant: 'destructive', title: 'Translation failed', description: 'Could not translate the message.' });
     } finally {
-      setIsTranslating(null);
+        setIsTranslating(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(selectedMessage.id);
+            return newSet;
+        });
     }
   };
 
@@ -1314,7 +1333,7 @@ export default function ChatPage() {
                     )}>
                         <ReplyPreview message={repliedToMessage} isSender={message.senderId === currentUserId} contactName={contact.name} />
                         <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
-                          {isTranslating === message.id ? (
+                          {isTranslating.has(message.id) ? (
                             <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
                               <LoaderCircle className="h-4 w-4 animate-spin"/>
                               <span>Translating...</span>
