@@ -17,13 +17,23 @@ function ChatPreview() {
     return (
         <div className="p-4 space-y-4">
             <div className="flex justify-end">
-                <div className="bg-primary text-primary-foreground text-sm p-3 rounded-l-xl rounded-t-xl max-w-[70%] shadow-md">
-                    This is how your chat wallpaper will look!
+                <div className="bg-primary text-primary-foreground text-sm shadow-md rounded-l-xl rounded-t-xl max-w-[70%]">
+                    <div className="px-2.5 pt-1.5">
+                        <p>This is how your chat wallpaper will look!</p>
+                        <div className="flex items-center justify-end gap-1.5 text-primary-foreground/70 text-xs pt-1 pb-1">
+                            <span>10:30 AM</span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div className="flex justify-start">
-                 <div className="bg-card text-card-foreground text-sm p-3 rounded-r-xl rounded-t-xl max-w-[70%] shadow-md">
-                    Looks great!
+                 <div className="bg-card text-card-foreground text-sm shadow-md rounded-r-xl rounded-t-xl max-w-[70%]">
+                    <div className="px-2.5 pt-1.5">
+                        <p>Looks great!</p>
+                         <div className="flex items-center justify-end gap-1.5 text-muted-foreground text-xs pt-1 pb-1">
+                            <span>10:31 AM</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
