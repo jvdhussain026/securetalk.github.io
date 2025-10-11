@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio } from 'lucide-react'
 import { useParams } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -52,6 +52,7 @@ import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
+import { Separator } from '@/components/ui/separator'
 
 
 const LinkifiedText = ({ text }: { text: string }) => {
@@ -175,19 +176,6 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   const highlightedText = useMemo(() => {
     if (!currentText) return null;
 
-    if (currentText.startsWith('[Broadcast]')) {
-        const markdownText = currentText.replace('[Broadcast]\n', '`Broadcast`\n');
-         return <ReactMarkdown
-                className="prose prose-sm prose-p:before:content-none prose-p:after:content-none dark:prose-invert"
-                 components={{
-                  p: ({node, ...props}) => <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }} {...props} />,
-                  a: ({node, ...props}) => <a className="text-blue-500 hover:underline" {...props} />
-                 }}
-               >
-                 {markdownText}
-               </ReactMarkdown>;
-    }
-
     if (!isSearchOpen || searchQuery.length <= 1) {
       return <LinkifiedText text={currentText} />;
     }
@@ -229,6 +217,28 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
       </>
     );
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
+  
+  if (currentText && currentText.startsWith('[Broadcast]')) {
+    const parts = currentText.replace('[Broadcast]\n', '').split('\n\n');
+    const title = parts[0].replace(/\*\*/g, '');
+    const body = parts.slice(1).join('\n\n');
+
+    return (
+        <div className="p-2.5">
+            <div className="flex items-center gap-2 mb-2">
+                <Radio className="h-5 w-5 text-primary"/>
+                <h3 className="font-bold text-base">Broadcast</h3>
+            </div>
+            <Separator className="bg-primary/20" />
+            <div className="pt-2">
+                <h4 className="font-bold text-lg mb-1">{title}</h4>
+                <div className="whitespace-pre-wrap text-sm" style={{ wordBreak: 'break-word' }}>
+                    {body}
+                </div>
+            </div>
+        </div>
+    );
+  }
 
 
   return (
