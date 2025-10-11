@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -31,7 +32,7 @@ import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-p
 import { AttachmentOptions } from '@/components/attachment-options'
 import { AudioPlayer } from '@/components/audio-player'
 import { DeleteMessageDialog } from '@/components/delete-message-dialog'
-import { AnimatePresence, motion } from 'framer-motion'
+import { AnimatePresence, motion, useAnimation, useMotionValue, useTransform } from 'framer-motion'
 import { ChatSearch } from '@/components/chat-search'
 import { LanguageSelectDialog } from '@/components/language-select-dialog'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
@@ -447,7 +448,7 @@ export default function ChatPage() {
           return newSet;
         });
       }
-    }, [preferredLang, contact?.liveTranslationEnabled, currentUserId]); // Removed isTranslating and translatedMessages
+    }, [preferredLang, contact?.liveTranslationEnabled, currentUserId, translatedMessages, isTranslating]);
 
 
   
@@ -470,7 +471,7 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    messages?.forEach(handleAutoTranslate);
+    messages?.forEach(msg => handleAutoTranslate(msg));
   }, [messages, handleAutoTranslate]);
 
   useEffect(() => {
@@ -847,9 +848,8 @@ export default function ChatPage() {
     }
   }
 
-  const handleReply = () => {
-    if (!selectedMessage) return;
-    setReplyingTo(selectedMessage);
+  const handleReply = (message: Message) => {
+    setReplyingTo(message);
     setIsMessageOptionsOpen(false);
     contentEditableRef.current?.focus();
   }
@@ -1135,6 +1135,104 @@ export default function ChatPage() {
 
   const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
+  const MessageItem = ({ message, repliedToMessage, translatedText, messageIndex }: { message: Message, repliedToMessage?: Message, translatedText?: string, messageIndex: number }) => {
+    const x = useMotionValue(0);
+    const controls = useAnimation();
+    const isSender = message.senderId === currentUserId;
+  
+    const onDragEnd = (event: any, info: any) => {
+      const dragThreshold = isSender ? -50 : 50;
+      if ((isSender && info.offset.x < dragThreshold) || (!isSender && info.offset.x > dragThreshold)) {
+        handleReply(message);
+      }
+      controls.start({ x: 0 });
+    };
+  
+    const backgroundOpacity = useTransform(
+      x,
+      isSender ? [-100, 0] : [0, 100],
+      [1, 0]
+    );
+  
+    return (
+      <div className="relative">
+        <motion.div
+          style={{ opacity: backgroundOpacity }}
+          className={cn(
+            "absolute inset-y-0 flex items-center",
+            isSender ? "right-full mr-2" : "left-full ml-2"
+          )}
+        >
+          <Reply className="h-5 w-5 text-muted-foreground" />
+        </motion.div>
+        <motion.div
+          drag="x"
+          dragConstraints={isSender ? { left: 0, right: 0 } : { left: 0, right: 100 }}
+          onDragEnd={onDragEnd}
+          style={{ x }}
+          animate={controls}
+          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+          className={cn("flex items-end gap-2", isSender ? "justify-end" : "justify-start")}
+          onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
+          onTouchStart={() => handleTouchStart(message)}
+          onTouchEnd={handleTouchEnd}
+          onTouchMove={handleTouchEnd}
+        >
+          <div 
+            ref={el => { if (el) messageRefs.current[message.id] = el }}
+          >
+            <div className={cn(
+                "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
+                isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
+                (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
+            )}>
+              <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
+              <div className={cn((repliedToMessage) ? "p-2" : "", (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
+                {isTranslating.has(message.id) ? (
+                  <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
+                    <LoaderCircle className="h-4 w-4 animate-spin"/>
+                    <span>Translating...</span>
+                  </div>
+                ) : (
+                  <MessageContent
+                    message={message}
+                    isSearchOpen={isSearchOpen}
+                    searchQuery={searchQuery}
+                    searchMatches={searchMatches}
+                    currentMatchIndex={currentMatchIndex}
+                    onMediaClick={handleMediaClick}
+                    translatedText={translatedText}
+                    onShowOriginal={() => {
+                      setTranslatedMessages(prev => {
+                        const newTranslations = {...prev};
+                        delete newTranslations[message.id];
+                        return newTranslations;
+                      });
+                    }}
+                  />
+                )}
+                <ClientOnly>
+                  <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                    {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
+                    {message.isEdited && <Pencil className="h-3 w-3" />}
+                    {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
+                    {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
+                  </div>
+                </ClientOnly>
+              </div>
+              {message.isStarred && isSender && (
+                  <div className="absolute -bottom-1 -right-2 text-yellow-400">
+                      <Star className="h-3.5 w-3.5 fill-yellow-400" />
+                  </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
+      </div>
+    );
+  };
+
+
   return (
     <>
       <div className="flex flex-col h-full bg-chat">
@@ -1318,60 +1416,12 @@ export default function ChatPage() {
                             </div>
                         </div>
                     )}
-                  <div 
-                    ref={el => { if(el) messageRefs.current[message.id] = el }}
-                    className={cn("flex items-end gap-2", message.senderId === currentUserId ? "justify-end" : "justify-start")}
-                    onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
-                    onTouchStart={() => handleTouchStart(message)}
-                    onTouchEnd={handleTouchEnd}
-                    onTouchMove={handleTouchEnd} // Cancel on scroll
-                  >
-                    <div className={cn(
-                      "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
-                      message.senderId === currentUserId ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                       (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
-                    )}>
-                        <ReplyPreview message={repliedToMessage} isSender={message.senderId === currentUserId} contactName={contact.name} />
-                        <div className={cn((repliedToMessage) ? "p-2" : "",  (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
-                          {isTranslating.has(message.id) ? (
-                            <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
-                              <LoaderCircle className="h-4 w-4 animate-spin"/>
-                              <span>Translating...</span>
-                            </div>
-                          ) : (
-                            <MessageContent
-                              message={message}
-                              isSearchOpen={isSearchOpen}
-                              searchQuery={searchQuery}
-                              searchMatches={searchMatches}
-                              currentMatchIndex={currentMatchIndex}
-                              onMediaClick={handleMediaClick}
-                              translatedText={translatedText}
-                              onShowOriginal={() => {
-                                setTranslatedMessages(prev => {
-                                  const newTranslations = {...prev};
-                                  delete newTranslations[message.id];
-                                  return newTranslations;
-                                });
-                              }}
-                            />
-                          )}
-                          <ClientOnly>
-                            <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", message.senderId === currentUserId ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                              {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
-                              {message.isEdited && <Pencil className="h-3 w-3" />}
-                              {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
-                              {message.isStarred && message.senderId !== currentUserId && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
-                            </div>
-                          </ClientOnly>
-                        </div>
-                         {message.isStarred && message.senderId === currentUserId && (
-                            <div className="absolute -bottom-1 -left-2 text-yellow-400">
-                                <Star className="h-3.5 w-3.5 fill-yellow-400" />
-                            </div>
-                        )}
-                    </div>
-                  </div>
+                     <MessageItem
+                        message={message}
+                        repliedToMessage={repliedToMessage}
+                        translatedText={translatedText}
+                        messageIndex={messageIndex}
+                      />
                   </React.Fragment>
                 );
               })}
@@ -1500,7 +1550,7 @@ export default function ChatPage() {
             message={selectedMessage}
             onDelete={openDeleteDialog}
             onEdit={handleEdit}
-            onReply={handleReply}
+            onReply={() => handleReply(selectedMessage)}
             onStar={handleToggleStar}
             onTranslate={triggerInboundTranslate}
             isTranslated={!!translatedMessages[selectedMessage.id]}
