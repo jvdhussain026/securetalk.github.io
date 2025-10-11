@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, HardDrive, ChevronRight, Image as ImageIcon, Video, FileText, Music, Wifi, Signal, Phone, Trash2 } from 'lucide-react';
+import { ArrowLeft, HardDrive, ChevronRight, Image as ImageIcon, Video, FileText, Music, Wifi, Signal, Phone, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
@@ -21,9 +21,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { useFirebase } from '@/firebase';
+import { useRouter } from 'next/navigation';
 
 export default function DataAndStoragePage() {
   const { toast } = useToast();
+  const { user } = useFirebase();
+  const router = useRouter();
   const [manageStorageOpen, setManageStorageOpen] = useState(false);
   const [clearCategory, setClearCategory] = useState<string | null>(null);
 
@@ -47,6 +51,19 @@ export default function DataAndStoragePage() {
     });
     setClearCategory(null);
   };
+  
+  const handleResetTour = () => {
+      if (user) {
+          localStorage.removeItem(`onboarding_completed_${user.uid}`);
+          toast({ title: 'Onboarding Tour Reset', description: 'The tour will start the next time you open the app.' });
+          router.push('/chats');
+          router.refresh();
+      }
+  };
+  
+  const handleResetData = () => {
+      toast({ title: 'This feature is not yet implemented.' });
+  }
 
   return (
     <>
@@ -156,6 +173,52 @@ export default function DataAndStoragePage() {
                 </div>
             </CardContent>
           </Card>
+
+          <div>
+            <h2 className="px-4 pb-2 font-semibold text-destructive">Danger Zone</h2>
+             <div className="rounded-lg bg-card p-4 space-y-3 border border-destructive/50">
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="w-full justify-between">
+                            <span>Reset Onboarding Tour</span>
+                            <RefreshCw className="h-5 w-5" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Reset Onboarding Tour?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to see the initial onboarding tour again?
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetTour}>Yes, Reset</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                         <Button variant="destructive" className="w-full justify-between">
+                            <span>Reset All App Data</span>
+                            <Trash2 className="h-5 w-5" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete all your app data, including chats and connections, from our servers.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleResetData} className="bg-destructive hover:bg-destructive/90">Yes, delete everything</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+             </div>
+        </div>
 
         </main>
       </div>
