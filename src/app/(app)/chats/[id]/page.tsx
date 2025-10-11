@@ -57,7 +57,7 @@ const LinkifiedText = ({ text }: { text: string }) => {
     const parts = text.split(urlRegex);
 
     return (
-        <p className="text-sm px-2 pt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+        <p className="text-sm px-3 pt-2 pb-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
             {parts.map((part, index) => {
                 if (part.match(urlRegex)) {
                     return (
@@ -179,7 +179,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
     const parts = currentText.split(regex);
 
     return (
-      <p className="text-sm px-2 pt-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+      <p className="text-sm px-3 pt-2 pb-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
         {parts.map((part, i) => {
           if (i % 2 === 1) { // It's a match
             const isCurrent = searchMatches.some(
@@ -221,7 +221,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
           {docAttachments.map(renderDoc)}
           {audioAttachments.map(renderAudio)}
           {translatedText && (
-            <button onClick={onShowOriginal} className="text-xs pt-2 px-2 text-primary/80 hover:underline">
+            <button onClick={onShowOriginal} className="text-xs pt-2 px-3 text-primary/80 hover:underline">
               Translated. Tap to see original.
             </button>
           )}
@@ -1182,13 +1182,13 @@ export default function ChatPage() {
     return (
       <div 
         ref={el => { if (el) messageRefs.current[message.id] = el }}
-        className="flex items-end gap-2 relative"
+        className="flex items-end gap-2 relative group"
         onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
         onTouchStart={() => handleTouchStart(message)}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchEnd}
       >
-        <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
+        <div className={cn("w-full flex", isSender ? "justify-end" : "justify-start")}>
             <motion.div
                 style={{ opacity: backgroundOpacity }}
                 className={cn(
@@ -1201,24 +1201,24 @@ export default function ChatPage() {
             
             <motion.div
                 drag="x"
-                dragConstraints={isSender ? { left: 0, right: 0 } : { left: 0, right: 100 }}
+                dragConstraints={isSender ? { left: -100, right: 0 } : { left: 0, right: 100 }}
+                dragElastic={0.2}
                 onDragEnd={onDragEnd}
                 style={{ x }}
                 animate={controls}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="w-full flex"
+                className="max-w-[75%] lg:max-w-[65%]"
             >
               <div
                   className={cn(
-                      "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
-                      isSender ? "bg-primary text-primary-foreground ml-auto" : "bg-card border shadow-sm",
-                      (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
+                      "p-1 space-y-1 relative shadow", 
+                      isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
                   )}
               >
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
-                <div className={cn((repliedToMessage) ? "p-2" : "", (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
+                <div className={cn((repliedToMessage) ? "pt-1" : "")}>
                   {isTranslating.has(message.id) ? (
-                    <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-sm text-muted-foreground">
                       <LoaderCircle className="h-4 w-4 animate-spin"/>
                       <span>Translating...</span>
                     </div>
@@ -1241,9 +1241,12 @@ export default function ChatPage() {
                     />
                   )}
                   <ClientOnly>
-                    <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                      {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
-                      {message.isEdited && <Pencil className="h-3 w-3" />}
+                    <div className={cn(
+                        "text-xs float-right clear-both relative -bottom-1 px-2 pb-0.5 flex items-center gap-1.5", 
+                        isSender ? "text-primary-foreground/70" : "text-muted-foreground")
+                    }>
+                      {translatedMessages[message.id] && <Languages className="h-3.5 w-3.5" />}
+                      {message.isEdited && <span>Edited</span>}
                       {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
                       {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
                     </div>
@@ -1424,7 +1427,7 @@ export default function ChatPage() {
 
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
-            <div className="p-4 space-y-1">
+            <div className="p-4 space-y-4">
               {filteredMessages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
