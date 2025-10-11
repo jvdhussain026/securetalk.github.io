@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, serverTimestamp, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, getDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
 import type { Contact } from '@/lib/types';
 
 
@@ -36,20 +36,14 @@ export default function NewBroadcastPage() {
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [recipientCount, setRecipientCount] = useState<number | null>(null);
 
   const contactsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
-    // Correctly query ONLY the user's own contacts sub-collection
     return query(collection(firestore, 'users', user.uid, 'contacts'));
   }, [firestore, user]);
 
   const { data: contacts } = useCollection<Contact>(contactsQuery);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // This function is triggered by the AlertDialog Action, so no need for another dialog.
-    // The form's onSubmit is now just a container for the trigger.
-  };
 
   const handleSendBroadcast = async () => {
     if (!title || !message || !contacts || !user || !firestore) {
@@ -65,40 +59,64 @@ export default function NewBroadcastPage() {
     
     const broadcastContent = `[Broadcast]\n**${title}**\n\n${message}`;
     const currentTimestamp = serverTimestamp();
+    let sentCount = 0;
 
-    const broadcastPromises = contacts.map(contact => {
-      const chatId = [user.uid, contact.id].sort().join('_');
-      const messagesRef = collection(firestore, 'chats', chatId, 'messages');
-      const messageData = {
-          senderId: user.uid,
-          text: broadcastContent,
-          timestamp: currentTimestamp,
-      };
-      
-      // Send the message
-      addDocumentNonBlocking(messagesRef, messageData);
+    const broadcastPromises = contacts.map(async (contact) => {
+        const contactUserDocRef = doc(firestore, 'users', contact.id);
+        const contactUserDoc = await getDocumentNonBlocking(contactUserDocRef);
 
-      // Update the last message timestamp for both users' contact entries
-      const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contact.id);
-      setDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+        if (contactUserDoc && contactUserDoc.exists()) {
+            const contactData = contactUserDoc.data();
+            // Default to true if the field is not set
+            if (contactData.receiveBroadcasts !== false) {
+                sentCount++;
+                const chatId = [user.uid, contact.id].sort().join('_');
+                const messagesRef = collection(firestore, 'chats', chatId, 'messages');
+                const messageData = {
+                    senderId: user.uid,
+                    text: broadcastContent,
+                    timestamp: currentTimestamp,
+                };
+                
+                // Send the message
+                addDocumentNonBlocking(messagesRef, messageData);
 
-      const otherUserContactRef = doc(firestore, 'users', contact.id, 'contacts', user.uid);
-      setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+                // Update the last message timestamp for both users' contact entries
+                const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contact.id);
+                setDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+
+                const otherUserContactRef = doc(firestore, 'users', contact.id, 'contacts', user.uid);
+                setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+            }
+        }
     });
 
-    // We don't need to wait for all promises for the UI, but in a real app you might want to.
-    Promise.all(broadcastPromises).catch(err => {
-      console.error("An error occurred during broadcast:", err);
-      // Even if some fail, we'll still show a partial success message.
-    });
+    await Promise.all(broadcastPromises);
 
     setIsSending(false);
     toast({
       title: 'Broadcast Sent!',
-      description: `Your message has been sent to ${contacts.length || 0} contacts.`,
+      description: `Your message has been sent to ${sentCount} contacts.`,
     });
     router.push('/chats');
   };
+
+  const handleTriggerClick = async () => {
+      if (!contacts || !firestore) return;
+      
+      let count = 0;
+      for (const contact of contacts) {
+          const contactUserDocRef = doc(firestore, 'users', contact.id);
+          const contactUserDoc = await getDocumentNonBlocking(contactUserDocRef);
+          if (contactUserDoc && contactUserDoc.exists()) {
+              const contactData = contactUserDoc.data();
+              if (contactData.receiveBroadcasts !== false) {
+                  count++;
+              }
+          }
+      }
+      setRecipientCount(count);
+  }
 
   return (
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
@@ -126,7 +144,7 @@ export default function NewBroadcastPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="title">Broadcast Title</Label>
                 <Input
@@ -148,7 +166,12 @@ export default function NewBroadcastPage() {
               </div>
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                    <Button type="submit" className="w-full" disabled={!title || !message || isSending}>
+                    <Button 
+                        type="button" 
+                        className="w-full" 
+                        disabled={!title || !message || isSending}
+                        onClick={handleTriggerClick}
+                    >
                         <Send className="mr-2" />
                         Send Broadcast
                     </Button>
@@ -158,7 +181,7 @@ export default function NewBroadcastPage() {
                         <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                         <AlertDialogDescription>
                             Your broadcast will be sent to all contacts who have enabled receiving broadcasts. 
-                            (Estimated recipients: {contacts?.length || '...'})
+                            (Estimated recipients: {recipientCount ?? '...'})
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>

@@ -43,6 +43,11 @@
             "type": "string",
             "format": "date-time",
             "description": "Timestamp of when the user was last active."
+        },
+        "receiveBroadcasts": {
+            "type": "boolean",
+            "description": "Indicates if the user wishes to receive broadcast messages.",
+            "default": true
         }
       },
       "required": [

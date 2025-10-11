@@ -10,6 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ComingSoonDialog } from '@/components/coming-soon-dialog';
+import { useFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 const PrivacyItem = ({ icon: Icon, title, value, onClick }: { icon: React.ElementType, title: string, value: string, onClick: () => void }) => (
   <button onClick={onClick} className="flex w-full items-center justify-between py-4 text-left">
@@ -45,12 +47,16 @@ const PrivacyToggle = ({ icon: Icon, title, description, isChecked, onCheckedCha
 export default function PrivacyPage() {
   const { toast } = useToast();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const { firestore, user, userProfile } = useFirebase();
+
+  // Initialize with profile data or default to true
+  const [receiveBroadcast, setReceiveBroadcast] = useState(userProfile?.receiveBroadcasts ?? true);
   
   const [readReceipts, setReadReceipts] = useState(true);
   const [typingIndicators, setTypingIndicators] = useState(true);
   const [showInNearby, setShowInNearby] = useState(true);
   const [showSecurityNotifs, setShowSecurityNotifs] = useState(true);
-  const [receiveBroadcast, setReceiveBroadcast] = useState(true);
+
 
   const handleComingSoon = () => {
     setIsModalOpen(true);
@@ -60,6 +66,20 @@ export default function PrivacyPage() {
     setter(!value);
     handleComingSoon();
   }
+  
+  const handleBroadcastToggle = (checked: boolean) => {
+    if (!firestore || !user) {
+        toast({ variant: 'destructive', title: "You must be logged in to change settings."});
+        return;
+    }
+    setReceiveBroadcast(checked);
+    const userDocRef = doc(firestore, 'users', user.uid);
+    updateDocumentNonBlocking(userDocRef, { receiveBroadcasts: checked });
+    toast({
+        title: "Setting Updated",
+        description: `You will ${checked ? 'now' : 'no longer'} receive broadcast messages.`
+    })
+  };
 
 
   return (
@@ -130,7 +150,7 @@ export default function PrivacyPage() {
                     title="Receive Broadcasts"
                     description="Allow contacts to send you broadcast messages."
                     isChecked={receiveBroadcast}
-                    onCheckedChange={(checked) => handleToggle(setReceiveBroadcast, receiveBroadcast)}
+                    onCheckedChange={handleBroadcastToggle}
                 />
             </CardContent>
         </Card>

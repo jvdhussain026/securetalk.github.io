@@ -48,6 +48,7 @@ export type Contact = {
   callStatus?: 'connected' | 'declined' | 'ended' | null;
   callWith?: string | null; // UID of the person they are in a call with
   lastSeen?: Timestamp;
+  receiveBroadcasts?: boolean;
 };
 
 export type UserProfile = {
@@ -55,6 +56,7 @@ export type UserProfile = {
     name: string;
     avatar: string;
     bio: string;
+    receiveBroadcasts?: boolean;
 }
 
 export type NearbyUser = {
