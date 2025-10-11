@@ -37,10 +37,9 @@ export default function NewBroadcastPage() {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
 
-  // A real implementation would query contacts who have receiveBroadcasts enabled.
-  // For now, we just get all contacts to show a count.
   const contactsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
+    // Correctly query ONLY the user's own contacts sub-collection
     return query(collection(firestore, 'users', user.uid, 'contacts'));
   }, [firestore, user]);
 
