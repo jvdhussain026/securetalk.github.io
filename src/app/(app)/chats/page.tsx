@@ -100,13 +100,17 @@ function ChatListItem({ contact }: { contact: Contact }) {
   const lastMessageText = useMemo(() => {
     if (isLoading) return 'Loading...';
     if (!lastMessage) return 'No messages yet.';
-    if (lastMessage.text) return lastMessage.text;
+
+    const prefix = lastMessage.senderId === user?.uid ? 'You: ' : '';
+    
+    if (lastMessage.text) return `${prefix}${lastMessage.text}`;
+
     if (lastMessage.attachments && lastMessage.attachments.length > 0) {
       const type = lastMessage.attachments[0].type;
-      return `${type.charAt(0).toUpperCase() + type.slice(1)} attachment`;
+      return `${prefix}${type.charAt(0).toUpperCase() + type.slice(1)} attachment`;
     }
     return '...';
-  }, [lastMessage, isLoading]);
+  }, [lastMessage, isLoading, user?.uid]);
   
   return (
       <>
