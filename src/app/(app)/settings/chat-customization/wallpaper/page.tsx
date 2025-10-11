@@ -5,7 +5,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Check, Upload, Save, X } from 'lucide-react';
+import { ArrowLeft, Check, Upload, Save, X, RotateCcw } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChatWallpapers } from '@/lib/placeholder-images';
@@ -44,7 +44,7 @@ export default function WallpaperPage() {
         setSelectedWallpaper(savedWallpaper);
     }, [defaultWallpaper]);
 
-    const handleSelectWallpaper = (wallpaperUrl: string) => {
+    const handleSelectWallpaper = (wallpaperUrl: string | null) => {
         setSelectedWallpaper(wallpaperUrl);
     };
 
@@ -73,10 +73,8 @@ export default function WallpaperPage() {
     };
     
     const handleResetToDefault = () => {
-        if(defaultWallpaper) {
-            setSelectedWallpaper(defaultWallpaper);
-            toast({ title: 'Preview reset to default.', description: 'Click Save to apply.' });
-        }
+        handleSelectWallpaper(defaultWallpaper);
+        toast({ title: 'Preview reset to default.', description: 'Click Save Changes to apply.' });
     };
     
     const handleSave = () => {
@@ -84,6 +82,11 @@ export default function WallpaperPage() {
             setActiveWallpaper(selectedWallpaper);
             localStorage.setItem('chatWallpaper', selectedWallpaper);
             toast({ title: 'Wallpaper Saved!', description: 'Your new wallpaper has been applied.' });
+        } else {
+             // Handling case where 'Default' (null) is saved
+            setActiveWallpaper(null);
+            localStorage.removeItem('chatWallpaper');
+            toast({ title: 'Wallpaper Reset!', description: 'Default chat background is active.' });
         }
     };
     
@@ -99,22 +102,17 @@ export default function WallpaperPage() {
                     </Link>
                 </Button>
                 <h1 className="text-2xl font-bold font-headline">Chat Wallpaper</h1>
-                 {hasChanges && (
-                    <div className="ml-auto flex gap-2">
-                        <Button variant="ghost" onClick={() => setSelectedWallpaper(activeWallpaper)}>Cancel</Button>
-                        <Button onClick={handleSave}>
-                            <Save className="mr-2 h-4 w-4" /> Save
-                        </Button>
-                    </div>
-                )}
             </header>
 
             <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
                 <Card>
                     <CardContent className="p-2">
                         <div 
-                            className="relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-muted"
-                            style={{ backgroundImage: `url(${selectedWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+                            className={cn(
+                                "relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-muted",
+                                !selectedWallpaper && "bg-chat" // Show default pattern if no image
+                            )}
+                            style={ selectedWallpaper ? { backgroundImage: `url(${selectedWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                         >
                             <ChatPreview />
                         </div>
@@ -139,6 +137,16 @@ export default function WallpaperPage() {
                         onChange={handleFileChange}
                     />
 
+                     <button onClick={() => handleSelectWallpaper(null)} className="relative aspect-square rounded-lg overflow-hidden group bg-muted border">
+                        <div className="w-full h-full bg-chat" />
+                        <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === null ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === null ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
+                                <Check className="w-5 h-5" />
+                            </div>
+                        </div>
+                    </button>
+
+
                     {ChatWallpapers.map(wallpaper => (
                         <button key={wallpaper.id} onClick={() => handleSelectWallpaper(wallpaper.imageUrl)} className="relative aspect-square rounded-lg overflow-hidden group">
                             <Image src={wallpaper.imageUrl} alt={wallpaper.description} layout="fill" objectFit="cover" data-ai-hint={wallpaper.imageHint}/>
@@ -151,9 +159,14 @@ export default function WallpaperPage() {
                     ))}
                 </div>
                 
-                 <Button variant="outline" className="w-full" onClick={handleResetToDefault}>
-                    Reset to Default
-                </Button>
+                 <div className="flex gap-2">
+                    <Button variant="outline" className="w-full" onClick={handleResetToDefault}>
+                        <RotateCcw className="mr-2 h-4 w-4" /> Reset
+                    </Button>
+                    <Button className="w-full" onClick={handleSave} disabled={!hasChanges}>
+                        <Save className="mr-2 h-4 w-4" /> Save Changes
+                    </Button>
+                 </div>
             </main>
         </div>
     );
