@@ -30,7 +30,7 @@ function ChatPreview() {
                  <div className="bg-card text-card-foreground text-sm shadow-md rounded-r-xl rounded-t-xl max-w-[70%]">
                     <div className="px-2.5 pt-1.5">
                         <p>Looks great!</p>
-                         <div className="flex items-center justify-end gap-1.5 text-muted-foreground text-xs pt-1 pb-1">
+                         <div className="flex items-center justify-start gap-1.5 text-muted-foreground text-xs pt-1 pb-1">
                             <span>10:31 AM</span>
                         </div>
                     </div>
