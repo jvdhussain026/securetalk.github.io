@@ -23,8 +23,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, serverTimestamp, updateDoc, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, query, serverTimestamp, doc } from 'firebase/firestore';
+import { addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import type { Contact } from '@/lib/types';
 
 
@@ -81,14 +81,14 @@ export default function NewBroadcastPage() {
 
       // Update the last message timestamp for both users' contact entries
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contact.id);
-      updateDoc(userContactRef, { lastMessageTimestamp: currentTimestamp });
+      setDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
 
       const otherUserContactRef = doc(firestore, 'users', contact.id, 'contacts', user.uid);
-      updateDoc(otherUserContactRef, { lastMessageTimestamp: currentTimestamp });
+      setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
     });
 
     // We don't need to wait for all promises for the UI, but in a real app you might want to.
-    await Promise.all(broadcastPromises).catch(err => {
+    Promise.all(broadcastPromises).catch(err => {
       console.error("An error occurred during broadcast:", err);
       // Even if some fail, we'll still show a partial success message.
     });
