@@ -57,7 +57,7 @@ const LinkifiedText = ({ text }: { text: string }) => {
     const parts = text.split(urlRegex);
 
     return (
-        <p className="text-sm px-3 pt-2 pb-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+        <>
             {parts.map((part, index) => {
                 if (part.match(urlRegex)) {
                     return (
@@ -75,13 +75,14 @@ const LinkifiedText = ({ text }: { text: string }) => {
                 }
                 return part;
             })}
-        </p>
+        </>
     );
 };
 
 
 type MessageContentProps = {
   message: Message;
+  isSender: boolean;
   isSearchOpen: boolean;
   searchQuery: string;
   searchMatches: { messageId: string, index: number }[];
@@ -91,7 +92,7 @@ type MessageContentProps = {
   onShowOriginal: () => void;
 };
 
-function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
+function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
   const { attachments = [], text } = message;
   const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
   const docAttachments = attachments.filter(a => a.type === 'document');
@@ -179,7 +180,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
     const parts = currentText.split(regex);
 
     return (
-      <p className="text-sm px-3 pt-2 pb-1 whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+      <>
         {parts.map((part, i) => {
           if (i % 2 === 1) { // It's a match
             const isCurrent = searchMatches.some(
@@ -209,7 +210,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
           }
           return part;
         })}
-      </p>
+      </>
     );
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
 
@@ -217,7 +218,22 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   return (
       <div className="space-y-2" style={{ wordBreak: 'break-word' }}>
           {renderMediaGrid()}
-          {currentText && <div className="flex items-end flex-wrap px-3 pt-2 pb-1">{highlightedText}</div>}
+           {currentText && (
+            <div className="flex items-end flex-wrap px-3 pt-2 pb-1">
+                <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+                    {highlightedText}
+                </p>
+                <span className={cn(
+                    "text-xs relative shrink-0 bottom-0 right-0 ml-2 flex items-center gap-1.5", 
+                    isSender ? "text-primary-foreground/70" : "text-muted-foreground")
+                }>
+                  {translatedText && <Languages className="h-3.5 w-3.5" />}
+                  {message.isEdited && <span>Edited</span>}
+                  {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
+                  {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
+                </span>
+            </div>
+          )}
           {docAttachments.map(renderDoc)}
           {audioAttachments.map(renderAudio)}
           {translatedText && (
@@ -1206,7 +1222,7 @@ export default function ChatPage() {
             >
               <div
                   className={cn(
-                      "p-1 space-y-1 relative shadow", 
+                      "p-1 space-y-1 relative shadow text-sm", 
                       isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
                   )}
               >
@@ -1220,6 +1236,7 @@ export default function ChatPage() {
                   ) : (
                     <MessageContent
                       message={message}
+                      isSender={isSender}
                       isSearchOpen={isSearchOpen}
                       searchQuery={searchQuery}
                       searchMatches={searchMatches}
@@ -1235,17 +1252,6 @@ export default function ChatPage() {
                       }}
                     />
                   )}
-                  <ClientOnly>
-                    <span className={cn(
-                        "text-xs relative float-right clear-both bottom-0.5 right-1.5 ml-2 flex items-center gap-1.5", 
-                        isSender ? "text-primary-foreground/70" : "text-muted-foreground")
-                    }>
-                      {translatedMessages[message.id] && <Languages className="h-3.5 w-3.5" />}
-                      {message.isEdited && <span>Edited</span>}
-                      {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
-                      {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
-                    </span>
-                  </ClientOnly>
                 </div>
                 {message.isStarred && isSender && (
                     <div className="absolute -bottom-1 -right-2 text-yellow-400">
