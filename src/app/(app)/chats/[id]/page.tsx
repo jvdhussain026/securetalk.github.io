@@ -226,10 +226,10 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     return (
         <div className="p-2.5">
             <div className="flex items-center gap-2 mb-2">
-                <Radio className="h-5 w-5 text-primary"/>
+                <Radio className={cn("h-5 w-5", isSender ? "text-primary-foreground/80" : "text-primary")} />
                 <h3 className="font-bold text-base">Broadcast</h3>
             </div>
-            <Separator className="bg-primary/20" />
+            <Separator className={cn("bg-primary/20", isSender && "bg-primary-foreground/20")} />
             <div className="pt-2">
                 <h4 className="font-bold text-lg mb-1">{title}</h4>
                 <div className="whitespace-pre-wrap text-sm" style={{ wordBreak: 'break-word' }}>
