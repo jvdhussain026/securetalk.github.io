@@ -36,5 +36,43 @@
       "imageUrl": "https://images.unsplash.com/photo-1590086782792-42dd2350140d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTkxMDU0Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "person portrait"
     }
+  ],
+  "chatWallpapers": [
+    {
+      "id": "wallpaper1",
+      "description": "Dark texture background",
+      "imageUrl": "https://images.unsplash.com/photo-1553095066-5014bc7b7f2d?q=80&w=2071&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "dark texture"
+    },
+    {
+      "id": "wallpaper2",
+      "description": "Minimalist light pattern",
+      "imageUrl": "https://images.unsplash.com/photo-1558591710-4b4a1ae0f04d?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "white pattern"
+    },
+    {
+      "id": "wallpaper3",
+      "description": "Abstract gradient",
+      "imageUrl": "https://images.unsplash.com/photo-1579546929518-9e396f3cc809?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "abstract gradient"
+    },
+    {
+      "id": "wallpaper4",
+      "description": "Night sky with stars",
+      "imageUrl": "https://images.unsplash.com/photo-1506443432602-ac2fcd6f54e0?q=80&w=1887&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "night sky"
+    },
+    {
+      "id": "wallpaper5",
+      "description": "Geometric pattern",
+      "imageUrl": "https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?q=80&w=1912&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "geometric pattern"
+    },
+    {
+      "id": "wallpaper6",
+      "description": "Soothing nature scene",
+      "imageUrl": "https://images.unsplash.com/photo-1444930694458-01babf71870c?q=80&w=2070&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D",
+      "imageHint": "nature forest"
+    }
   ]
 }

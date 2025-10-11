@@ -123,16 +123,16 @@ export default function ChatCustomizationPage() {
                             </AlertDialogContent>
                         </AlertDialog>
 
-                        <button 
+                        <Link 
+                            href="/settings/chat-customization/wallpaper"
                             className="flex w-full items-center justify-between py-4 text-left"
-                            onClick={() => toast({ title: "Feature coming soon!"})}
                         >
                             <div className="flex items-center gap-3">
                                 <Wallpaper className="h-5 w-5 text-muted-foreground" />
                                 <span>Chat Wallpaper</span>
                             </div>
                             <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                        </button>
+                        </Link>
                     </div>
                 </div>
              </CardContent>

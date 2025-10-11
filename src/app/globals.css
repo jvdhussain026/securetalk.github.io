@@ -29,6 +29,7 @@
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
+    --chat-wallpaper-url: none;
   }
   .dark {
     --background: 224 71% 4%;
@@ -55,6 +56,7 @@
     --chart-3: 30 80% 55%;
     --chart-4: 280 65% 60%;
     --chart-5: 340 75% 55%;
+    --chat-wallpaper-url: none;
   }
 }
 
@@ -70,6 +72,13 @@
 @layer components {
   .bg-chat {
     background-color: hsl(var(--muted));
+    background-image: var(--chat-wallpaper-url);
+    background-size: cover;
+    background-position: center;
+    background-blend-mode: overlay;
+  }
+  .dark .bg-chat {
+    background-blend-mode: luminosity;
   }
 }
 

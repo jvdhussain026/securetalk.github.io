@@ -370,7 +370,6 @@ export default function ChatPage() {
   const [menuPage, setMenuPage] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCountOnLoad, setUnreadCountOnLoad] = useState(0);
-  const [userScrolledUp, setUserScrolledUp] = useState(false);
   
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -384,6 +383,24 @@ export default function ChatPage() {
   const initialScrollDoneRef = useRef(false);
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [wallpaper, setWallpaper] = useState<string | null>(null);
+
+  useEffect(() => {
+    const savedWallpaper = localStorage.getItem('chatWallpaper');
+    if (savedWallpaper) {
+        setWallpaper(savedWallpaper);
+    }
+    // Listen for changes from other tabs
+    const handleStorageChange = (e: StorageEvent) => {
+        if (e.key === 'chatWallpaper') {
+            setWallpaper(e.newValue);
+        }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => {
+        window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   useEffect(() => {
     // When entering the chat, store the unread count and then reset it
@@ -904,6 +921,8 @@ export default function ChatPage() {
     setIsMenuOpen(false);
     if (action === 'find') {
       setIsSearchOpen(true);
+    } else if (action === 'theme') {
+      router.push('/settings/chat-customization/wallpaper');
     } else {
       setIsComingSoonOpen(true);
     }
@@ -1187,51 +1206,55 @@ export default function ChatPage() {
                 style={{ x }}
                 animate={controls}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={cn(
-                    "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
-                    isSender ? "bg-primary text-primary-foreground" : "bg-card border shadow-sm",
-                    (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
-                )}
+                className="w-full flex"
             >
-              <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
-              <div className={cn((repliedToMessage) ? "p-2" : "", (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
-                {isTranslating.has(message.id) ? (
-                  <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
-                    <LoaderCircle className="h-4 w-4 animate-spin"/>
-                    <span>Translating...</span>
-                  </div>
-                ) : (
-                  <MessageContent
-                    message={message}
-                    isSearchOpen={isSearchOpen}
-                    searchQuery={searchQuery}
-                    searchMatches={searchMatches}
-                    currentMatchIndex={currentMatchIndex}
-                    onMediaClick={handleMediaClick}
-                    translatedText={translatedText}
-                    onShowOriginal={() => {
-                      setTranslatedMessages(prev => {
-                        const newTranslations = {...prev};
-                        delete newTranslations[message.id];
-                        return newTranslations;
-                      });
-                    }}
-                  />
+              <div
+                  className={cn(
+                      "p-2 rounded-2xl max-w-[75%] lg:max-w-[65%] space-y-2 relative", 
+                      isSender ? "bg-primary text-primary-foreground ml-auto" : "bg-card border shadow-sm",
+                      (!message.text || (message.attachments && message.attachments.length > 0) || repliedToMessage) ? "p-0" : ""
+                  )}
+              >
+                <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
+                <div className={cn((repliedToMessage) ? "p-2" : "", (!message.text || (message.attachments && message.attachments.length > 0)) ? "p-1" : "")}>
+                  {isTranslating.has(message.id) ? (
+                    <div className="flex items-center gap-2 px-2 pt-1 text-sm text-muted-foreground">
+                      <LoaderCircle className="h-4 w-4 animate-spin"/>
+                      <span>Translating...</span>
+                    </div>
+                  ) : (
+                    <MessageContent
+                      message={message}
+                      isSearchOpen={isSearchOpen}
+                      searchQuery={searchQuery}
+                      searchMatches={searchMatches}
+                      currentMatchIndex={currentMatchIndex}
+                      onMediaClick={handleMediaClick}
+                      translatedText={translatedText}
+                      onShowOriginal={() => {
+                        setTranslatedMessages(prev => {
+                          const newTranslations = {...prev};
+                          delete newTranslations[message.id];
+                          return newTranslations;
+                        });
+                      }}
+                    />
+                  )}
+                  <ClientOnly>
+                    <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
+                      {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
+                      {message.isEdited && <Pencil className="h-3 w-3" />}
+                      {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
+                      {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
+                    </div>
+                  </ClientOnly>
+                </div>
+                {message.isStarred && isSender && (
+                    <div className="absolute -bottom-1 -right-2 text-yellow-400">
+                        <Star className="h-3.5 w-3.5 fill-yellow-400" />
+                    </div>
                 )}
-                <ClientOnly>
-                  <div className={cn("text-xs text-right mt-1 px-2 flex items-center justify-end gap-1", isSender ? "text-primary-foreground/70" : "text-muted-foreground")}>
-                    {translatedMessages[message.id] && <Languages className="h-3 w-3" />}
-                    {message.isEdited && <Pencil className="h-3 w-3" />}
-                    {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
-                    {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
-                  </div>
-                </ClientOnly>
               </div>
-              {message.isStarred && isSender && (
-                  <div className="absolute -bottom-1 -right-2 text-yellow-400">
-                      <Star className="h-3.5 w-3.5 fill-yellow-400" />
-                  </div>
-              )}
             </motion.div>
         </div>
       </div>
@@ -1241,7 +1264,7 @@ export default function ChatPage() {
 
   return (
     <>
-      <div className="flex flex-col h-full bg-chat">
+      <div className="flex flex-col h-full bg-chat" style={{ '--chat-wallpaper-url': `url(${wallpaper})` } as React.CSSProperties}>
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
           <AnimatePresence>
             {isSearchOpen ? (
