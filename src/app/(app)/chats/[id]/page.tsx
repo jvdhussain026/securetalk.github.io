@@ -216,10 +216,10 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
 
 
   return (
-      <div className="space-y-2" style={{ wordBreak: 'break-word' }}>
+      <div className="flex flex-col">
           {renderMediaGrid()}
            {currentText && (
-            <div className="px-3 pt-2">
+            <div className="px-2.5 pt-1.5">
                 <p className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
                 </p>
@@ -228,11 +228,11 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
           {docAttachments.map(renderDoc)}
           {audioAttachments.map(renderAudio)}
           {translatedText && (
-            <button onClick={onShowOriginal} className="text-xs pt-2 px-3 text-primary/80 hover:underline">
+            <button onClick={onShowOriginal} className="text-xs pt-2 px-2.5 text-primary/80 hover:underline">
               Translated. Tap to see original.
             </button>
           )}
-           <div className={cn("flex items-center gap-1.5 px-3 pb-1.5 text-xs", isSender ? 'self-end' : 'self-start')}>
+          <div className={cn("flex items-center gap-1.5 px-2.5 pb-1 text-xs", isSender ? 'self-end' : 'self-start')}>
                 {translatedText && <Languages className={cn("h-3.5 w-3.5", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')} />}
                 {message.isEdited && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>Edited</span>}
                 {message.timestamp && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{format(message.timestamp.toDate(), 'p')}</span>}
@@ -1221,14 +1221,14 @@ export default function ChatPage() {
                   className={cn(
                       "shadow text-sm flex flex-col", 
                       isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
-                      (message.attachments && message.attachments.length > 0 && !message.text) ? "" : "p-1"
+                      (message.attachments && message.attachments.length > 0 && !message.text) ? "" : ""
                   )}
               >
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
                 
                 <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
                   {isTranslating.has(message.id) ? (
-                    <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2 px-2.5 pt-1.5 pb-1 text-sm text-muted-foreground">
                       <LoaderCircle className="h-4 w-4 animate-spin"/>
                       <span>Translating...</span>
                     </div>
@@ -1647,5 +1647,7 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
 
     
