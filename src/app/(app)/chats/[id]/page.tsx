@@ -217,7 +217,7 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
   return (
       <div className="space-y-2" style={{ wordBreak: 'break-word' }}>
           {renderMediaGrid()}
-          {currentText && highlightedText}
+          {currentText && <div className="flex items-end flex-wrap px-3 pt-2 pb-1">{highlightedText}</div>}
           {docAttachments.map(renderDoc)}
           {audioAttachments.map(renderAudio)}
           {translatedText && (
@@ -440,22 +440,18 @@ export default function ChatPage() {
     setEnterToSend(enterSetting);
   }, []);
 
-  const handleAutoTranslate = useCallback(async (messageToTranslate: Message) => {
-    if (!preferredLang || !contact?.liveTranslationEnabled || !messageToTranslate.text || messageToTranslate.senderId === currentUserId) {
+  const handleAutoTranslate = useCallback(async (messageToTranslate: Message, lang: string) => {
+    if (!lang || !contact?.liveTranslationEnabled || !messageToTranslate.text || messageToTranslate.senderId === currentUserId) {
       return;
     }
-     // Check if it's already translated to prevent re-triggering
-    if(translatedMessages[messageToTranslate.id]) {
+     // Check if it's already translated or currently being translated
+    if(translatedMessages[messageToTranslate.id] || isTranslating.has(messageToTranslate.id)) {
       return;
     }
 
-    if (isTranslating.has(messageToTranslate.id)) {
-      return;
-    }
-    
     setIsTranslating(prev => new Set(prev).add(messageToTranslate.id));
     try {
-      const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: preferredLang });
+      const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: lang });
       if (result.translatedText) {
         setTranslatedMessages(prev => ({ ...prev, [messageToTranslate.id!]: result.translatedText }));
       }
@@ -468,7 +464,7 @@ export default function ChatPage() {
         return newSet;
       });
     }
-  }, [preferredLang, contact?.liveTranslationEnabled, currentUserId, isTranslating, translatedMessages]);
+  }, [contact?.liveTranslationEnabled, currentUserId, translatedMessages, isTranslating]);
 
 
   
@@ -491,13 +487,12 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    messages?.forEach(msg => {
-       // Check if it's not already translated before triggering
-        if (!translatedMessages[msg.id]) {
-            handleAutoTranslate(msg);
-        }
-    });
-  }, [messages, handleAutoTranslate, translatedMessages]);
+    if (messages && preferredLang && contact?.liveTranslationEnabled) {
+      messages.forEach(msg => {
+          handleAutoTranslate(msg, preferredLang);
+      });
+    }
+  }, [messages, preferredLang, contact?.liveTranslationEnabled, handleAutoTranslate]);
 
   useEffect(() => {
     try {
@@ -1216,7 +1211,7 @@ export default function ChatPage() {
                   )}
               >
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
-                <div className={cn((repliedToMessage) ? "pt-1" : "")}>
+                <div className={cn("min-w-[100px]", (repliedToMessage) ? "pt-1" : "")}>
                   {isTranslating.has(message.id) ? (
                     <div className="flex items-center gap-2 px-3 pt-2 pb-1 text-sm text-muted-foreground">
                       <LoaderCircle className="h-4 w-4 animate-spin"/>
@@ -1241,15 +1236,15 @@ export default function ChatPage() {
                     />
                   )}
                   <ClientOnly>
-                    <div className={cn(
-                        "text-xs float-right clear-both relative -bottom-1 px-2 pb-0.5 flex items-center gap-1.5", 
+                    <span className={cn(
+                        "text-xs relative float-right clear-both bottom-0.5 right-1.5 ml-2 flex items-center gap-1.5", 
                         isSender ? "text-primary-foreground/70" : "text-muted-foreground")
                     }>
                       {translatedMessages[message.id] && <Languages className="h-3.5 w-3.5" />}
                       {message.isEdited && <span>Edited</span>}
                       {message.timestamp && <span>{format(message.timestamp.toDate(), 'p')}</span>}
                       {message.isStarred && !isSender && <Star className="h-3 w-3 text-yellow-400 fill-yellow-400" />}
-                    </div>
+                    </span>
                   </ClientOnly>
                 </div>
                 {message.isStarred && isSender && (
@@ -1651,5 +1646,7 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
 
     
