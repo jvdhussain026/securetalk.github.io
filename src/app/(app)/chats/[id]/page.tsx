@@ -369,7 +369,8 @@ export default function ChatPage() {
   const [menuPage, setMenuPage] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCountOnLoad, setUnreadCountOnLoad] = useState(0);
-
+  const [userScrolledUp, setUserScrolledUp] = useState(false);
+  
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -378,7 +379,6 @@ export default function ChatPage() {
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
   const prevMessagesCountRef = useRef(messages?.length || 0);
   
-  const userScrolledUpRef = useRef(false);
   const unreadDividerRef = useRef<HTMLDivElement>(null);
   const initialScrollDoneRef = useRef(false);
 
@@ -479,46 +479,42 @@ export default function ChatPage() {
     }
   }, []);
 
-
-    useEffect(() => {
-        const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
-        if (!viewport) return;
-
-        // Only perform initial scroll once
-        if (messages && !initialScrollDoneRef.current) {
-            if (unreadDividerRef.current) {
-                unreadDividerRef.current.scrollIntoView({ block: 'center' });
-            } else {
-                viewport.scrollTop = viewport.scrollHeight;
-            }
-            initialScrollDoneRef.current = true;
-            return;
-        }
-
-        const handleScroll = () => {
-            const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 100;
-            userScrolledUpRef.current = !isScrolledToBottom;
-        };
-
-        handleScroll(); // Check initial position
-        viewport.addEventListener('scroll', handleScroll);
-
-        return () => viewport.removeEventListener('scroll', handleScroll);
-    }, [messages]);
-    
-    
     useEffect(() => {
         const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
         if (!viewport || !messages) return;
-    
-        // If the user has not scrolled up, auto-scroll to the bottom
-        if (!userScrolledUpRef.current && !isSearchOpen) {
-             // Use requestAnimationFrame to ensure the scroll happens after the new message is rendered
-            requestAnimationFrame(() => {
-                 viewport.scrollTop = viewport.scrollHeight;
-            });
+
+        const scrollToBottom = () => {
+            if (viewport) {
+                viewport.scrollTop = viewport.scrollHeight;
+            }
+        };
+
+        const handleScroll = () => {
+            if (viewport) {
+                const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 1;
+                setUserScrolledUp(!isScrolledToBottom);
+            }
+        };
+
+        // Initial scroll
+        if (!initialScrollDoneRef.current) {
+            if (unreadDividerRef.current) {
+                unreadDividerRef.current.scrollIntoView({ block: 'center' });
+            } else {
+                scrollToBottom();
+            }
+            initialScrollDoneRef.current = true;
+        } else {
+            // Auto-scroll on new message if user is at the bottom
+            if (!userScrolledUp) {
+                scrollToBottom();
+            }
         }
-    }, [messages, isSearchOpen]);
+        
+        viewport.addEventListener('scroll', handleScroll);
+        return () => viewport.removeEventListener('scroll', handleScroll);
+
+    }, [messages, userScrolledUp]);
 
   useEffect(() => {
     if (!isMenuOpen) {
@@ -1555,3 +1551,5 @@ export default function ChatPage() {
     </>
   )
 }
+
+    
