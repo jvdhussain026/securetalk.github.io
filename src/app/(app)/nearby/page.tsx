@@ -3,7 +3,7 @@
 
 import React, { useState, useMemo } from 'react'
 import { User, Search, Wifi, MessageSquare, Phone, Users } from 'lucide-react'
-import type { NearbyUser } from '@/lib/types'
+import type { Contact } from '@/lib/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Sidebar } from '@/components/sidebar'
@@ -12,17 +12,37 @@ import { Input } from '@/components/ui/input'
 import { NavLink } from '@/components/nav-link'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
+import { collection, query, orderBy } from 'firebase/firestore'
 
 
 export default function NearbyPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const { user, firestore } = useFirebase();
+
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'contacts'), orderBy('lastMessageTimestamp', 'desc'));
+  }, [firestore, user]);
+
+  const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
+
+  const totalUnreadCount = useMemo(() => {
+    if (!contacts) return 0;
+    return contacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
+  }, [contacts]);
+
+  const hasMissedCalls = useMemo(() => {
+    if (!contacts) return false;
+    return contacts.some(c => c.call?.type === 'missed');
+  }, [contacts]);
 
 
   const navItems = [
-    { href: '/chats', icon: MessageSquare, label: 'Chats' },
-    { href: '/calls', icon: Phone, label: 'Calls' },
-    { href: '/nearby', icon: Users, label: 'Nearby' },
+    { href: '/chats', icon: MessageSquare, label: 'Chats', hasNotification: totalUnreadCount > 0 },
+    { href: '/calls', icon: Phone, label: 'Calls', hasNotification: hasMissedCalls },
+    { href: '/nearby', icon: Users, label: 'Nearby', hasNotification: false },
   ]
   
 
@@ -64,7 +84,7 @@ export default function NearbyPage() {
          <footer className="border-t shrink-0 bg-card">
             <nav className="grid grid-cols-3 items-center p-2">
                 {navItems.map((item, index) => (
-                <NavLink key={index} href={item.href} icon={item.icon} label={item.label} />
+                <NavLink key={index} href={item.href} icon={item.icon} label={item.label} hasNotification={item.hasNotification} />
                 ))}
             </nav>
         </footer>
