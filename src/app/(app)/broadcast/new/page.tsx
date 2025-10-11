@@ -22,7 +22,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { useFirebase, useCollection } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, where } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 
@@ -38,7 +38,11 @@ export default function NewBroadcastPage() {
 
   // A real implementation would query contacts who have receiveBroadcasts enabled.
   // For now, we just get all contacts to show a count.
-  const contactsQuery = firestore && user ? query(collection(firestore, 'users', user.uid, 'contacts')) : null;
+  const contactsQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return query(collection(firestore, 'users', user.uid, 'contacts'));
+  }, [firestore, user]);
+
   const { data: contacts } = useCollection<Contact>(contactsQuery);
 
   const handleSubmit = async (e: React.FormEvent) => {
