@@ -392,7 +392,7 @@ export default function ChatPage() {
         updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.id]); // Only run when contact is first loaded
+  }, [contact?.id]);
 
 
   useEffect(() => {
@@ -423,18 +423,20 @@ export default function ChatPage() {
     setEnterToSend(enterSetting);
   }, []);
 
- const handleAutoTranslate = useCallback(async (messageToTranslate: Message) => {
+  const handleAutoTranslate = useCallback(async (messageToTranslate: Message) => {
     if (!preferredLang || !contact?.liveTranslationEnabled || !messageToTranslate.text || messageToTranslate.senderId === currentUserId) {
       return;
     }
-    
-    setIsTranslating(prev => {
-        const newSet = new Set(prev);
-        if (newSet.has(messageToTranslate.id)) return prev; // Already translating
-        newSet.add(messageToTranslate.id);
-        return newSet;
-    });
+     // Check if it's already translated to prevent re-triggering
+    if(translatedMessages[messageToTranslate.id]) {
+      return;
+    }
 
+    if (isTranslating.has(messageToTranslate.id)) {
+      return;
+    }
+    
+    setIsTranslating(prev => new Set(prev).add(messageToTranslate.id));
     try {
       const result = await translateMessage({ text: messageToTranslate.text, targetLanguage: preferredLang });
       if (result.translatedText) {
@@ -449,8 +451,7 @@ export default function ChatPage() {
         return newSet;
       });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [preferredLang, contact?.liveTranslationEnabled, currentUserId]);
+  }, [preferredLang, contact?.liveTranslationEnabled, currentUserId, isTranslating, translatedMessages]);
 
 
   
@@ -495,47 +496,42 @@ export default function ChatPage() {
     }
   }, []);
 
-  const scrollToBottom = useCallback(() => {
-    const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
-    }
-  }, []);
-
+  // New, simplified scrolling logic
   useEffect(() => {
     const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
-    if (!viewport) return;
+    if (!viewport || areMessagesLoading || !messages) return;
 
-    const handleScroll = () => {
-      const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 1;
-      setUserScrolledUp(!isScrolledToBottom);
+    const scrollToBottom = () => {
+        if (viewport) {
+            viewport.scrollTop = viewport.scrollHeight;
+        }
     };
-
-    if (!initialScrollDoneRef.current) {
-      if (unreadDividerRef.current) {
-        unreadDividerRef.current.scrollIntoView({ block: 'center' });
-        // Use a timeout to ensure smooth scrolling is complete before attaching the listener
-        setTimeout(() => {
-            viewport.addEventListener('scroll', handleScroll);
-        }, 1000);
-      } else {
-        scrollToBottom();
-        viewport.addEventListener('scroll', handleScroll);
-      }
-      initialScrollDoneRef.current = true;
-    } else {
-      if (!userScrolledUp) {
-        scrollToBottom();
-      }
-    }
     
-    // Make sure to add the listener if it's not the initial scroll
-    if (initialScrollDoneRef.current) {
-         viewport.addEventListener('scroll', handleScroll);
-    }
+    // Logic for initial scroll
+    if (!initialScrollDoneRef.current) {
+        if (unreadDividerRef.current) {
+            // If there's an unread divider, scroll to it
+            unreadDividerRef.current.scrollIntoView({ block: 'center' });
+        } else {
+            // Otherwise, scroll to the bottom
+            scrollToBottom();
+        }
+        initialScrollDoneRef.current = true;
+    } else {
+        // Logic for subsequent message updates
+        const isScrolledToBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 200;
+        const lastMessage = messages[messages.length - 1];
 
-    return () => viewport.removeEventListener('scroll', handleScroll);
-}, [messages, userScrolledUp, scrollToBottom]);
+        // If a new message arrives from the other user, and we are near the bottom, auto-scroll.
+        if (lastMessage && lastMessage.senderId !== currentUserId && isScrolledToBottom) {
+             setTimeout(scrollToBottom, 100);
+        } else if (lastMessage && lastMessage.senderId === currentUserId) {
+            // Always scroll down for our own new messages
+             setTimeout(scrollToBottom, 100);
+        }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, areMessagesLoading]);
 
 
   useEffect(() => {
