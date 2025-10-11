@@ -82,6 +82,7 @@ const LinkifiedText = ({ text }: { text: string }) => {
 
 type MessageContentProps = {
   message: Message;
+  isSender: boolean;
   isSearchOpen: boolean;
   searchQuery: string;
   searchMatches: { messageId: string, index: number }[];
@@ -91,7 +92,7 @@ type MessageContentProps = {
   onShowOriginal: () => void;
 };
 
-function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
+function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMatches, currentMatchIndex, onMediaClick, translatedText, onShowOriginal }: MessageContentProps) {
   const { attachments = [], text } = message;
   const mediaAttachments = attachments.filter(a => a.type === 'image' || a.type === 'video');
   const docAttachments = attachments.filter(a => a.type === 'document');
@@ -231,6 +232,12 @@ function MessageContent({ message, isSearchOpen, searchQuery, searchMatches, cur
               Translated. Tap to see original.
             </button>
           )}
+           <div className={cn("flex items-center gap-1.5 p-1 text-xs", isSender ? 'self-end' : 'self-start')}>
+                {translatedText && <Languages className={cn("h-3.5 w-3.5", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')} />}
+                {message.isEdited && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>Edited</span>}
+                {message.timestamp && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{format(message.timestamp.toDate(), 'p')}</span>}
+                {message.isStarred && <Star className={cn("h-3 w-3", isSender ? 'text-yellow-300 fill-yellow-300': 'text-yellow-400 fill-yellow-400')} />}
+          </div>
       </div>
   );
 }
@@ -1212,7 +1219,7 @@ export default function ChatPage() {
             >
               <div
                   className={cn(
-                      "p-1 space-y-1 shadow text-sm", 
+                      "p-1 space-y-1 shadow text-sm flex flex-col", 
                       isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
                   )}
               >
@@ -1227,6 +1234,7 @@ export default function ChatPage() {
                   ) : (
                     <MessageContent
                       message={message}
+                      isSender={isSender}
                       isSearchOpen={isSearchOpen}
                       searchQuery={searchQuery}
                       searchMatches={searchMatches}
@@ -1242,12 +1250,6 @@ export default function ChatPage() {
                       }}
                     />
                   )}
-                   <div className="self-end flex items-center gap-1.5 p-1 text-xs">
-                        {translatedText && <Languages className={cn("h-3.5 w-3.5", isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')} />}
-                        {message.isEdited && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>Edited</span>}
-                        {message.timestamp && <span className={cn(isSender ? 'text-primary-foreground/70' : 'text-muted-foreground')}>{format(message.timestamp.toDate(), 'p')}</span>}
-                        {message.isStarred && <Star className={cn("h-3 w-3", isSender ? 'text-yellow-300 fill-yellow-300': 'text-yellow-400 fill-yellow-400')} />}
-                  </div>
                 </div>
 
               </div>
