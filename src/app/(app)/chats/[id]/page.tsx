@@ -3,7 +3,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -295,6 +295,19 @@ function ReplyPreview({ message, isSender, contactName }: { message?: Message, i
         </div>
     )
 }
+
+function SystemMessage({ text }: { text: string }) {
+    const content = text.replace(/^\[SYSTEM\]\s*/, '');
+    return (
+        <div className="flex justify-center my-2">
+            <div className="text-center text-xs text-muted-foreground bg-muted/80 backdrop-blur-sm rounded-full px-3 py-1.5 flex items-center gap-2">
+                <Shield className="h-3.5 w-3.5" />
+                <span>{content}</span>
+            </div>
+        </div>
+    );
+}
+
 
 function getLanguageName(langCode: string | null): string {
     if (!langCode) return "Not Set";
@@ -1187,13 +1200,25 @@ export default function ChatPage() {
 
   const isLoading = areMessagesLoading || isContactLoading || isChatLoading;
 
+  const augmentedMessages = useMemo(() => {
+      const systemMessage: Message = {
+        id: 'system-encryption-notice',
+        text: '[SYSTEM] Messages are end-to-end encrypted. No one outside of this chat, not even Secure Talk, can read them.',
+        senderId: 'system',
+        timestamp: messages?.[0]?.timestamp, // Use timestamp of first message or now
+      };
+      // Return a new array with the system message at the beginning
+      return messages ? [systemMessage, ...messages] : [systemMessage];
+  }, [messages]);
+
+
   const filteredMessages = useMemo(() => {
-    if (!messages) return [];
-    return messages.filter(message => {
+    if (!augmentedMessages) return [];
+    return augmentedMessages.filter(message => {
       // Hide message if it has been soft-deleted by the current user
       return !message.deletedFor || !message.deletedFor.includes(currentUserId!);
     });
-  }, [messages, currentUserId]);
+  }, [augmentedMessages, currentUserId]);
 
   const displayName = contact?.displayName || contact?.name;
 
@@ -1514,6 +1539,10 @@ export default function ChatPage() {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
                 
+                if (message.text && message.text.startsWith('[SYSTEM]')) {
+                    return <SystemMessage key={message.id} text={message.text} />;
+                }
+
                 const showDivider = unreadCountOnLoad > 0 && messageIndex === dividerIndex;
 
                 return (
