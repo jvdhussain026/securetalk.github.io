@@ -475,13 +475,13 @@ export default function ChatPage() {
     // Only show toast for new incoming messages and if the document is hidden
     if (lastMessage.senderId !== currentUserId && document.hidden) {
         toast({
-            title: `New message from ${contact?.name}`,
+            title: `New message from ${contact?.displayName || contact?.name}`,
             description: lastMessage.text || 'Sent an attachment',
         });
     }
 
     prevMessagesCountRef.current = messages.length;
-  }, [messages, contact?.name, currentUserId, toast]);
+  }, [messages, contact?.displayName, contact?.name, currentUserId, toast]);
 
   useEffect(() => {
     const lang = localStorage.getItem('preferredLang');
@@ -1157,7 +1157,7 @@ export default function ChatPage() {
     if(checked) {
         setIsLiveTranslateInfoOpen(true);
     }
-  }
+  };
 
 
   const renderFooterAttachmentPreview = (attachment: Attachment) => {
@@ -1185,6 +1185,7 @@ export default function ChatPage() {
     });
   }, [messages, currentUserId]);
 
+  const displayName = contact?.displayName || contact?.name;
 
   const getStatusText = () => {
       if (chat?.typing?.[contactId]) {
@@ -1304,7 +1305,7 @@ export default function ChatPage() {
                       isSelected && "bg-blue-500/30"
                   )}
               >
-                <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
+                <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={displayName} />
                 
                 <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
                   {isTranslating.has(message.id) ? (
@@ -1376,13 +1377,13 @@ export default function ChatPage() {
                 </Button>
                 <button onClick={() => handleAvatarClick(contact.avatar)}>
                 <Avatar className="h-10 w-10">
-                    <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
+                    <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
                 </Avatar>
                 </button>
                 <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-2">
-                    <h2 className="text-lg font-bold truncate">{contact.name}</h2>
+                    <h2 className="text-lg font-bold truncate">{displayName}</h2>
                     {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{getStatusText()}</p>
@@ -1560,7 +1561,7 @@ export default function ChatPage() {
                 {replyingTo && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
                     <div className="overflow-hidden">
-                        <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === currentUserId ? "yourself" : contact?.name}</p>
+                        <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === currentUserId ? "yourself" : displayName}</p>
                         <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
@@ -1691,7 +1692,7 @@ export default function ChatPage() {
                 setIsMessageOptionsOpen(true);
             }
         }}
-        contactName={contact.name}
+        contactName={displayName || ''}
         isMultiSelect={isMultiSelectMode}
         selectedMessages={
             messages?.filter(m => selectedMessageIds.includes(m.id) || m.id === selectedMessage?.id) || []
@@ -1732,7 +1733,7 @@ export default function ChatPage() {
                 <AlertDialogTitle>Live Translation is Active</AlertDialogTitle>
               </div>
               <AlertDialogDescription className="pt-2">
-                For this chat, all incoming messages will be automatically translated to your preferred language ({getLanguageName(preferredLang)}). When you send a message, it will be automatically translated to {contact?.name}'s language ({getLanguageName(contact?.language)}). You can disable this feature in the future from chat settings.
+                For this chat, all incoming messages will be automatically translated to your preferred language ({getLanguageName(preferredLang)}). When you send a message, it will be automatically translated to {displayName}'s language ({getLanguageName(contact?.language)}). You can disable this feature in the future from chat settings.
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

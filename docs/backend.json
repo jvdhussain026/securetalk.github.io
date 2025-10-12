@@ -148,14 +148,13 @@
         },
         "displayName": {
           "type": "string",
-          "description": "The display name for the contact."
+          "description": "The custom, user-defined display name for the contact."
         }
       },
       "required": [
         "id",
         "userId",
-        "contactUserId",
-        "displayName"
+        "contactUserId"
       ]
     }
   },

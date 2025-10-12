@@ -23,6 +23,7 @@ export type Message = {
 export type Contact = {
   id:string; // This will be the user's UID
   name: string;
+  displayName?: string; // User-editable nickname
   avatar: string;
   language: string;
   status?: 'online' | 'offline';
@@ -50,6 +51,7 @@ export type Contact = {
   lastSeen?: Timestamp;
   receiveBroadcasts?: boolean;
   isPinned?: boolean;
+  isArchived?: boolean; // Added for archive feature
 };
 
 export type UserProfile = {

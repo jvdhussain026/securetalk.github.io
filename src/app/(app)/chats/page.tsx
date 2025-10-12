@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin, Archive } from 'lucide-react'
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment, writeBatch } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
@@ -134,6 +134,8 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
       clearTimeout(longPressTimerRef.current);
     }
   };
+  
+  const displayName = contact.displayName || contact.name;
 
   return (
       <>
@@ -148,8 +150,8 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
         >
             <div className="relative">
                 <Avatar className="h-12 w-12" onClick={handleAvatarClick}>
-                    <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                    <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
+                    <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
                  {remoteUser?.status === 'online' && (
                     <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card" />
@@ -158,7 +160,7 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">
                     <div className="flex items-center gap-1">
-                        <p className="font-bold truncate text-base">{contact.name}</p>
+                        <p className="font-bold truncate text-base">{displayName}</p>
                         {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                     </div>
                     <ClientOnly>
@@ -216,7 +218,8 @@ export default function ChatsPage() {
 
   const contactsQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null;
-      return query(collection(firestore, 'users', user.uid, 'contacts'), orderBy('lastMessageTimestamp', 'desc'));
+      // Fetch all contacts, filtering and sorting will be done on the client
+      return query(collection(firestore, 'users', user.uid, 'contacts'), where('isArchived', 'in', [false, null]));
   }, [firestore, user]);
 
   const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
@@ -271,9 +274,11 @@ export default function ChatsPage() {
     { href: '/nearby', icon: Users, label: 'Nearby', hasNotification: false },
   ]
   
-  const handleMenuClick = (action: 'newGroup' | 'newBroadcast' ) => {
+  const handleMenuClick = (action: 'newGroup' | 'newBroadcast' | 'archived' ) => {
     if (action === 'newBroadcast') {
       router.push('/broadcast/new');
+    } else if (action === 'archived') {
+      router.push('/archived');
     } else {
       setIsModalOpen(true);
     }
@@ -282,11 +287,13 @@ export default function ChatsPage() {
   const sortedContacts = useMemo(() => {
     if (!contacts) return [];
     
-    return contacts
-      .filter(contact =>
-        contact.name.toLowerCase().includes(searchQuery.toLowerCase())
-      )
-      .sort((a, b) => {
+    // Filter first
+    const filtered = contacts.filter(contact =>
+        (contact.displayName || contact.name).toLowerCase().includes(searchQuery.toLowerCase())
+    );
+    
+    // Then sort
+    return filtered.sort((a, b) => {
         // Pinned contacts come first
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
@@ -310,10 +317,37 @@ export default function ChatsPage() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!selectedContact || !firestore || !user) return;
-    // This is a placeholder. Will be implemented fully later.
-    toast({ variant: 'destructive', title: `"${deleteType}" action is not yet implemented.` });
-    setIsModalOpen(false);
+    if (!selectedContact || !firestore || !user || !deleteType) return;
+
+    if (deleteType === 'clear') {
+        const chatId = [user.uid, selectedContact.id].sort().join('_');
+        const messagesRef = collection(firestore, 'chats', chatId, 'messages');
+        const messagesSnap = await getDocs(messagesRef);
+        
+        const batch = writeBatch(firestore);
+        messagesSnap.docs.forEach(doc => {
+            batch.delete(doc.ref);
+        });
+        await batch.commit();
+
+        toast({ title: "Chat Cleared", description: `All messages with ${selectedContact.name} have been deleted.`});
+    } else if (deleteType === 'delete') {
+        // This is a more complex operation
+        // 1. Delete the contact from the current user's list
+        const myContactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
+        
+        // 2. Delete the current user from the other user's contact list
+        const otherUserContactRef = doc(firestore, 'users', selectedContact.id, 'contacts', user.uid);
+        
+        const batch = writeBatch(firestore);
+        batch.delete(myContactRef);
+        batch.delete(otherUserContactRef);
+        await batch.commit();
+        
+        toast({ variant: 'destructive', title: "Chat Deleted", description: `You are no longer connected with ${selectedContact.name}.` });
+    }
+
+    setIsDeleteOpen(false);
     setSelectedContact(null);
   };
   
@@ -331,6 +365,26 @@ export default function ChatsPage() {
     } catch (error) {
         console.error("Failed to toggle pin state:", error);
         toast({ variant: 'destructive', title: 'Failed to update pin state.' });
+    }
+    
+    setIsContactOptionsOpen(false);
+    setSelectedContact(null);
+  };
+  
+  const handleArchiveToggle = async () => {
+    if (!selectedContact || !firestore || !user) return;
+    
+    const contactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
+    const newArchiveState = !selectedContact.isArchived;
+
+    try {
+        await updateDoc(contactRef, { isArchived: newArchiveState });
+        toast({
+            title: newArchiveState ? 'Chat Archived' : 'Chat Unarchived',
+        });
+    } catch (error) {
+        console.error("Failed to toggle archive state:", error);
+        toast({ variant: 'destructive', title: 'Failed to update archive state.' });
     }
     
     setIsContactOptionsOpen(false);
@@ -385,6 +439,9 @@ export default function ChatsPage() {
               </DropdownMenuItem>
               <DropdownMenuItem onSelect={() => handleMenuClick('newBroadcast')}>
                 <Radio className="mr-2" /> New Broadcast
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => handleMenuClick('archived')}>
+                  <Archive className="mr-2" /> Archived Chats
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
@@ -444,7 +501,7 @@ export default function ChatsPage() {
           onClose={() => setIsContactOptionsOpen(false)}
           contact={selectedContact}
           onPin={handlePinToggle}
-          onArchive={() => { setIsContactOptionsOpen(false); setIsModalOpen(true); }}
+          onArchive={handleArchiveToggle}
           onClear={() => handleOpenDeleteDialog('clear')}
           onDelete={() => handleOpenDeleteDialog('delete')}
         />
@@ -453,7 +510,7 @@ export default function ChatsPage() {
         <DeleteChatDialog
           open={isDeleteOpen}
           onOpenChange={setIsDeleteOpen}
-          contactName={selectedContact.name}
+          contactName={selectedContact.displayName || selectedContact.name}
           type={deleteType}
           onConfirm={handleConfirmDelete}
         />

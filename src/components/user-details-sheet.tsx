@@ -10,11 +10,16 @@ import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Image from "next/image"
-import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe, Shield } from "lucide-react"
+import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe, Shield, Edit, Save, X, LoaderCircle } from "lucide-react"
 
 import type { Contact, Message } from "@/lib/types"
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { Badge } from "./ui/badge"
+import { useFirebase, useDoc, useMemoFirebase } from "@/firebase"
+import { updateDocumentNonBlocking } from "@/firebase"
+import { doc } from 'firebase/firestore'
+import { Input } from "./ui/input"
+import { useToast } from "@/hooks/use-toast"
 
 
 type UserDetailsSheetProps = {
@@ -32,12 +37,50 @@ const EmptyState = ({ icon: Icon, text }: { icon: React.ElementType, text: strin
 );
 
 export function UserDetailsSheet({ open, onOpenChange, contact, messages }: UserDetailsSheetProps) {
+  const { firestore, user } = useFirebase();
+  const { toast } = useToast();
   const [imagePreview, setImagePreview] = React.useState<ImagePreviewState>(null);
+  const [isEditing, setIsEditing] = React.useState(false);
+  const [isSaving, setIsSaving] = React.useState(false);
+  const [editedName, setEditedName] = React.useState(contact.displayName || contact.name);
+
+  const localContactDocRef = useMemoFirebase(() => {
+    if (!firestore || !user || !contact) return null;
+    return doc(firestore, 'users', user.uid, 'contacts', contact.id);
+  }, [firestore, user, contact]);
+
+  React.useEffect(() => {
+    if (contact) {
+        setEditedName(contact.displayName || contact.name);
+    }
+  }, [contact]);
+
+
   const avatarUrl = contact.profilePictureUrl || contact.avatar;
+  const displayName = contact.displayName || contact.name;
+  const realName = contact.name;
 
   const handleAvatarClick = (url: string) => {
     setImagePreview({ urls: [url], startIndex: 0 });
   };
+  
+  const handleSaveName = () => {
+    if (!localContactDocRef) return;
+    if (editedName.trim().length < 2) {
+        toast({ variant: 'destructive', title: "Name is too short." });
+        return;
+    }
+    setIsSaving(true);
+    updateDocumentNonBlocking(localContactDocRef, { displayName: editedName });
+    toast({ title: "Contact name updated!" });
+    setIsSaving(false);
+    setIsEditing(false);
+  }
+
+  const handleCancelEdit = () => {
+    setEditedName(displayName);
+    setIsEditing(false);
+  }
 
   const statusText = React.useMemo(() => {
     if (contact.status === 'online') {
@@ -102,20 +145,43 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
            <div className="p-4 bg-card rounded-t-[10px] flex-1">
             <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-border mb-4" />
             <div className="max-w-md mx-auto">
-              <Drawer.Title className="sr-only">User Details: {contact.name}</Drawer.Title>
-              <Drawer.Description className="sr-only">Detailed information and shared media for {contact.name}.</Drawer.Description>
+              <Drawer.Title className="sr-only">User Details: {displayName}</Drawer.Title>
+              <Drawer.Description className="sr-only">Detailed information and shared media for {displayName}.</Drawer.Description>
               <ScrollArea className="h-[calc(100vh_-_150px)] md:h-[calc(100vh_-_174px)]">
                 <div className="flex flex-col items-center text-center p-4">
                   <button onClick={() => handleAvatarClick(avatarUrl)}>
                     <Avatar className="w-24 h-24 mb-4">
-                        <AvatarImage src={avatarUrl} alt={contact.name} data-ai-hint="person portrait" />
-                        <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
+                        <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
                     </Avatar>
                   </button>
                   <div className="flex items-center gap-2">
-                    <h2 className="text-2xl font-bold">{contact.name}</h2>
+                    {isEditing ? (
+                        <div className="flex items-center gap-1">
+                           <Input 
+                                value={editedName} 
+                                onChange={(e) => setEditedName(e.target.value)} 
+                                className="text-2xl font-bold h-11 text-center" 
+                                autoFocus
+                            />
+                            <Button size="icon" variant="ghost" onClick={handleCancelEdit}>
+                                <X className="h-5 w-5" />
+                            </Button>
+                            <Button size="icon" variant="ghost" onClick={handleSaveName} disabled={isSaving}>
+                                {isSaving ? <LoaderCircle className="animate-spin" /> : <Save className="h-5 w-5" />}
+                            </Button>
+                        </div>
+                    ) : (
+                         <div className="flex items-center gap-2">
+                            <h2 className="text-2xl font-bold">{displayName}</h2>
+                             <Button size="icon" variant="ghost" onClick={() => setIsEditing(true)}>
+                                <Edit className="h-5 w-5" />
+                            </Button>
+                         </div>
+                    )}
                     {contact.verified && <BadgeCheck className="h-6 w-6 text-primary" />}
                   </div>
+                   { (displayName !== realName) && <p className="text-sm text-muted-foreground mt-1">({realName})</p> }
                   <p className="text-muted-foreground">{statusText}</p>
                    {contact.verified && (
                         <Badge variant="outline" className="mt-4 border-primary/50 text-primary font-semibold">
@@ -209,5 +275,3 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
     </>
   )
 }
-
-    
