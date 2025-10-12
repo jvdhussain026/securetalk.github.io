@@ -218,8 +218,10 @@ export default function ChatsPage() {
 
   const contactsQuery = useMemoFirebase(() => {
       if (!firestore || !user) return null;
-      // Fetch all contacts, filtering and sorting will be done on the client
-      return query(collection(firestore, 'users', user.uid, 'contacts'), where('isArchived', 'in', [false, null]));
+      return query(
+        collection(firestore, 'users', user.uid, 'contacts'),
+        orderBy('lastMessageTimestamp', 'desc')
+      );
   }, [firestore, user]);
 
   const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
@@ -289,7 +291,7 @@ export default function ChatsPage() {
     
     // Filter first
     const filtered = contacts.filter(contact =>
-        (contact.displayName || contact.name).toLowerCase().includes(searchQuery.toLowerCase())
+        (contact.displayName || contact.name).toLowerCase().includes(searchQuery.toLowerCase()) && !contact.isArchived
     );
     
     // Then sort
@@ -298,10 +300,9 @@ export default function ChatsPage() {
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
 
-        // Then sort by last message timestamp (newest first)
-        const timeA = a.lastMessageTimestamp?.toMillis() || 0;
-        const timeB = b.lastMessageTimestamp?.toMillis() || 0;
-        return timeB - timeA;
+        // If both are pinned or both are not pinned, sort by last message timestamp is already done by the query.
+        // No need for extra timestamp sorting here.
+        return 0;
       });
   }, [contacts, searchQuery]);
   
@@ -313,7 +314,7 @@ export default function ChatsPage() {
   const handleOpenDeleteDialog = (type: 'clear' | 'delete') => {
     setIsContactOptionsOpen(false);
     setDeleteType(type);
-    setIsModalOpen(true); // Reusing for generic confirmation
+    setIsDeleteOpen(true);
   };
 
   const handleConfirmDelete = async () => {
