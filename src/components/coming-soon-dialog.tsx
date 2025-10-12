@@ -1,3 +1,4 @@
+
 "use client"
 
 import {
@@ -22,7 +23,7 @@ export function ComingSoonDialog({ open, onOpenChange }: ComingSoonDialogProps) 
         <AlertDialogHeader>
           <AlertDialogTitle>Feature Coming Soon!</AlertDialogTitle>
           <AlertDialogDescription>
-            We're working hard to bring this feature to you. Please check back later.
+            We're working hard to bring this feature for you. Please check back later.
           </AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>

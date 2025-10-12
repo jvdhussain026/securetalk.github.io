@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, Wifi, Users, ArrowRight, ArrowLeft, LoaderCircle } from 'lucide-react';
+import { ShieldCheck, Wifi, Users, ArrowRight, ArrowLeft, LoaderCircle, MessageCircle, Settings, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
@@ -26,32 +26,31 @@ const WelcomeStep = ({ onNext, onAnonymousSignIn, isSigningIn }: { onNext: () =>
     };
 
     return (
-        <div className="h-full w-full flex flex-col justify-between p-8 text-white text-center bg-gradient-to-br from-blue-600 via-blue-800 to-gray-900">
+        <div className="h-full w-full flex flex-col justify-between p-8 text-foreground text-center bg-background">
              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1, delay: 0.2 }}
                 className="flex-1 flex flex-col justify-center items-center"
             >
-                <ShieldCheck className="w-20 h-20 mb-6 drop-shadow-lg" />
+                <ShieldCheck className="w-20 h-20 mb-6 text-primary drop-shadow-lg" />
                 <h1 className="text-4xl font-bold font-headline drop-shadow-md">Welcome to Secure Talk</h1>
-                <p className="mt-4 text-lg text-blue-200 max-w-md">Your private, decentralized communication hub.</p>
-                <div className="mt-8 space-y-4 text-left max-w-sm">
-                    <div className="flex items-start gap-4">
-                        <ShieldCheck className="w-6 h-6 mt-1 flex-shrink-0 text-blue-300" />
-                        <div>
-                            <h3 className="font-semibold">True End-to-End Encryption</h3>
-                            <p className="text-sm text-blue-200">Only you and the person you're communicating with can read what's sent.</p>
-                        </div>
-                    </div>
-                     <div className="flex items-start gap-4">
-                        <Users className="w-6 h-6 mt-1 flex-shrink-0 text-blue-300" />
-                        <div>
-                            <h3 className="font-semibold">Decentralized Freedom</h3>
-                            <p className="text-sm text-blue-200">Connect directly without central servers for most features.</p>
-                        </div>
-                    </div>
+                <p className="mt-2 font-semibold text-lg text-primary">(Developer Preview)</p>
+                <p className="mt-4 text-md text-muted-foreground max-w-md">
+                    You’re among the first to try Secure Talk! 🎉
+                    <br />
+                    This early release is for testers and developers. Your feedback shapes the future of private communication.
+                </p>
+                <div className="mt-6 text-left max-w-sm bg-muted p-4 rounded-lg">
+                    <p className='font-bold text-center mb-2'>💬 Share feedback directly with us:</p>
+                    <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                        <li>Open <Settings className="inline h-4 w-4" /> Settings → <Send className="inline h-4 w-4" /> Feedback & Report</li>
+                        <li>Chat directly with <span className="font-bold text-primary">Secure Talk Dev</span> (we'll add them for you).</li>
+                    </ul>
                 </div>
+                 <p className="mt-6 text-md text-muted-foreground max-w-md">
+                    Thanks for helping us build something truly secure. 🔐
+                 </p>
             </motion.div>
             <motion.div
                  initial={{ opacity: 0, y: 20 }}
@@ -60,7 +59,7 @@ const WelcomeStep = ({ onNext, onAnonymousSignIn, isSigningIn }: { onNext: () =>
             >
                 <Button size="lg" className="w-full" onClick={handleGetStarted} disabled={isSigningIn}>
                     {isSigningIn && <LoaderCircle className="animate-spin mr-2" />}
-                    {isSigningIn ? 'Securing your session...' : 'Let\'s Go'} 
+                    {isSigningIn ? 'Securing your session...' : 'Get Started'} 
                     {!isSigningIn && <ArrowRight className="ml-2" />}
                 </Button>
             </motion.div>
@@ -78,7 +77,7 @@ const NameStep = ({ onNext, isSaving }: { onNext: (name: string) => void; isSavi
             <div className="w-full max-w-sm space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="name">Display Name</Label>
-                    <Input id="name" placeholder="E.g., Javed Hussain" value={name} onChange={(e) => setName(e.target.value)} />
+                    <Input id="name" placeholder="E.g., Javed Hussain" value={name} onChange={(e) => setName(e.target.value)} autoFocus/>
                 </div>
                 <Button size="lg" className="w-full" onClick={() => onNext(name)} disabled={name.length < 2 || isSaving}>
                     {isSaving && <LoaderCircle className="animate-spin mr-2" />}
@@ -359,7 +358,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         }
     };
 
-    const handleNameNext = (name: string) => {
+    const handleNameNext = async (name: string) => {
         if (name.trim().length < 2) {
              toast({ variant: "destructive", title: "Please enter a valid name."});
              return;
@@ -383,6 +382,48 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         };
 
         setDocumentNonBlocking(userRef, profileData, { merge: true });
+
+        // Add the developer as a default contact
+        const devId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
+        const devDocRef = doc(firestore, 'users', devId);
+        
+        try {
+            const devDoc = await getDocumentNonBlocking(devDocRef);
+            if (devDoc && devDoc.exists()) {
+                const devData = devDoc.data();
+                const currentTimestamp = serverTimestamp();
+
+                // Add dev to user's contacts
+                const userContactRef = doc(firestore, 'users', user.uid, 'contacts', devId);
+                setDocumentNonBlocking(userContactRef, {
+                    id: devId,
+                    name: devData.name,
+                    avatar: devData.profilePictureUrl,
+                    bio: devData.bio,
+                    language: 'en',
+                    verified: true,
+                    liveTranslationEnabled: false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+
+                // Add user to dev's contacts
+                const devContactRef = doc(firestore, 'users', devId, 'contacts', user.uid);
+                setDocumentNonBlocking(devContactRef, {
+                    id: user.uid,
+                    name: profileData.name,
+                    avatar: profileData.profilePictureUrl,
+                    bio: profileData.bio,
+                    language: 'en',
+                    verified: false,
+                    liveTranslationEnabled: false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+            }
+        } catch (error) {
+            console.error("Failed to add developer contact:", error);
+            // Don't block onboarding for this
+        }
+
 
         // This is an optimistic update. We proceed to the next step.
         // The error will be caught by the global error handler if it fails.
