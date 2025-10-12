@@ -110,7 +110,7 @@ export default function NearbyPage() {
             setTimeout(() => {
                 setDiscoveredUsers(simulatedUsers);
                 setNearbyState('results');
-            }, 1500);
+            }, 2500);
         },
         (error) => {
             console.error("Geolocation error:", error);
@@ -150,7 +150,7 @@ export default function NearbyPage() {
                     <Wifi className="mx-auto h-16 w-16 text-primary/80 mb-4" />
                     <h2 className="text-2xl font-bold font-headline">Discover people nearby</h2>
                     <p className="mt-2 text-muted-foreground max-w-sm">
-                       Start chats and calls without any internet with end-to-end encrypted technology. No one can read or listen, not even us.
+                       Find and connect with other Secure Talk users near you. Your location is only used when this screen is open.
                     </p>
                     <Button className="mt-8" size="lg" onClick={handleStartScan}>
                         Find People Nearby
@@ -160,16 +160,16 @@ export default function NearbyPage() {
         case 'scanning':
             return (
                  <div className="flex flex-col items-center text-center p-8 mt-10">
-                     <div className="relative flex items-center justify-center h-40 w-40">
+                     <div className="relative flex items-center justify-center h-48 w-48">
                         <motion.div 
                             className="absolute inset-0 bg-primary/10 rounded-full"
-                            animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1]}}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                            animate={{ scale: [1, 1.4, 1], opacity: [1, 0, 1]}}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut" }}
                         />
                         <motion.div 
-                            className="absolute inset-4 bg-primary/20 rounded-full"
-                             animate={{ scale: [1, 1.1, 1], opacity: [1, 0.5, 1]}}
-                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                            className="absolute inset-8 bg-primary/20 rounded-full"
+                             animate={{ scale: [1, 1.2, 1], opacity: [1, 0, 1]}}
+                            transition={{ duration: 2.5, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
                         />
                          <Wifi className="h-16 w-16 text-primary" />
                      </div>
@@ -178,12 +178,25 @@ export default function NearbyPage() {
             )
         case 'results':
             return (
-                <div className="p-4 space-y-3">
-                    <p className="text-sm text-center text-muted-foreground">Found {discoveredUsers.length} people nearby. Tap to view.</p>
+                <motion.div 
+                    className="p-4 space-y-3"
+                    initial="hidden"
+                    animate="visible"
+                    variants={{
+                        visible: {
+                            transition: {
+                                staggerChildren: 0.1
+                            }
+                        }
+                    }}
+                >
+                    <p className="text-sm text-center text-muted-foreground px-4">Found {discoveredUsers.length} people nearby. Tap to view.</p>
                     {discoveredUsers.map(u => (
-                        <NearbyUserItem key={u.id} user={u} onSelect={setSelectedUser} />
+                        <motion.div key={u.id} variants={{ hidden: { opacity: 0, y: 20 }, visible: { opacity: 1, y: 0 } }}>
+                          <NearbyUserItem user={u} onSelect={setSelectedUser} />
+                        </motion.div>
                     ))}
-                </div>
+                </motion.div>
             );
         case 'empty':
              return (
@@ -258,3 +271,5 @@ export default function NearbyPage() {
     </>
   )
 }
+
+    
