@@ -6,7 +6,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment } from 'firebase/firestore'
+import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment, writeBatch } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
 
@@ -22,6 +22,8 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { OnboardingFlow, TourStep } from '@/components/onboarding-flow'
+import { ContactOptions } from '@/components/contact-options'
+import { DeleteChatDialog } from '@/components/delete-chat-dialog'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,11 +48,12 @@ function formatLastMessageTimestamp(timestamp: any) {
 }
 
 
-function ChatListItem({ contact }: { contact: Contact }) {
+function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress: (contact: Contact) => void }) {
   const { firestore, user } = useFirebase();
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+  const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const remoteUserDocRef = useMemoFirebase(() => {
     if(!firestore || !contact.id) return null;
@@ -94,6 +97,7 @@ function ChatListItem({ contact }: { contact: Contact }) {
 
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     setImagePreview({ urls: [contact.avatar], startIndex: 0 });
   };
 
@@ -103,7 +107,14 @@ function ChatListItem({ contact }: { contact: Contact }) {
 
     const prefix = lastMessage.senderId === user?.uid ? 'You: ' : '';
     
-    if (lastMessage.text) return `${prefix}${lastMessage.text}`;
+    if (lastMessage.text) {
+        if (lastMessage.text.startsWith('[Broadcast]')) {
+            const body = lastMessage.text.replace(/^\[Broadcast\]\s*/, '');
+            const match = body.match(/^\*\*(.*?)\*\*/);
+            return `${prefix}Broadcast: ${match ? match[1] : '...'}`;
+        }
+        return `${prefix}${lastMessage.text}`;
+    }
 
     if (lastMessage.attachments && lastMessage.attachments.length > 0) {
       const type = lastMessage.attachments[0].type;
@@ -112,9 +123,29 @@ function ChatListItem({ contact }: { contact: Contact }) {
     return '...';
   }, [lastMessage, isLoading, user?.uid]);
   
+  const handleTouchStart = () => {
+    longPressTimerRef.current = setTimeout(() => {
+      onLongPress(contact);
+    }, 500);
+  };
+
+  const handleTouchEnd = () => {
+    if (longPressTimerRef.current) {
+      clearTimeout(longPressTimerRef.current);
+    }
+  };
+
   return (
       <>
-        <Link href={`/chats/${contact.id}`} className="flex items-center gap-4 p-4">
+        <Link 
+            href={`/chats/${contact.id}`} 
+            className="flex items-center gap-4 p-4"
+            onContextMenu={(e) => { e.preventDefault(); onLongPress(contact); }}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onTouchCancel={handleTouchEnd}
+            onTouchMove={handleTouchEnd}
+        >
             <div className="relative">
                 <Avatar className="h-12 w-12" onClick={handleAvatarClick}>
                     <AvatarImage src={contact.avatar} alt={contact.name} data-ai-hint="person portrait" />
@@ -166,6 +197,11 @@ export default function ChatsPage() {
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
   const router = useRouter();
+
+  const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
+  const [isContactOptionsOpen, setIsContactOptionsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [deleteType, setDeleteType] = useState<'clear' | 'delete' | null>(null);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -250,6 +286,58 @@ export default function ChatsPage() {
     );
   }, [contacts, searchQuery]);
   
+  const handleLongPress = (contact: Contact) => {
+    setSelectedContact(contact);
+    setIsContactOptionsOpen(true);
+  };
+  
+  const handleOpenDeleteDialog = (type: 'clear' | 'delete') => {
+    setIsContactOptionsOpen(false);
+    setDeleteType(type);
+    setIsDeleteOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedContact || !firestore || !user) return;
+
+    const chatId = [user.uid, selectedContact.id].sort().join('_');
+    const messagesRef = collection(firestore, "chats", chatId, "messages");
+    
+    try {
+        const batch = writeBatch(firestore);
+        
+        if (deleteType === 'clear') {
+            const messagesSnapshot = await getDocs(messagesRef);
+            messagesSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            await batch.commit();
+            toast({ title: "Chat Cleared", description: `Messages with ${selectedContact.name} have been cleared.` });
+        } else if (deleteType === 'delete') {
+            // Delete messages
+            const messagesSnapshot = await getDocs(messagesRef);
+            messagesSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            // Delete contact from current user's list
+            const myContactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
+            batch.delete(myContactRef);
+            // Delete me from their contact list
+            const theirContactRef = doc(firestore, 'users', selectedContact.id, 'contacts', user.uid);
+            batch.delete(theirContactRef);
+
+            await batch.commit();
+            toast({ title: "Chat Deleted", description: `${selectedContact.name} has been removed from your contacts.` });
+        }
+    } catch (error) {
+        console.error("Error performing delete action:", error);
+        toast({ variant: 'destructive', title: `Failed to ${deleteType} chat` });
+    } finally {
+        setIsDeleteOpen(false);
+        setSelectedContact(null);
+    }
+  };
+
   const isLoading = isUserLoading || areContactsLoading || isProfileLoading;
 
   if (!isOnboardingComplete) {
@@ -325,7 +413,7 @@ export default function ChatsPage() {
             <div>
               {sortedContacts.map((contact) => (
                   <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
-                    <ChatListItem contact={contact} />
+                    <ChatListItem contact={contact} onLongPress={handleLongPress} />
                   </div>
                 )
               )}
@@ -350,6 +438,26 @@ export default function ChatsPage() {
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
       {showTour && <TourStep onComplete={handleTourComplete} />}
+      {selectedContact && (
+        <ContactOptions
+          isOpen={isContactOptionsOpen}
+          onClose={() => setIsContactOptionsOpen(false)}
+          contact={selectedContact}
+          onPin={() => { setIsContactOptionsOpen(false); setIsModalOpen(true); }}
+          onArchive={() => { setIsContactOptionsOpen(false); setIsModalOpen(true); }}
+          onClear={() => handleOpenDeleteDialog('clear')}
+          onDelete={() => handleOpenDeleteDialog('delete')}
+        />
+      )}
+      {selectedContact && (
+        <DeleteChatDialog
+          open={isDeleteOpen}
+          onOpenChange={setIsDeleteOpen}
+          contactName={selectedContact.name}
+          type={deleteType}
+          onConfirm={handleConfirmDelete}
+        />
+      )}
     </>
   )
 }
