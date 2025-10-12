@@ -5,9 +5,9 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin, Archive } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin, Archive, Pencil } from 'lucide-react'
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment, writeBatch } from 'firebase/firestore'
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
+import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -34,6 +34,7 @@ import {
 import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase'
 import type { Contact, Message } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
+import { EditContactDialog } from '@/components/edit-contact-dialog'
 
 function formatLastMessageTimestamp(timestamp: any) {
   if (!timestamp) return '';
@@ -207,6 +208,8 @@ export default function ChatsPage() {
   const [isContactOptionsOpen, setIsContactOptionsOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [deleteType, setDeleteType] = useState<'clear' | 'delete' | null>(null);
+  const [isEditContactOpen, setIsEditContactOpen] = useState(false);
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -217,14 +220,15 @@ export default function ChatsPage() {
 
 
   const contactsQuery = useMemoFirebase(() => {
-      if (!firestore || !user) return null;
-      return query(
-        collection(firestore, 'users', user.uid, 'contacts'),
-        orderBy('lastMessageTimestamp', 'desc')
-      );
+    if (!firestore || !user) return null;
+    // The query is now simpler, just filtering out archived chats
+    return query(
+      collection(firestore, 'users', user.uid, 'contacts')
+    );
   }, [firestore, user]);
 
   const { data: contacts, isLoading: areContactsLoading } = useCollection<Contact>(contactsQuery);
+
 
   const { toast } = useToast()
 
@@ -286,23 +290,23 @@ export default function ChatsPage() {
     }
   };
 
-  const sortedContacts = useMemo(() => {
+ const sortedContacts = useMemo(() => {
     if (!contacts) return [];
-    
-    // Filter first
-    const filtered = contacts.filter(contact =>
+
+    return [...contacts]
+      .filter(contact =>
         (contact.displayName || contact.name).toLowerCase().includes(searchQuery.toLowerCase()) && !contact.isArchived
-    );
-    
-    // Then sort
-    return filtered.sort((a, b) => {
+      )
+      .sort((a, b) => {
         // Pinned contacts come first
         if (a.isPinned && !b.isPinned) return -1;
         if (!a.isPinned && b.isPinned) return 1;
 
-        // If both are pinned or both are not pinned, sort by last message timestamp is already done by the query.
-        // No need for extra timestamp sorting here.
-        return 0;
+        // Then sort by last message timestamp (descending)
+        const aTimestamp = a.lastMessageTimestamp?.toMillis() || 0;
+        const bTimestamp = b.lastMessageTimestamp?.toMillis() || 0;
+        
+        return bTimestamp - aTimestamp;
       });
   }, [contacts, searchQuery]);
   
@@ -316,6 +320,11 @@ export default function ChatsPage() {
     setDeleteType(type);
     setIsDeleteOpen(true);
   };
+  
+  const handleOpenEditDialog = () => {
+    setIsContactOptionsOpen(false);
+    setIsEditContactOpen(true);
+  }
 
   const handleConfirmDelete = async () => {
     if (!selectedContact || !firestore || !user || !deleteType) return;
@@ -331,7 +340,7 @@ export default function ChatsPage() {
         });
         await batch.commit();
 
-        toast({ title: "Chat Cleared", description: `All messages with ${selectedContact.name} have been deleted.`});
+        toast({ title: "Chat Cleared", description: `All messages with ${selectedContact.displayName || selectedContact.name} have been deleted.`});
     } else if (deleteType === 'delete') {
         // This is a more complex operation
         // 1. Delete the contact from the current user's list
@@ -345,7 +354,7 @@ export default function ChatsPage() {
         batch.delete(otherUserContactRef);
         await batch.commit();
         
-        toast({ variant: 'destructive', title: "Chat Deleted", description: `You are no longer connected with ${selectedContact.name}.` });
+        toast({ variant: 'destructive', title: "Chat Deleted", description: `You are no longer connected with ${selectedContact.displayName || selectedContact.name}.` });
     }
 
     setIsDeleteOpen(false);
@@ -390,6 +399,23 @@ export default function ChatsPage() {
     
     setIsContactOptionsOpen(false);
     setSelectedContact(null);
+  };
+
+  const handleSaveContactName = async (newName: string) => {
+    if (!selectedContact || !user || !firestore) return;
+    
+    if (newName.trim().length < 2) {
+      toast({ variant: "destructive", title: "Name is too short." });
+      return false;
+    }
+    
+    const contactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
+    await updateDocumentNonBlocking(contactRef, { displayName: newName });
+    
+    toast({ title: "Contact name updated!" });
+    setIsEditContactOpen(false);
+    setSelectedContact(null);
+    return true;
   };
 
 
@@ -505,6 +531,7 @@ export default function ChatsPage() {
           onArchive={handleArchiveToggle}
           onClear={() => handleOpenDeleteDialog('clear')}
           onDelete={() => handleOpenDeleteDialog('delete')}
+          onEditName={handleOpenEditDialog}
         />
       )}
       {selectedContact && (
@@ -514,6 +541,14 @@ export default function ChatsPage() {
           contactName={selectedContact.displayName || selectedContact.name}
           type={deleteType}
           onConfirm={handleConfirmDelete}
+        />
+      )}
+       {selectedContact && (
+        <EditContactDialog
+          open={isEditContactOpen}
+          onOpenChange={setIsEditContactOpen}
+          contact={selectedContact}
+          onSave={handleSaveContactName}
         />
       )}
     </>

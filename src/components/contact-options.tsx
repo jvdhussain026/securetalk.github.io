@@ -2,7 +2,7 @@
 'use client';
 
 import { motion, AnimatePresence } from 'framer-motion';
-import { Pin, Archive, Trash2, XCircle } from 'lucide-react';
+import { Pin, Archive, Trash2, XCircle, Pencil } from 'lucide-react';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
@@ -14,6 +14,7 @@ type ContactOptionsProps = {
   onArchive: () => void;
   onClear: () => void;
   onDelete: () => void;
+  onEditName: () => void;
 };
 
 export function ContactOptions({
@@ -24,9 +25,11 @@ export function ContactOptions({
   onArchive,
   onClear,
   onDelete,
+  onEditName,
 }: ContactOptionsProps) {
   const options = [
     { label: contact.isPinned ? 'Unpin Chat' : 'Pin Chat', icon: Pin, action: onPin },
+    { label: 'Edit Name', icon: Pencil, action: onEditName },
     { label: 'Archive Chat', icon: Archive, action: onArchive },
     { label: 'Clear Chat', icon: XCircle, action: onClear, isDestructive: true },
     { label: 'Delete Chat', icon: Trash2, action: onDelete, isDestructive: true },
@@ -53,11 +56,11 @@ export function ContactOptions({
             <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-muted" />
             <div className="p-2 flex items-center gap-4 bg-muted rounded-lg mb-4">
               <Avatar className="h-12 w-12">
-                <AvatarImage src={contact.avatar} alt={contact.name} />
-                <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                <AvatarImage src={contact.avatar} alt={contact.displayName || contact.name} />
+                <AvatarFallback>{(contact.displayName || contact.name).charAt(0)}</AvatarFallback>
               </Avatar>
               <div>
-                <p className="font-bold">{contact.name}</p>
+                <p className="font-bold">{contact.displayName || contact.name}</p>
                 <p className="text-sm text-muted-foreground">Options</p>
               </div>
             </div>
