@@ -88,12 +88,40 @@ export default function NearbyPage() {
   }, [contacts]);
 
   const handleStartScan = () => {
+    if (!navigator.geolocation) {
+        setNearbyState('denied');
+        toast({
+            variant: "destructive",
+            title: "Location Not Supported",
+            description: "Your browser does not support geolocation.",
+        });
+        return;
+    }
+
     setNearbyState('scanning');
-    // Simulate scanning for users
-    setTimeout(() => {
-        setDiscoveredUsers(simulatedUsers);
-        setNearbyState('results');
-    }, 2500);
+
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            // In a real app, you would send these coordinates to your backend
+            // to find other users. For now, we just simulate the success.
+            console.log('Location obtained:', position.coords);
+            
+            // Simulate network delay for finding users
+            setTimeout(() => {
+                setDiscoveredUsers(simulatedUsers);
+                setNearbyState('results');
+            }, 1500);
+        },
+        (error) => {
+            console.error("Geolocation error:", error);
+            setNearbyState('denied');
+            toast({
+                variant: "destructive",
+                title: "Location Access Denied",
+                description: "Please enable location permissions in your browser or device settings to use this feature.",
+            });
+        }
+    );
   };
   
   const handleConnectRequest = (userId: string) => {
@@ -168,11 +196,16 @@ export default function NearbyPage() {
         case 'denied':
              return (
                  <div className="text-center p-8 mt-10 flex flex-col items-center">
-                    <Wifi className="mx-auto h-16 w-16 text-destructive/80 mb-4" />
+                    <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}>
+                        <Wifi className="mx-auto h-16 w-16 text-destructive/80 mb-4" />
+                    </motion.div>
                     <h2 className="text-2xl font-bold font-headline text-destructive">Location Access Required</h2>
                     <p className="mt-2 text-muted-foreground max-w-sm">
                         To use the Nearby feature, please enable location permissions for this app in your browser or device settings.
                     </p>
+                    <Button className="mt-8" size="lg" onClick={handleStartScan}>
+                        Try Again
+                    </Button>
                 </div>
              )
       }
@@ -225,5 +258,3 @@ export default function NearbyPage() {
     </>
   )
 }
-
-    
