@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -56,7 +57,7 @@ import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 
 
-const LinkifiedText = ({ text }: { text: string }) => {
+const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
     const urlRegex = /(https?:\/\/[^\s]+)/g;
     const parts = text.split(urlRegex);
 
@@ -70,7 +71,10 @@ const LinkifiedText = ({ text }: { text: string }) => {
                             href={part}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-blue-500 hover:underline"
+                            className={cn(
+                                "hover:underline",
+                                isSender ? "text-blue-300" : "text-blue-500"
+                            )}
                             onClick={(e) => e.stopPropagation()} // Prevent message long press
                         >
                             {part}
@@ -178,7 +182,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     if (!currentText) return null;
 
     if (!isSearchOpen || searchQuery.length <= 1) {
-      return <LinkifiedText text={currentText} />;
+      return <LinkifiedText text={currentText} isSender={isSender} />;
     }
 
     const regex = new RegExp(`(${searchQuery})`, 'gi');
@@ -217,7 +221,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
         })}
       </>
     );
-  }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
+  }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id, isSender]);
   
   if (currentText && currentText.startsWith('[Broadcast]')) {
     const body = currentText.replace(/^\[Broadcast\]\s*/, '');
