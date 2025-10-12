@@ -1,9 +1,9 @@
 
 'use client'
 
-import React, { useState, useMemo } from 'react'
-import { User, Search, Wifi, MessageSquare, Phone, Users } from 'lucide-react'
-import type { Contact } from '@/lib/types'
+import React, { useState, useMemo, useEffect } from 'react'
+import { User, Search, Wifi, MessageSquare, Phone, Users, LoaderCircle } from 'lucide-react'
+import type { Contact, NearbyUser } from '@/lib/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Sidebar } from '@/components/sidebar'
@@ -14,12 +14,26 @@ import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
+import { PlaceHolderImages } from '@/lib/placeholder-images'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Card, CardContent } from '@/components/ui/card'
+import { useToast } from '@/hooks/use-toast'
 
+const simulatedUsers: NearbyUser[] = [
+    { id: 'sim1', name: 'Alex', avatar: PlaceHolderImages[0].imageUrl, bio: 'Exploring the world, one city at a time.', connectionStatus: 'none' },
+    { id: 'sim2', name: 'Brenda', avatar: PlaceHolderImages[1].imageUrl, bio: 'Coffee enthusiast and book lover.', connectionStatus: 'requested' },
+    { id: 'sim3', name: 'Carlos', avatar: PlaceHolderImages[2].imageUrl, bio: 'Designer and tech geek.', connectionStatus: 'none' },
+]
 
 export default function NearbyPage() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const { user, firestore } = useFirebase();
+  const { toast } = useToast()
+
+  const [nearbyState, setNearbyState] = useState<'intro' | 'scanning' | 'results' | 'denied' | 'empty'>('intro')
+  const [discoveredUsers, setDiscoveredUsers] = useState<NearbyUser[]>([])
+  const [selectedUser, setSelectedUser] = useState<NearbyUser | null>(null);
 
   const contactsQuery = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -38,6 +52,21 @@ export default function NearbyPage() {
     return contacts.some(c => c.call?.type === 'missed');
   }, [contacts]);
 
+  const handleTurnOnNearby = () => {
+    setNearbyState('scanning');
+    // Simulate scanning for users
+    setTimeout(() => {
+        setDiscoveredUsers(simulatedUsers);
+        setNearbyState('results');
+    }, 2000);
+  };
+  
+  const handleConnectRequest = (userId: string) => {
+    setDiscoveredUsers(prevUsers => 
+        prevUsers.map(u => u.id === userId ? { ...u, connectionStatus: 'requested' } : u)
+    );
+    setSelectedUser(null);
+  };
 
   const navItems = [
     { href: '/chats', icon: MessageSquare, label: 'Chats', hasNotification: totalUnreadCount > 0 },
@@ -45,6 +74,83 @@ export default function NearbyPage() {
     { href: '/nearby', icon: Users, label: 'Nearby', hasNotification: false },
   ]
   
+  const renderContent = () => {
+      switch (nearbyState) {
+          case 'intro':
+            return (
+                <motion.div 
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center text-center p-8 mt-10"
+                >
+                    <Wifi className="mx-auto h-16 w-16 text-primary/80 mb-4" />
+                    <h2 className="text-2xl font-bold font-headline">Discover People Nearby</h2>
+                    <p className="mt-2 text-muted-foreground max-w-sm">
+                        Find and connect with other Secure Talk users around you. This feature requires location access to discover people in your immediate vicinity. Your location is only used while this screen is open and is never stored.
+                    </p>
+                    <Button className="mt-8" size="lg" onClick={handleTurnOnNearby}>
+                        Turn On Nearby
+                    </Button>
+                </motion.div>
+            )
+        case 'scanning':
+            return (
+                 <div className="flex flex-col items-center text-center p-8 mt-10">
+                     <div className="relative flex items-center justify-center h-40 w-40">
+                        <motion.div 
+                            className="absolute inset-0 bg-primary/10 rounded-full"
+                            animate={{ scale: [1, 1.2, 1], opacity: [1, 0.5, 1]}}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+                        />
+                        <motion.div 
+                            className="absolute inset-4 bg-primary/20 rounded-full"
+                             animate={{ scale: [1, 1.1, 1], opacity: [1, 0.5, 1]}}
+                            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                        />
+                         <Wifi className="h-16 w-16 text-primary" />
+                     </div>
+                     <h2 className="mt-8 text-xl font-semibold">Scanning for nearby users...</h2>
+                </div>
+            )
+        case 'results':
+            return (
+                <div className="p-4">
+                    <p className="text-sm text-center text-muted-foreground mb-4">Found {discoveredUsers.length} people nearby. Tap to view.</p>
+                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                        {discoveredUsers.map(u => (
+                            <Card key={u.id} className="text-center p-4 hover:bg-accent/50 cursor-pointer" onClick={() => setSelectedUser(u)}>
+                                <CardContent className="p-0 flex flex-col items-center gap-2">
+                                     <Avatar className="h-20 w-20">
+                                        <AvatarImage src={u.avatar} alt={u.name} data-ai-hint="person portrait" />
+                                        <AvatarFallback>{u.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <p className="font-bold">{u.name}</p>
+                                </CardContent>
+                            </Card>
+                        ))}
+                    </div>
+                </div>
+            );
+        case 'empty':
+             return (
+                 <div className="text-center p-8 mt-10 flex flex-col items-center">
+                    <Users className="mx-auto h-16 w-16 text-muted-foreground/50" />
+                    <h2 className="mt-4 text-xl font-semibold">No One Nearby</h2>
+                    <p className="mt-2 text-muted-foreground">We couldn't find anyone else using the Nearby feature right now. Try again in a bit!</p>
+                </div>
+             )
+        case 'denied':
+             return (
+                 <div className="text-center p-8 mt-10 flex flex-col items-center">
+                    <Wifi className="mx-auto h-16 w-16 text-destructive/80 mb-4" />
+                    <h2 className="text-2xl font-bold font-headline text-destructive">Location Access Required</h2>
+                    <p className="mt-2 text-muted-foreground max-w-sm">
+                        To use the Nearby feature, please enable location permissions for this app in your browser or device settings.
+                    </p>
+                </div>
+             )
+      }
+  }
 
   return (
     <>
@@ -68,18 +174,9 @@ export default function NearbyPage() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
-          <div className="p-4 text-center border-b">
-            <Wifi className="mx-auto h-12 w-12 text-primary/80 mb-2" />
-            <h2 className="text-lg font-semibold">Discover people nearby</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              This feature is coming soon! Find and chat with people around you without needing an internet connection.
-            </p>
-          </div>
-           <div className="text-center p-8 mt-10 flex flex-col items-center">
-              <Users className="mx-auto h-16 w-16 text-muted-foreground/50" />
-              <h2 className="mt-4 text-xl font-semibold">No One Nearby</h2>
-              <p className="mt-2 text-muted-foreground">The nearby users feature is under development.</p>
-          </div>
+          <AnimatePresence mode="wait">
+            {renderContent()}
+          </AnimatePresence>
         </main>
          <footer className="border-t shrink-0 bg-card">
             <nav className="grid grid-cols-3 items-center p-2">
@@ -89,6 +186,16 @@ export default function NearbyPage() {
             </nav>
         </footer>
       </div>
+      {selectedUser && (
+        <NearbyUserSheet
+            open={!!selectedUser}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) setSelectedUser(null);
+            }}
+            user={selectedUser}
+            onConnect={handleConnectRequest}
+        />
+      )}
     </>
   )
 }
