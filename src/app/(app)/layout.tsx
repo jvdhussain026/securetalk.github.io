@@ -31,6 +31,31 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const { data: contacts } = useCollection<Contact>(contactsQuery);
 
+  // Global context menu handler to disable right-click on non-text elements
+  useEffect(() => {
+    const handleContextMenu = (event: MouseEvent) => {
+        const target = event.target as HTMLElement;
+
+        // Allow context menu on inputs, textareas, and content-editable divs
+        const isEditable = target.tagName === 'INPUT' ||
+                           target.tagName === 'TEXTAREA' ||
+                           target.isContentEditable;
+
+        // Allow context menu specifically on message text for copying
+        const isMessageText = target.closest('.select-text');
+
+        if (!isEditable && !isMessageText) {
+            event.preventDefault();
+        }
+    };
+
+    document.addEventListener('contextmenu', handleContextMenu);
+
+    return () => {
+        document.removeEventListener('contextmenu', handleContextMenu);
+    };
+  }, []);
+
   // Presence management using Realtime Database for reliable disconnect handling
   useEffect(() => {
     if (!user || !firestore) return;
