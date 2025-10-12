@@ -20,10 +20,11 @@ type MessageOptionsProps = {
   onStar: () => void;
   onTranslate: () => void;
   isTranslated: boolean;
+  onTapMessage: (message: Message) => void;
   onClose: () => void;
 };
 
-export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, onReply, onStar, onTranslate, isTranslated, onClose }: MessageOptionsProps) {
+export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, onReply, onStar, onTranslate, isTranslated, onTapMessage, onClose }: MessageOptionsProps) {
   const { toast } = useToast();
   const { user } = useFirebase();
   const [showMore, setShowMore] = useState(false);
@@ -136,7 +137,10 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
         className="fixed bottom-0 left-0 right-0 z-50 rounded-t-2xl bg-card p-4 shadow-lg md:max-w-md md:mx-auto"
       >
         <div className="mx-auto mb-2 h-1.5 w-12 rounded-full bg-muted" />
-        <div className="p-2 bg-muted rounded-lg mb-4">
+        <div
+            className="p-2 bg-muted rounded-lg mb-4 cursor-pointer"
+            onClick={() => onTapMessage(message)}
+        >
           <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Media message'}</p>
         </div>
         <div className="relative h-[84px] overflow-hidden">

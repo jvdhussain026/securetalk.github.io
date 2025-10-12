@@ -1,12 +1,10 @@
-
-
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio } from 'lucide-react'
 import { useParams } from 'next/navigation'
-import { format, formatDistanceToNowStrict, differenceInMinutes } from 'date-fns'
+import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown';
@@ -53,6 +51,8 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
+import { MultiSelectHeader } from '@/components/multi-select-header'
+import { MultiSelectFooter } from '@/components/multi-select-footer'
 
 
 const LinkifiedText = ({ text }: { text: string }) => {
@@ -219,32 +219,42 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id]);
   
   if (currentText && currentText.startsWith('[Broadcast]')) {
-    const parts = currentText.replace('[Broadcast]\n', '').split('\n\n');
-    const title = parts[0].replace(/\*\*/g, '');
-    const body = parts.slice(1).join('\n\n');
-
-    return (
-        <div className="p-2.5">
-            <div className="flex items-center gap-2 mb-2">
-                <Radio className={cn("h-5 w-5", isSender ? "text-primary-foreground/80" : "text-primary")} />
-                <h3 className="font-bold text-base">Broadcast</h3>
-            </div>
-            <Separator className={cn("bg-primary/20", isSender && "bg-primary-foreground/20")} />
-            <div className="pt-2">
-                <h4 className="font-bold text-lg mb-1">{title}</h4>
-                <div className="whitespace-pre-wrap text-sm" style={{ wordBreak: 'break-word' }}>
-                    {body}
+    const body = currentText.replace(/^\[Broadcast\]\s*/, '');
+    const match = body.match(/^\*\*(.*?)\*\*\s*\n\n([\s\S]*)/);
+    
+    if (match) {
+        const title = match[1];
+        const messageBody = match[2];
+        
+        return (
+            <div className="p-2.5">
+                <div className="flex items-center gap-2 mb-2">
+                    <Radio className={cn("h-5 w-5", isSender ? "text-primary-foreground/80" : "text-primary")} />
+                    <h3 className="font-bold text-base">Broadcast</h3>
+                </div>
+                <Separator className={cn("bg-primary/20", isSender && "bg-primary-foreground/20")} />
+                <div className="pt-2">
+                    <h4 className="font-bold text-lg mb-1">{title}</h4>
+                    <div className="whitespace-pre-wrap text-sm" style={{ wordBreak: 'break-word' }}>
+                         <ReactMarkdown
+                            components={{
+                                a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
+                            }}
+                         >
+                            {messageBody}
+                        </ReactMarkdown>
+                    </div>
                 </div>
             </div>
-        </div>
-    );
+        );
+    }
   }
 
 
   return (
       <div className={cn("flex flex-col", (mediaAttachments.length > 0 && !text) ? "" : "p-1")}>
           {renderMediaGrid()}
-           {currentText && (
+           {currentText && !currentText.startsWith('[Broadcast]') && (
             <div className="px-2.5 pt-1.5">
                 <div className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
@@ -409,6 +419,9 @@ export default function ChatPage() {
   const [menuPage, setMenuPage] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [unreadCountOnLoad, setUnreadCountOnLoad] = useState(0);
+  
+  const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
+  const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -879,12 +892,46 @@ export default function ChatPage() {
       longPressTimerRef.current = null;
     }
   };
-  
-  const handleMessageLongPress = (message: Message) => {
-    setSelectedMessage(message);
-    setIsMessageOptionsOpen(true);
+
+  const handleMessageClick = (message: Message) => {
+    if (isMultiSelectMode) {
+      toggleMessageSelection(message.id);
+    }
   }
   
+  const handleMessageLongPress = (message: Message) => {
+    if (isMultiSelectMode) {
+      toggleMessageSelection(message.id);
+    } else {
+      setSelectedMessage(message);
+      setIsMessageOptionsOpen(true);
+    }
+  }
+
+  const toggleMessageSelection = (messageId: string) => {
+    setSelectedMessageIds(prev =>
+      prev.includes(messageId)
+        ? prev.filter(id => id !== messageId)
+        : [...prev, messageId]
+    );
+  };
+  
+  const handleEnterMultiSelect = (message: Message) => {
+    setIsMessageOptionsOpen(false);
+    setIsMultiSelectMode(true);
+    setSelectedMessageIds(prev => {
+        const newSet = new Set(prev);
+        if(selectedMessage) newSet.add(selectedMessage.id);
+        newSet.add(message.id);
+        return Array.from(newSet);
+    });
+  };
+  
+  const handleExitMultiSelect = () => {
+    setIsMultiSelectMode(false);
+    setSelectedMessageIds([]);
+  }
+
   const openDeleteDialog = () => {
     setIsMessageOptionsOpen(false);
     setIsDeleteAlertOpen(true);
@@ -908,35 +955,38 @@ export default function ChatPage() {
     contentEditableRef.current?.focus();
   }
 
-  const handleToggleStar = async () => {
-    if (!selectedMessage || !chatId || !firestore) return;
-    const messageRef = doc(firestore, "chats", chatId, "messages", selectedMessage.id);
-    await updateDoc(messageRef, {
-        isStarred: !selectedMessage.isStarred
-    });
-    toast({ title: selectedMessage.isStarred ? "Message unstarred" : "Message starred" });
-    setIsMessageOptionsOpen(false);
+  const handleToggleStar = async (messagesToStar: Message[]) => {
+    if (!chatId || !firestore) return;
+    const isUnstarring = messagesToStar.every(m => m.isStarred);
+    
+    for (const msg of messagesToStar) {
+      const messageRef = doc(firestore, "chats", chatId, "messages", msg.id);
+      updateDocumentNonBlocking(messageRef, { isStarred: !isUnstarring });
+    }
+    
+    toast({ title: `${messagesToStar.length} message${messagesToStar.length > 1 ? 's' : ''} ${isUnstarring ? 'unstarred' : 'starred'}` });
+    handleExitMultiSelect();
   }
 
-  const handleDeleteMessage = async ({ forEveryone }: { forEveryone: boolean }) => {
-    if (!selectedMessage || !chatId || !firestore || !currentUserId) return;
+  const handleDeleteMessages = async ({ forEveryone }: { forEveryone: boolean }) => {
+    if (!chatId || !firestore || !currentUserId) return;
 
-    const messageRef = doc(firestore, "chats", chatId, "messages", selectedMessage.id);
-    
-    if (forEveryone) {
-      // Hard delete for everyone
-      await deleteDoc(messageRef);
-      toast({ title: "Message deleted for everyone." });
-    } else {
-      // Soft delete for the current user
-      await updateDoc(messageRef, {
-        deletedFor: arrayUnion(currentUserId)
-      });
-      toast({ title: "Message deleted for you." });
+    const messagesToDelete = selectedMessageIds;
+
+    for (const msgId of messagesToDelete) {
+        const messageRef = doc(firestore, "chats", chatId, "messages", msgId);
+        if (forEveryone) {
+            // Hard delete
+            deleteDoc(messageRef);
+        } else {
+            // Soft delete
+            updateDoc(messageRef, { deletedFor: arrayUnion(currentUserId) });
+        }
     }
-
-    setSelectedMessage(null);
-    setIsDeleteAlertOpen(false);
+    
+    toast({ title: `${messagesToDelete.length} message${messagesToDelete.length > 1 ? 's' : ''} deleted.` });
+    handleExitMultiSelect();
+    setIsDeleteAlertOpen(false); // Close dialog if it was open
   }
 
   const handleMediaClick = (message: Message, clickedIndex: number) => {
@@ -1198,12 +1248,14 @@ export default function ChatPage() {
 
   const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
-  const MessageItem = ({ message, repliedToMessage, translatedText, messageIndex }: { message: Message, repliedToMessage?: Message, translatedText?: string, messageIndex: number }) => {
+  const MessageItem = ({ message, repliedToMessage, translatedText }: { message: Message, repliedToMessage?: Message, translatedText?: string }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
     const isSender = message.senderId === currentUserId;
+    const isSelected = selectedMessageIds.includes(message.id);
 
     const onDragEnd = (event: any, info: any) => {
+        if (isMultiSelectMode) return;
         const dragThreshold = isSender ? -50 : 50;
         if ((isSender && info.offset.x < dragThreshold) || (!isSender && info.offset.x > dragThreshold)) {
             handleReply(message);
@@ -1221,6 +1273,7 @@ export default function ChatPage() {
         onTouchStart={() => handleTouchStart(message)}
         onTouchEnd={handleTouchEnd}
         onTouchMove={handleTouchEnd}
+        onClick={() => handleMessageClick(message)}
       >
         <div className={cn("flex w-full", isSender ? "justify-end" : "justify-start")}>
             <motion.div
@@ -1234,7 +1287,7 @@ export default function ChatPage() {
             </motion.div>
             
             <motion.div
-                drag="x"
+                drag={isMultiSelectMode ? false : "x"}
                 dragConstraints={isSender ? { left: -100, right: 0 } : { left: 0, right: 100 }}
                 dragElastic={0.2}
                 onDragEnd={onDragEnd}
@@ -1245,9 +1298,10 @@ export default function ChatPage() {
             >
               <div
                   className={cn(
-                      "shadow text-sm flex flex-col", 
+                      "shadow text-sm flex flex-col transition-colors", 
                       isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
-                      (message.attachments && message.attachments.length > 0 && !message.text) ? "" : ""
+                      (message.attachments && message.attachments.length > 0 && !message.text) ? "" : "",
+                      isSelected && "bg-blue-500/30"
                   )}
               >
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={contact.name} />
@@ -1278,7 +1332,6 @@ export default function ChatPage() {
                     />
                   )}
                 </div>
-
               </div>
             </motion.div>
         </div>
@@ -1291,25 +1344,21 @@ export default function ChatPage() {
     <>
       <div className="flex flex-col h-full bg-chat" style={{ '--chat-wallpaper-url': `url(${wallpaper})` } as React.CSSProperties}>
         <header className="flex items-center gap-2 p-2 border-b shrink-0 h-[61px] bg-card text-foreground">
-          <AnimatePresence>
-            {isSearchOpen ? (
-              <motion.div
-                key="search-bar"
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.2 }}
-                className="flex items-center gap-2 w-full"
-                >
-                <ChatSearch
-                    onClose={() => setIsSearchOpen(false)}
-                    searchQuery={searchQuery}
-                    setSearchQuery={setSearchQuery}
-                    matches={searchMatches}
-                    currentMatchIndex={currentMatchIndex}
-                    onNavigate={handleNavigateMatch}
-                />
-              </motion.div>
+          <AnimatePresence mode="wait">
+            {isMultiSelectMode ? (
+              <MultiSelectHeader
+                selectedCount={selectedMessageIds.length}
+                onExit={handleExitMultiSelect}
+              />
+            ) : isSearchOpen ? (
+              <ChatSearch
+                  onClose={() => setIsSearchOpen(false)}
+                  searchQuery={searchQuery}
+                  setSearchQuery={setSearchQuery}
+                  matches={searchMatches}
+                  currentMatchIndex={currentMatchIndex}
+                  onNavigate={handleNavigateMatch}
+              />
             ) : (
               <motion.div
                 key="chat-header"
@@ -1474,7 +1523,6 @@ export default function ChatPage() {
                         message={message}
                         repliedToMessage={repliedToMessage}
                         translatedText={translatedText}
-                        messageIndex={messageIndex}
                       />
                   </React.Fragment>
                 );
@@ -1482,118 +1530,135 @@ export default function ChatPage() {
             </div>
           </ScrollArea>
         </main>
-
-        <footer className="p-2 border-t shrink-0 bg-card">
-          <AnimatePresence>
-            {editingMessage && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-2 pb-2 text-sm flex justify-between items-center text-muted-foreground">
-                  <div className="flex items-center gap-2 text-primary">
-                    <Pencil className="h-4 w-4" />
-                    <p className="font-semibold">Editing message</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelEdit}><X className="h-4 w-4"/></Button>
-              </motion.div>
-            )}
-             {replyingTo && (
-              <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
-                  <div className="overflow-hidden">
-                    <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === currentUserId ? "yourself" : contact?.name}</p>
-                    <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
-                  </div>
-                  <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
-              </motion.div>
-            )}
-          </AnimatePresence>
-          {attachmentsToSend.length > 0 && (
-            <div className="p-2">
-              <p className="text-sm font-medium mb-2">Attachment Preview</p>
-              <div className="grid grid-cols-4 gap-2">
-                {attachmentsToSend.slice(0, 4).map((attachment, index) => (
-                  <div key={index} className="relative">
-                    {renderFooterAttachmentPreview(attachment)}
-                    {index === 3 && attachmentsToSend.length > 4 && (
-                       <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
-                         <span className="text-white font-bold text-lg">+{attachmentsToSend.length - 4}</span>
-                       </div>
-                    )}
-                    <Button
-                      size="icon"
-                      variant="destructive"
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
-                      onClick={() => removeAttachmentFromPreview(index)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-          <form onSubmit={isRecording ? stopRecordingAndSend : handleSend} className="flex items-end gap-2">
-            <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
-                <Plus className="h-6 w-6" />
-                <span className="sr-only">Add media</span>
-            </Button>
-            <div className="flex-1 relative">
-                <div
-                    ref={contentEditableRef}
-                    contentEditable
-                    onInput={handleInput}
-                    onKeyDown={handleKeyDown}
-                    onPaste={handlePaste}
-                    className="relative flex-1 bg-muted rounded-lg px-4 py-2 pr-12 text-base min-h-[40px] max-h-32 overflow-y-auto z-10"
-                    style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
-                    data-placeholder="Type a message..."
-                />
-                 {isRecording && (
-                    <div className="absolute inset-0 flex items-center justify-between w-full h-10 px-4 bg-muted rounded-lg z-20">
-                        <div className="flex items-center gap-2 text-red-600 animate-pulse">
-                            <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
-                            <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+        
+        <AnimatePresence>
+        {isMultiSelectMode ? (
+            <MultiSelectFooter
+                selectedMessageIds={selectedMessageIds}
+                messages={messages || []}
+                onDelete={() => setIsDeleteAlertOpen(true)}
+                onStar={handleToggleStar}
+                onForward={() => setIsComingSoonOpen(true)}
+            />
+        ) : (
+            <motion.footer
+                initial={{ y: 50, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                exit={{ y: 50, opacity: 0 }}
+                className="p-2 border-t shrink-0 bg-card"
+            >
+            <AnimatePresence>
+                {editingMessage && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-2 pb-2 text-sm flex justify-between items-center text-muted-foreground">
+                    <div className="flex items-center gap-2 text-primary">
+                        <Pencil className="h-4 w-4" />
+                        <p className="font-semibold">Editing message</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelEdit}><X className="h-4 w-4"/></Button>
+                </motion.div>
+                )}
+                {replyingTo && (
+                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
+                    <div className="overflow-hidden">
+                        <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === currentUserId ? "yourself" : contact?.name}</p>
+                        <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
+                    </div>
+                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
+                </motion.div>
+                )}
+            </AnimatePresence>
+            {attachmentsToSend.length > 0 && (
+                <div className="p-2">
+                <p className="text-sm font-medium mb-2">Attachment Preview</p>
+                <div className="grid grid-cols-4 gap-2">
+                    {attachmentsToSend.slice(0, 4).map((attachment, index) => (
+                    <div key={index} className="relative">
+                        {renderFooterAttachmentPreview(attachment)}
+                        {index === 3 && attachmentsToSend.length > 4 && (
+                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center rounded-lg">
+                            <span className="text-white font-bold text-lg">+{attachmentsToSend.length - 4}</span>
                         </div>
-                        <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
-                            <Trash2 className="h-5 w-5" />
+                        )}
+                        <Button
+                        size="icon"
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 h-6 w-6 rounded-full"
+                        onClick={() => removeAttachmentFromPreview(index)}
+                        >
+                        <X className="h-4 w-4" />
                         </Button>
                     </div>
-                )}
-                 <div className="absolute right-1 bottom-1 flex items-center self-end z-20">
-                    {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
-                        <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
-                        {isOutboundTranslating ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Languages className="h-5 w-5" />}
-                        <span className="sr-only">Translate</span>
-                        </Button>
-                    )}
-                    {!isRecording && contact?.liveTranslationEnabled && (
-                        <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={() => setIsLiveTranslateInfoOpen(true)}>
-                        <Languages className="h-5 w-5 text-primary" />
-                        <span className="sr-only">Live Translation Enabled</span>
-                        </Button>
-                    )}
+                    ))}
                 </div>
-            </div>
-            
-            <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={handleButtonAction}>
-                {isOutboundTranslating ? (
-                     <LoaderCircle className="h-5 w-5 animate-spin" />
-                ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
-                    <Send className="h-5 w-5" />
-                ) : isRecording ? (
-                    <Send className="h-5 w-5" />
-                ) : (
-                    <Mic className="h-5 w-5" />
-                )}
-                <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
-            </Button>
-            <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                onChange={handleFileChange}
-                accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                multiple
-            />
-          </form>
-        </footer>
+                </div>
+            )}
+            <form onSubmit={isRecording ? stopRecordingAndSend : handleSend} className="flex items-end gap-2">
+                <Button type="button" size="icon" variant="ghost" className="shrink-0 h-10 w-10" onClick={handleMediaButtonClick}>
+                    <Plus className="h-6 w-6" />
+                    <span className="sr-only">Add media</span>
+                </Button>
+                <div className="flex-1 relative">
+                    <div
+                        ref={contentEditableRef}
+                        contentEditable
+                        onInput={handleInput}
+                        onKeyDown={handleKeyDown}
+                        onPaste={handlePaste}
+                        className="relative flex-1 bg-muted rounded-lg px-4 py-2 pr-12 text-base min-h-[40px] max-h-32 overflow-y-auto z-10"
+                        style={{ wordBreak: 'break-word', whiteSpace: 'pre-wrap' }}
+                        data-placeholder="Type a message..."
+                    />
+                    {isRecording && (
+                        <div className="absolute inset-0 flex items-center justify-between w-full h-10 px-4 bg-muted rounded-lg z-20">
+                            <div className="flex items-center gap-2 text-red-600 animate-pulse">
+                                <div className="w-2.5 h-2.5 rounded-full bg-red-600" />
+                                <span className="font-mono text-sm font-medium">{formatRecordingTime(recordingTime)}</span>
+                            </div>
+                            <Button type="button" size="icon" variant="ghost" onClick={cancelRecording} className="text-destructive h-8 w-8">
+                                <Trash2 className="h-5 w-5" />
+                            </Button>
+                        </div>
+                    )}
+                    <div className="absolute right-1 bottom-1 flex items-center self-end z-20">
+                        {!isRecording && !contact?.liveTranslationEnabled && showOutboundTranslate && (
+                            <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={handleOutboundTranslate} disabled={isOutboundTranslating}>
+                            {isOutboundTranslating ? <LoaderCircle className="h-5 w-5 animate-spin" /> : <Languages className="h-5 w-5" />}
+                            <span className="sr-only">Translate</span>
+                            </Button>
+                        )}
+                        {!isRecording && contact?.liveTranslationEnabled && (
+                            <Button type="button" size="icon" variant="ghost" className="shrink-0 h-8 w-8" onClick={() => setIsLiveTranslateInfoOpen(true)}>
+                            <Languages className="h-5 w-5 text-primary" />
+                            <span className="sr-only">Live Translation Enabled</span>
+                            </Button>
+                        )}
+                    </div>
+                </div>
+                
+                <Button type="submit" size="icon" className="rounded-full shrink-0 h-10 w-10" disabled={isOutboundTranslating && !isRecording} onClick={handleButtonAction}>
+                    {isOutboundTranslating ? (
+                        <LoaderCircle className="h-5 w-5 animate-spin" />
+                    ) : (newMessage.trim() || attachmentsToSend.length > 0) && !isRecording ? (
+                        <Send className="h-5 w-5" />
+                    ) : isRecording ? (
+                        <Send className="h-5 w-5" />
+                    ) : (
+                        <Mic className="h-5 w-5" />
+                    )}
+                    <span className="sr-only">{(newMessage.trim() || attachmentsToSend.length > 0) ? 'Send' : 'Record audio'}</span>
+                </Button>
+                <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    onChange={handleFileChange}
+                    accept="image/*,video/*,audio/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                    multiple
+                />
+            </form>
+            </motion.footer>
+        )}
+        </AnimatePresence>
       </div>
       {contact && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={remoteUser || contact} messages={messages || []} />}
        <AnimatePresence>
@@ -1605,9 +1670,10 @@ export default function ChatPage() {
             onDelete={openDeleteDialog}
             onEdit={handleEdit}
             onReply={() => handleReply(selectedMessage)}
-            onStar={handleToggleStar}
+            onStar={() => handleToggleStar([selectedMessage])}
             onTranslate={triggerInboundTranslate}
             isTranslated={!!translatedMessages[selectedMessage.id]}
+            onTapMessage={handleEnterMultiSelect}
             onClose={() => {
                 setIsMessageOptionsOpen(false);
                 setSelectedMessage(null);
@@ -1615,19 +1681,23 @@ export default function ChatPage() {
             />
         )}
        </AnimatePresence>
-      {selectedMessage && contact && (
-        <DeleteMessageDialog
-          open={isDeleteAlertOpen}
-          onOpenChange={setIsDeleteAlertOpen}
-          onConfirm={handleDeleteMessage}
-          onCancel={() => {
+      <DeleteMessageDialog
+        open={isDeleteAlertOpen}
+        onOpenChange={setIsDeleteAlertOpen}
+        onConfirm={handleDeleteMessages}
+        onCancel={() => {
             setIsDeleteAlertOpen(false);
-            setIsMessageOptionsOpen(true);
-          }}
-          contactName={contact.name}
-          messageSenderId={selectedMessage.senderId}
-        />
-      )}
+            if (!isMultiSelectMode) {
+                setIsMessageOptionsOpen(true);
+            }
+        }}
+        contactName={contact.name}
+        isMultiSelect={isMultiSelectMode}
+        selectedMessages={
+            messages?.filter(m => selectedMessageIds.includes(m.id) || m.id === selectedMessage?.id) || []
+        }
+        currentUserId={currentUserId || ''}
+      />
       <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}

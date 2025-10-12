@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -13,7 +13,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Button } from '@/components/ui/button';
-import { useFirebase } from '@/firebase';
+import type { Message } from '@/lib/types';
 
 type DeleteMessageDialogProps = {
   open: boolean;
@@ -21,7 +21,9 @@ type DeleteMessageDialogProps = {
   onConfirm: (options: { forEveryone: boolean }) => void;
   onCancel: () => void;
   contactName: string;
-  messageSenderId: string;
+  isMultiSelect: boolean;
+  selectedMessages: Message[];
+  currentUserId: string;
 };
 
 export function DeleteMessageDialog({
@@ -30,22 +32,23 @@ export function DeleteMessageDialog({
   onConfirm,
   onCancel,
   contactName,
-  messageSenderId,
+  isMultiSelect,
+  selectedMessages,
+  currentUserId,
 }: DeleteMessageDialogProps) {
   const [forEveryone, setForEveryone] = useState(false);
-  const { user } = useFirebase();
-  const isMyMessage = user?.uid === messageSenderId;
+  
+  const canDeleteForEveryone = selectedMessages.every(m => m.senderId === currentUserId);
+  const title = `Delete ${selectedMessages.length} message${selectedMessages.length > 1 ? 's' : ''}?`;
 
   const handleConfirm = () => {
-    // Ensure forEveryone is only true if it's my message
-    onConfirm({ forEveryone: isMyMessage && forEveryone });
+    onConfirm({ forEveryone: canDeleteForEveryone && forEveryone });
   };
   
   const handleCancel = () => {
     onCancel();
   };
 
-  // Reset state when dialog closes
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       setForEveryone(false);
@@ -57,13 +60,13 @@ export function DeleteMessageDialog({
     <AlertDialog open={open} onOpenChange={handleOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>Delete message?</AlertDialogTitle>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
           <AlertDialogDescription>
-            This message will be permanently deleted. This action cannot be undone.
+            The selected messages will be permanently deleted. This action cannot be undone.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        {isMyMessage && (
+        {canDeleteForEveryone && (
           <div className="flex items-center space-x-2 my-4">
               <Checkbox id="deleteForEveryone" checked={forEveryone} onCheckedChange={(checked) => setForEveryone(!!checked)} />
               <Label htmlFor="deleteForEveryone" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
