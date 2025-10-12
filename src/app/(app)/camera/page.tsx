@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { Suspense, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { ArrowLeft, Camera, RefreshCw, Check, X, Video, Image as ImageIcon } from 'lucide-react';
+import { ArrowLeft, Camera, RefreshCw, Check, X, Video, Image as ImageIcon, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import {
@@ -24,7 +24,7 @@ import Image from 'next/image';
 type FacingMode = 'user' | 'environment';
 type CaptureMode = 'photo' | 'video';
 
-export default function CameraPage() {
+function CameraPageContent() {
   const { toast } = useToast();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -247,4 +247,17 @@ export default function CameraPage() {
       )}
     </div>
   );
+}
+
+
+export default function CameraPage() {
+    return (
+        <Suspense fallback={
+            <div className="flex flex-col h-full bg-black text-white items-center justify-center">
+                <LoaderCircle className="h-8 w-8 animate-spin" />
+            </div>
+        }>
+            <CameraPageContent />
+        </Suspense>
+    );
 }

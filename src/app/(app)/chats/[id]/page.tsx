@@ -1,4 +1,4 @@
-
+firebase deploy
 
 'use client'
 
