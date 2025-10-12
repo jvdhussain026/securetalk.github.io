@@ -50,6 +50,16 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
       action();
     };
   };
+  
+  const handleCopy = () => {
+    if (message.text) {
+        navigator.clipboard.writeText(message.text);
+        toast({ title: 'Message copied!' });
+    } else {
+        toast({ variant: 'destructive', title: 'Cannot copy media' });
+    }
+    handleClose();
+  };
 
   const handleAction = (actionName: string) => {
     toast({ title: `${actionName} not implemented yet.` });
@@ -92,14 +102,7 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
     { label: 'Share', icon: Share2, action: handleShare, show: true },
     { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit },
     { label: message.isStarred ? 'Unstar' : 'Star', icon: Star, action: handleActionWithClose(onStar), show: true },
-    { label: 'Copy', icon: Copy, action: handleActionWithClose(() => {
-        if(message.text) {
-            navigator.clipboard.writeText(message.text)
-            toast({ title: 'Message copied!' })
-        } else {
-            toast({ variant: 'destructive', title: 'Cannot copy media' })
-        }
-    }), show: !!message.text },
+    { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text },
      { label: isTranslated ? 'Original' : 'Translate', icon: Languages, action: handleActionWithClose(onTranslate), show: !!message.text },
   ];
 
