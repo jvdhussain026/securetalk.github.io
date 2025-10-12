@@ -236,7 +236,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                 <Separator className={cn("bg-primary/20", isSender && "bg-primary-foreground/20")} />
                 <div className="pt-2">
                     <h4 className="font-bold text-lg mb-1">{title}</h4>
-                    <div className="whitespace-pre-wrap text-sm" style={{ wordBreak: 'break-word' }}>
+                    <div className="whitespace-pre-wrap text-sm select-text" style={{ wordBreak: 'break-word' }}>
                          <ReactMarkdown
                             components={{
                                 a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
@@ -257,7 +257,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
           {renderMediaGrid()}
            {currentText && !currentText.startsWith('[Broadcast]') && (
             <div className="px-2.5 pt-1.5">
-                <div className="whitespace-pre-wrap" style={{ wordBreak: 'break-word' }}>
+                <div className="whitespace-pre-wrap select-text" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
                 </div>
             </div>
