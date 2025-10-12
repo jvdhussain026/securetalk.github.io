@@ -43,6 +43,7 @@ function ChatPreview() {
 export default function WallpaperPage() {
     const [activeWallpaper, setActiveWallpaper] = useState<string | null>(null);
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null>(null);
+    const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     
@@ -53,6 +54,11 @@ export default function WallpaperPage() {
         const initialWallpaper = savedWallpaper === 'null' ? null : (savedWallpaper || defaultWallpaper);
         setActiveWallpaper(initialWallpaper);
         setSelectedWallpaper(initialWallpaper);
+        
+        const savedCustom = localStorage.getItem('customGlobalWallpaper');
+        if (savedCustom) {
+            setCustomWallpaper(savedCustom);
+        }
     }, []);
 
     const handleSelectWallpaper = (wallpaperUrl: string | null) => {
@@ -77,6 +83,8 @@ export default function WallpaperPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const dataUrl = e.target?.result as string;
+                localStorage.setItem('customGlobalWallpaper', dataUrl);
+                setCustomWallpaper(dataUrl);
                 handleSelectWallpaper(dataUrl);
             };
             reader.readAsDataURL(file);
@@ -146,6 +154,20 @@ export default function WallpaperPage() {
                         accept="image/*"
                         onChange={handleFileChange}
                     />
+
+                    {customWallpaper && (
+                         <button onClick={() => handleSelectWallpaper(customWallpaper)} className="relative aspect-square rounded-lg overflow-hidden group">
+                            <Image src={customWallpaper} alt="Custom Uploaded Wallpaper" layout="fill" objectFit="cover" data-ai-hint="custom wallpaper"/>
+                            <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === customWallpaper ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === customWallpaper ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
+                                    <Check className="w-5 h-5" />
+                                </div>
+                            </div>
+                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span className="text-white text-xs font-semibold">Your Photo</span>
+                            </div>
+                        </button>
+                    )}
 
                      <button onClick={() => handleSelectWallpaper(null)} className="relative aspect-square rounded-lg overflow-hidden group bg-muted border">
                         <div className="w-full h-full bg-chat" />

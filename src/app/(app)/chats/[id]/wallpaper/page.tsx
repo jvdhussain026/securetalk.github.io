@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -59,10 +60,10 @@ export default function PerChatWallpaperPage() {
 
     const [activeWallpaper, setActiveWallpaper] = useState<string | null>(null);
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null>(null);
+    const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const defaultGlobalWallpaper = typeof window !== 'undefined' ? localStorage.getItem('chatWallpaper') : null;
-    const noWallpaper = null; // Represents resetting to the theme color
 
     useEffect(() => {
         if (chatData) {
@@ -73,7 +74,11 @@ export default function PerChatWallpaperPage() {
             setActiveWallpaper(initialWallpaper);
             setSelectedWallpaper(initialWallpaper);
         }
-    }, [chatData, defaultGlobalWallpaper]);
+        const savedCustom = localStorage.getItem(`customChatWallpaper_${chatId}`);
+        if (savedCustom) {
+            setCustomWallpaper(savedCustom);
+        }
+    }, [chatData, defaultGlobalWallpaper, chatId]);
 
     const handleSelectWallpaper = (wallpaperUrl: string | null) => {
         setSelectedWallpaper(wallpaperUrl);
@@ -97,6 +102,8 @@ export default function PerChatWallpaperPage() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 const dataUrl = e.target?.result as string;
+                localStorage.setItem(`customChatWallpaper_${chatId}`, dataUrl);
+                setCustomWallpaper(dataUrl);
                 handleSelectWallpaper(dataUrl);
             };
             reader.readAsDataURL(file);
@@ -104,16 +111,17 @@ export default function PerChatWallpaperPage() {
     };
     
     const handleResetToDefault = () => {
-        // Sets preview to the global default wallpaper
-        handleSelectWallpaper(defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper);
+        const globalDefault = defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper;
+        handleSelectWallpaper(globalDefault);
         toast({ title: 'Preview reset to global default.', description: 'Click Save Changes to apply to this chat.' });
     };
     
     const handleSave = () => {
         if (!chatDocRef) return;
-        // If selected is same as global, we save `null` to inherit.
-        // If selected is a specific URL (custom or from palette), we save that URL.
-        const valueToSave = selectedWallpaper === (defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper)
+        const globalDefault = defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper;
+        // If selected wallpaper is the same as the global one, save `null` to inherit from global.
+        // Otherwise, save the specific URL.
+        const valueToSave = selectedWallpaper === globalDefault
             ? null 
             : selectedWallpaper;
 
@@ -125,7 +133,7 @@ export default function PerChatWallpaperPage() {
     
     const hasChanges = activeWallpaper !== selectedWallpaper;
 
-    const finalPreviewWallpaper = selectedWallpaper ?? (defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper);
+    const finalPreviewWallpaper = selectedWallpaper;
 
     return (
         <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
@@ -171,6 +179,20 @@ export default function PerChatWallpaperPage() {
                         accept="image/*"
                         onChange={handleFileChange}
                     />
+
+                    {customWallpaper && (
+                         <button onClick={() => handleSelectWallpaper(customWallpaper)} className="relative aspect-square rounded-lg overflow-hidden group">
+                            <Image src={customWallpaper} alt="Custom Uploaded Wallpaper for this chat" layout="fill" objectFit="cover" data-ai-hint="custom wallpaper"/>
+                            <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === customWallpaper ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === customWallpaper ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
+                                    <Check className="w-5 h-5" />
+                                </div>
+                            </div>
+                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span className="text-white text-xs font-semibold">Your Photo</span>
+                            </div>
+                        </button>
+                    )}
 
                      <button onClick={() => handleSelectWallpaper(null)} className="relative aspect-square rounded-lg overflow-hidden group bg-muted border">
                         <div className="w-full h-full bg-chat" />
