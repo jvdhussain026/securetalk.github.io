@@ -1201,15 +1201,29 @@ export default function ChatPage() {
   const isLoading = areMessagesLoading || isContactLoading || isChatLoading;
 
   const augmentedMessages = useMemo(() => {
-      const systemMessage: Message = {
+      const systemMessages: Message[] = [];
+      const firstMessageTimestamp = messages?.[0]?.timestamp;
+
+      const encryptionMessage: Message = {
         id: 'system-encryption-notice',
         text: '[SYSTEM] Messages are end-to-end encrypted. No one outside of this chat, not even Secure Talk, can read them.',
         senderId: 'system',
-        timestamp: messages?.[0]?.timestamp, // Use timestamp of first message or now
+        timestamp: firstMessageTimestamp,
       };
-      // Return a new array with the system message at the beginning
-      return messages ? [systemMessage, ...messages] : [systemMessage];
-  }, [messages]);
+      systemMessages.push(encryptionMessage);
+
+      if (contact?.verified) {
+          const verifiedNotice: Message = {
+              id: 'system-verified-notice',
+              text: '[SYSTEM] You are chatting with an official Secure Talk Developer account. Look for the checkmark for verification.',
+              senderId: 'system',
+              timestamp: firstMessageTimestamp,
+          };
+          systemMessages.push(verifiedNotice);
+      }
+
+      return messages ? [...systemMessages, ...messages] : systemMessages;
+  }, [messages, contact?.verified]);
 
 
   const filteredMessages = useMemo(() => {
