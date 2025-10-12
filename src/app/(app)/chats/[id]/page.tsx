@@ -1461,14 +1461,14 @@ export default function ChatPage() {
                                             />
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onSelect={() => setMenuPage(2)}>
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuPage(2); }}>
                                             <span>More</span>
                                             <ChevronRight className="ml-auto h-4 w-4" />
                                         </DropdownMenuItem>
                                     </>
                                 ) : (
                                      <>
-                                        <DropdownMenuItem onSelect={() => setMenuPage(1)}>
+                                        <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuPage(1); }}>
                                             <ChevronLeft className="mr-2 h-4 w-4" />
                                             <span>Back</span>
                                         </DropdownMenuItem>
