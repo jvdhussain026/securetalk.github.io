@@ -5,13 +5,15 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Check, Upload, Save, X, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Check, Upload, Save, X, RotateCcw, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChatWallpapers } from '@/lib/placeholder-images';
 import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useFirebase } from '@/firebase';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 function ChatPreview() {
     return (
@@ -44,8 +46,10 @@ export default function WallpaperPage() {
     const [activeWallpaper, setActiveWallpaper] = useState<string | null>(null);
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null>(null);
     const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
+    const { storage, user } = useFirebase();
     
     const defaultWallpaper = null; // No background image by default
 
@@ -69,7 +73,7 @@ export default function WallpaperPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -80,12 +84,29 @@ export default function WallpaperPage() {
                 });
                 return;
             }
+            if (!storage || !user) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not upload image. Please try again.' });
+                return;
+            }
+            setIsUploading(true);
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const dataUrl = e.target?.result as string;
-                localStorage.setItem('customGlobalWallpaper', dataUrl);
-                setCustomWallpaper(dataUrl);
-                handleSelectWallpaper(dataUrl);
+                try {
+                    const storageRef = ref(storage, `wallpapers/global/${user.uid}/${Date.now()}_${file.name}`);
+                    const snapshot = await uploadString(storageRef, dataUrl, 'data_url');
+                    const downloadURL = await getDownloadURL(snapshot.ref);
+                    
+                    setCustomWallpaper(downloadURL);
+                    setSelectedWallpaper(downloadURL);
+                    localStorage.setItem('customGlobalWallpaper', downloadURL);
+                    toast({ title: 'Upload successful!', description: 'Preview updated.' });
+                } catch (error) {
+                    console.error("Wallpaper upload failed: ", error);
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the selected image.' });
+                } finally {
+                    setIsUploading(false);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -143,9 +164,10 @@ export default function WallpaperPage() {
                     <button 
                         onClick={handleFileUploadClick} 
                         className="aspect-square bg-card rounded-lg flex flex-col items-center justify-center gap-2 text-primary border-2 border-dashed hover:bg-accent"
+                        disabled={isUploading}
                     >
-                        <Upload className="w-8 h-8" />
-                        <span className="text-sm font-medium">Upload Photo</span>
+                        {isUploading ? <LoaderCircle className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
+                        <span className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Photo'}</span>
                     </button>
                     <input 
                         type="file" 

@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Check, Upload, Save, RotateCcw } from 'lucide-react';
+import { ArrowLeft, Check, Upload, Save, RotateCcw, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChatWallpapers } from '@/lib/placeholder-images';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 
 function ChatPreview() {
     return (
@@ -45,7 +46,7 @@ function ChatPreview() {
 export default function PerChatWallpaperPage() {
     const params = useParams();
     const router = useRouter();
-    const { firestore, user } = useFirebase();
+    const { firestore, user, storage } = useFirebase();
     const { toast } = useToast();
     
     const contactId = params.id as string;
@@ -61,6 +62,7 @@ export default function PerChatWallpaperPage() {
     const [activeWallpaper, setActiveWallpaper] = useState<string | null>(null);
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null>(null);
     const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const defaultGlobalWallpaper = typeof window !== 'undefined' ? localStorage.getItem('chatWallpaper') : null;
@@ -88,7 +90,7 @@ export default function PerChatWallpaperPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) { // 5MB limit
@@ -99,12 +101,25 @@ export default function PerChatWallpaperPage() {
                 });
                 return;
             }
+            setIsUploading(true);
             const reader = new FileReader();
-            reader.onload = (e) => {
+            reader.onload = async (e) => {
                 const dataUrl = e.target?.result as string;
-                localStorage.setItem(`customChatWallpaper_${chatId}`, dataUrl);
-                setCustomWallpaper(dataUrl);
-                handleSelectWallpaper(dataUrl);
+                 try {
+                    const storageRef = ref(storage, `wallpapers/${chatId}/${Date.now()}_${file.name}`);
+                    const snapshot = await uploadString(storageRef, dataUrl, 'data_url');
+                    const downloadURL = await getDownloadURL(snapshot.ref);
+                    
+                    setCustomWallpaper(downloadURL);
+                    setSelectedWallpaper(downloadURL);
+                    localStorage.setItem(`customChatWallpaper_${chatId}`, downloadURL);
+                    toast({ title: 'Upload successful!', description: 'Preview updated.' });
+                } catch (error) {
+                    console.error("Wallpaper upload failed: ", error);
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the selected image.' });
+                } finally {
+                    setIsUploading(false);
+                }
             };
             reader.readAsDataURL(file);
         }
@@ -168,9 +183,10 @@ export default function PerChatWallpaperPage() {
                     <button 
                         onClick={handleFileUploadClick} 
                         className="aspect-square bg-card rounded-lg flex flex-col items-center justify-center gap-2 text-primary border-2 border-dashed hover:bg-accent"
+                        disabled={isUploading}
                     >
-                        <Upload className="w-8 h-8" />
-                        <span className="text-sm font-medium">Upload Photo</span>
+                        {isUploading ? <LoaderCircle className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
+                        <span className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Photo'}</span>
                     </button>
                     <input 
                         type="file" 
