@@ -49,6 +49,7 @@ export type Contact = {
   callWith?: string | null; // UID of the person they are in a call with
   lastSeen?: Timestamp;
   receiveBroadcasts?: boolean;
+  isPinned?: boolean;
 };
 
 export type UserProfile = {

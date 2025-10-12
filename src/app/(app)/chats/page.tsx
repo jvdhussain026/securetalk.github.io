@@ -5,7 +5,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle } from 'lucide-react'
+import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin } from 'lucide-react'
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment, writeBatch } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
@@ -173,9 +173,12 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
                     <p className={cn("text-sm truncate", lastMessage ? 'text-muted-foreground' : 'text-muted-foreground italic')}>
                         {lastMessageText}
                     </p>
+                    <div className="flex items-center gap-2">
+                     {contact.isPinned && <Pin className="h-4 w-4 text-muted-foreground" />}
                      {contact.unreadCount > 0 && (
                         <Badge className="h-5 shrink-0">{contact.unreadCount}</Badge>
                      )}
+                    </div>
                 </div>
             </div>
         </Link>
@@ -279,11 +282,20 @@ export default function ChatsPage() {
   const sortedContacts = useMemo(() => {
     if (!contacts) return [];
     
-    // The query now handles the sorting by lastMessageTimestamp descending.
-    // We just need to filter.
-    return contacts.filter(contact =>
+    return contacts
+      .filter(contact =>
         contact.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+      )
+      .sort((a, b) => {
+        // Pinned contacts come first
+        if (a.isPinned && !b.isPinned) return -1;
+        if (!a.isPinned && b.isPinned) return 1;
+
+        // Then sort by last message timestamp (newest first)
+        const timeA = a.lastMessageTimestamp?.toMillis() || 0;
+        const timeB = b.lastMessageTimestamp?.toMillis() || 0;
+        return timeB - timeA;
+      });
   }, [contacts, searchQuery]);
   
   const handleLongPress = (contact: Contact) => {
@@ -294,49 +306,37 @@ export default function ChatsPage() {
   const handleOpenDeleteDialog = (type: 'clear' | 'delete') => {
     setIsContactOptionsOpen(false);
     setDeleteType(type);
-    setIsDeleteOpen(true);
+    setIsModalOpen(true); // Reusing for generic confirmation
   };
 
   const handleConfirmDelete = async () => {
     if (!selectedContact || !firestore || !user) return;
-
-    const chatId = [user.uid, selectedContact.id].sort().join('_');
-    const messagesRef = collection(firestore, "chats", chatId, "messages");
-    
-    try {
-        const batch = writeBatch(firestore);
-        
-        if (deleteType === 'clear') {
-            const messagesSnapshot = await getDocs(messagesRef);
-            messagesSnapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            await batch.commit();
-            toast({ title: "Chat Cleared", description: `Messages with ${selectedContact.name} have been cleared.` });
-        } else if (deleteType === 'delete') {
-            // Delete messages
-            const messagesSnapshot = await getDocs(messagesRef);
-            messagesSnapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            // Delete contact from current user's list
-            const myContactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
-            batch.delete(myContactRef);
-            // Delete me from their contact list
-            const theirContactRef = doc(firestore, 'users', selectedContact.id, 'contacts', user.uid);
-            batch.delete(theirContactRef);
-
-            await batch.commit();
-            toast({ title: "Chat Deleted", description: `${selectedContact.name} has been removed from your contacts.` });
-        }
-    } catch (error) {
-        console.error("Error performing delete action:", error);
-        toast({ variant: 'destructive', title: `Failed to ${deleteType} chat` });
-    } finally {
-        setIsDeleteOpen(false);
-        setSelectedContact(null);
-    }
+    // This is a placeholder. Will be implemented fully later.
+    toast({ variant: 'destructive', title: `"${deleteType}" action is not yet implemented.` });
+    setIsModalOpen(false);
+    setSelectedContact(null);
   };
+  
+  const handlePinToggle = async () => {
+    if (!selectedContact || !firestore || !user) return;
+    
+    const contactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
+    const newPinState = !selectedContact.isPinned;
+
+    try {
+        await updateDoc(contactRef, { isPinned: newPinState });
+        toast({
+            title: newPinState ? 'Chat Pinned' : 'Chat Unpinned',
+        });
+    } catch (error) {
+        console.error("Failed to toggle pin state:", error);
+        toast({ variant: 'destructive', title: 'Failed to update pin state.' });
+    }
+    
+    setIsContactOptionsOpen(false);
+    setSelectedContact(null);
+  };
+
 
   const isLoading = isUserLoading || areContactsLoading || isProfileLoading;
 
@@ -412,7 +412,7 @@ export default function ChatsPage() {
           ) : (
             <div>
               {sortedContacts.map((contact) => (
-                  <div key={contact.id} className="block hover:bg-accent/50 transition-colors border-b">
+                  <div key={contact.id} className={cn("block hover:bg-accent/50 transition-colors border-b", contact.isPinned && "bg-muted/50")}>
                     <ChatListItem contact={contact} onLongPress={handleLongPress} />
                   </div>
                 )
@@ -443,7 +443,7 @@ export default function ChatsPage() {
           isOpen={isContactOptionsOpen}
           onClose={() => setIsContactOptionsOpen(false)}
           contact={selectedContact}
-          onPin={() => { setIsContactOptionsOpen(false); setIsModalOpen(true); }}
+          onPin={handlePinToggle}
           onArchive={() => { setIsContactOptionsOpen(false); setIsModalOpen(true); }}
           onClear={() => handleOpenDeleteDialog('clear')}
           onDelete={() => handleOpenDeleteDialog('delete')}

@@ -26,7 +26,7 @@ export function ContactOptions({
   onDelete,
 }: ContactOptionsProps) {
   const options = [
-    { label: 'Pin Chat', icon: Pin, action: onPin },
+    { label: contact.isPinned ? 'Unpin Chat' : 'Pin Chat', icon: Pin, action: onPin },
     { label: 'Archive Chat', icon: Archive, action: onArchive },
     { label: 'Clear Chat', icon: XCircle, action: onClear, isDestructive: true },
     { label: 'Delete Chat', icon: Trash2, action: onDelete, isDestructive: true },
