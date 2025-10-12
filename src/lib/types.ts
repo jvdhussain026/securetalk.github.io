@@ -20,6 +20,14 @@ export type Message = {
   deletedFor?: string[]; // Array of user UIDs who have deleted this message
 };
 
+export type Chat = {
+    id: string;
+    participants: Record<string, boolean>;
+    typing: Record<string, boolean>;
+    wallpaper?: string | null;
+    createdAt: Timestamp;
+};
+
 export type Contact = {
   id:string; // This will be the user's UID
   name: string;

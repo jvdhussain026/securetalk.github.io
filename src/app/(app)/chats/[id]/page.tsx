@@ -312,6 +312,7 @@ function createChatId(uid1: string, uid2: string): string {
 
 export default function ChatPage() {
   const params = useParams();
+  const router = useRouter();
   const { firestore, user, userProfile } = useFirebase();
 
   const currentUserId = user?.uid;
@@ -438,13 +439,20 @@ export default function ChatPage() {
   const [wallpaper, setWallpaper] = useState<string | null>(null);
 
   useEffect(() => {
-    const savedWallpaper = localStorage.getItem('chatWallpaper');
-    if (savedWallpaper) {
-        setWallpaper(savedWallpaper);
+    // This now reads both the global and chat-specific wallpaper
+    const globalWallpaper = localStorage.getItem('chatWallpaper');
+    const chatWallpaper = chat?.wallpaper;
+
+    // The chat-specific wallpaper takes precedence
+    const finalWallpaper = chatWallpaper !== undefined ? chatWallpaper : globalWallpaper;
+
+    if (finalWallpaper) {
+      setWallpaper(finalWallpaper);
     }
-    // Listen for changes from other tabs
+    
+    // Listen for changes from other tabs for the global setting
     const handleStorageChange = (e: StorageEvent) => {
-        if (e.key === 'chatWallpaper') {
+        if (e.key === 'chatWallpaper' && chat?.wallpaper === undefined) {
             setWallpaper(e.newValue);
         }
     };
@@ -452,7 +460,8 @@ export default function ChatPage() {
     return () => {
         window.removeEventListener('storage', handleStorageChange);
     };
-  }, []);
+  }, [chat?.wallpaper]);
+
 
   useEffect(() => {
     // When entering the chat, store the unread count and then reset it
@@ -1006,7 +1015,7 @@ export default function ChatPage() {
     if (action === 'find') {
       setIsSearchOpen(true);
     } else if (action === 'theme') {
-      router.push('/settings/chat-customization/wallpaper');
+      router.push(`/chats/${contactId}/wallpaper`);
     } else {
       setIsComingSoonOpen(true);
     }
@@ -1445,7 +1454,7 @@ export default function ChatPage() {
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('theme'); setIsMenuOpen(false);}}>
                                             <Palette className="mr-2 h-4 w-4" />
-                                            <span>Chat Theme</span>
+                                            <span>Chat Wallpaper</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
                                             <Label htmlFor="live-translation-switch" className="flex items-center gap-2 cursor-pointer">

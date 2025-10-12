@@ -80,6 +80,10 @@
                 "type": "boolean"
             }
         },
+        "wallpaper": {
+            "type": "string",
+            "description": "URL of the custom wallpaper for this specific chat."
+        },
         "createdAt": {
           "type": "string",
           "description": "Timestamp of when the chat was created.",
