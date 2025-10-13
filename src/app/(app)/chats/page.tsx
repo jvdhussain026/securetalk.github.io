@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
 import { ImagePreviewDialog } from '@/components/image-preview-dialog'
 import type { ImagePreviewState } from '@/components/image-preview-dialog'
-import { OnboardingFlow, TourStep } from '@/components/onboarding-flow'
+import { OnboardingFlow } from '@/components/onboarding-flow'
 import { ContactOptions } from '@/components/contact-options'
 import { DeleteChatDialog } from '@/components/delete-chat-dialog'
 import {
@@ -199,7 +199,6 @@ export default function ChatsPage() {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
-  const [showTour, setShowTour] = useState(false);
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
   const router = useRouter();
@@ -253,14 +252,8 @@ export default function ChatsPage() {
     if (user) {
         localStorage.setItem(`onboarding_completed_${user.uid}`, 'true');
         setIsOnboardingComplete(true);
-        // Delay showing the tour to allow the main UI to render
-        setTimeout(() => setShowTour(true), 500);
     }
   };
-  
-  const handleTourComplete = () => {
-    setShowTour(false);
-  }
 
   const totalUnreadCount = useMemo(() => {
     if (!contacts) return 0;
@@ -521,7 +514,6 @@ export default function ChatsPage() {
 
       </div>
       <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
-      {showTour && <TourStep onComplete={handleTourComplete} />}
       {selectedContact && (
         <ContactOptions
           isOpen={isContactOptionsOpen}
@@ -554,3 +546,5 @@ export default function ChatsPage() {
     </>
   )
 }
+
+    
