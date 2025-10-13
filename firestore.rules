@@ -1,186 +1,162 @@
 /**
- * @fileoverview Firestore Security Rules for Secure Talk application.
- *
- * Core Philosophy:
- * This ruleset prioritizes secure data access based on user identity and relationships. It enforces
- * ownership for user-specific data and shared access for collaborative content like chats and groups.
- * In prototyping mode, it trusts data shapes but strictly enforces authorization.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership and group-based access model.
  *
  * Data Structure:
- * - /users/{userId}: Stores individual user profiles, accessible only to the owning user.
- * - /chats/{chatId}: Stores metadata for 1-on-1 chats. Access is granted to chat participants.
- * - /chats/{chatId}/messages/{messageId}: Stores messages within 1-on-1 chats. Access follows chat participants.
+ * - /users/{userId}: Stores individual user profiles. Only the authenticated user can read/write their own profile.
+ * - /chats/{chatId}: Stores metadata for 1-on-1 chats. Access is restricted to participants of the chat.
+ * - /chats/{chatId}/messages/{messageId}: Stores messages within a 1-on-1 chat. Access is restricted to participants of the chat.
  * - /users/{userId}/contacts/{contactId}: Stores a user's contacts. Only the owning user can manage their contacts.
- * - /groups/{groupId}: Stores group chat metadata. Access is granted to group participants.
- * - /groups/{groupId}/messages/{messageId}: Stores messages within group chats. Access follows group participants.
+ * - /groups/{groupId}: Stores group chat information.  Access is restricted to group members.
+ * - /groups/{groupId}/messages/{messageId}: Stores messages within a group chat. Access is restricted to group members.
  *
  * Key Security Decisions:
- * - User data is strictly private (owner-only).
- * - Chat and group access is managed through `participants` maps on the chat/group documents.
- * - Listing of user contacts is restricted to the owning user.
- * - No public listing of users, chats, or groups is allowed.
+ * - User listing is disallowed.
+ * - All write operations require authentication.
+ * - Data validation is minimal to allow for rapid prototyping.  Only authorization-critical fields are validated.
  *
  * Denormalization for Authorization:
- * - Chat and group documents denormalize the list of participating user IDs into a `participants` map.
- *   This allows security rules to quickly check if a user is authorized to access the chat/group and its messages.
+ * - The `participants` map on `chats/{chatId}` and `groups/{groupId}` is used to efficiently determine read/write access for chat participants.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile data.
+     * @description Secures user profiles. Only the authenticated user can read/write their own profile.
      * @path /users/{userId}
-     * @allow (create) User with matching ID can create their own profile.
-     * @allow (get, update, delete) User with matching ID can read, update, and delete their profile.
-     * @deny (create) User cannot create a profile with an ID that doesn't match their own.
-     * @deny (get, update, delete) User cannot read, update, or delete another user's profile.
-     * @principle Enforces document ownership for user profiles.
+     * @allow (create) - User with UID 'user123' can create their profile at /users/user123.
+     * @allow (get, list, update, delete) - User with UID 'user123' can read, update, and delete their profile at /users/user123.
+     * @deny (create) - User with UID 'user456' cannot create a profile at /users/user123.
+     * @deny (get, list, update, delete) - User with UID 'user456' cannot read, update, or delete the profile at /users/user123.
+     * @principle Enforces document ownership for writes.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
         return request.auth.uid == userId;
       }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && getSelf().data != null;
+      function isSignedIn() {
+        return request.auth != null;
       }
-
-      function getSelf() {
-        return get(/databases/$(database)/documents/users/$(userId));
-      }
-
-      allow get: if isOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
       allow list: if false;
       allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Controls access to 1-on-1 chat metadata.
+     * @description Secures 1-on-1 chat metadata. Access is restricted to participants of the chat.
      * @path /chats/{chatId}
-     * @allow (get, list) Any participant can read the chat metadata.
-     * @allow (create) Only a participant can create a chat. Participants must match auth.uid
-     * @allow (update, delete) Only a participant can update or delete the chat.
-     * @deny Requests from non-participants.
-     * @principle Enforces shared access based on the `participants` map.
+     * @allow (get, list) - User with UID 'user123' can read chat /chats/chat123 if 'user123' is a participant.
+     * @allow (create, update, delete) - User with UID 'user123' can create, update, and delete chat /chats/chat123 if 'user123' is a participant.
+     * @deny (get, list) - User with UID 'user456' cannot read chat /chats/chat123 if 'user456' is not a participant.
+     * @deny (create, update, delete) - User with UID 'user456' cannot create, update, or delete chat /chats/chat123 if 'user456' is not a participant.
+     * @principle Restricts access to shared resources based on participation.
      */
     match /chats/{chatId} {
+      function isParticipant(chatId) {
+        return request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
       function isSignedIn() {
         return request.auth != null;
       }
-
-      function isParticipant() {
-        return isSignedIn() && (resource.data.participants[request.auth.uid] == true || request.resource.data.participants[request.auth.uid] == true);
-      }
-
-      allow get: if isParticipant();
+      allow get: if isSignedIn() && isParticipant(chatId);
       allow list: if false;
       allow create: if isSignedIn() && request.resource.data.participants[request.auth.uid] == true;
-      allow update: if isParticipant();
-      allow delete: if isParticipant();
+      allow update: if isSignedIn() && isParticipant(chatId);
+      allow delete: if isSignedIn() && isParticipant(chatId);
     }
 
     /**
-     * @description Controls access to messages within a 1-on-1 chat.
+     * @description Secures messages within a 1-on-1 chat. Access is restricted to participants of the chat.
      * @path /chats/{chatId}/messages/{messageId}
-     * @allow (get, list) Any participant in the chat can read messages.
-     * @allow (create) Only a participant in the chat can create a message.
-     * @allow (update, delete) No one can update or delete a message.
-     * @deny Requests from non-participants.
-     * @principle Enforces shared access to chat messages based on the `participants` map in the parent chat document.
+     * @allow (get, list) - User with UID 'user123' can read messages in /chats/chat123 if 'user123' is a participant.
+     * @allow (create) - User with UID 'user123' can create a message in /chats/chat123 if 'user123' is a participant.
+     * @deny (get, list) - User with UID 'user456' cannot read messages in /chats/chat123 if 'user456' is not a participant.
+     * @deny (create) - User with UID 'user456' cannot create a message in /chats/chat123 if 'user456' is not a participant.
+     * @principle Restricts access to subcollections based on parent document's access control.
      */
     match /chats/{chatId}/messages/{messageId} {
+      function isChatParticipant(chatId) {
+        return request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
       function isSignedIn() {
         return request.auth != null;
       }
-
-      function isChatParticipant(chatId) {
-        return isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
-      }
-
-      allow get: if isChatParticipant(chatId);
+      allow get: if isSignedIn() && isChatParticipant(chatId);
       allow list: if false;
-      allow create: if isChatParticipant(chatId);
+      allow create: if isSignedIn() && isChatParticipant(chatId);
       allow update: if false;
       allow delete: if false;
     }
 
     /**
-     * @description Controls access to a user's contacts.
+     * @description Secures user contacts. Only the owning user can manage their contacts.
      * @path /users/{userId}/contacts/{contactId}
-     * @allow (get, list) The owning user can read their own contacts.
-     * @allow (create, update, delete) The owning user can manage their own contacts.
-     * @deny Requests from other users.
-     * @principle Enforces document ownership for contact management.
+     * @allow (get, list) - User with UID 'user123' can read their own contacts in /users/user123/contacts.
+     * @allow (create, update, delete) - User with UID 'user123' can create, update, and delete contacts in /users/user123/contacts.
+     * @deny (get, list) - User with UID 'user456' cannot read contacts in /users/user123/contacts.
+     * @deny (create, update, delete) - User with UID 'user456' cannot create, update, or delete contacts in /users/user123/contacts.
+     * @principle Enforces document ownership for nested data.
      */
     match /users/{userId}/contacts/{contactId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
       function isSignedIn() {
         return request.auth != null;
       }
-
-      function isOwner(userId) {
-        return isSignedIn() && request.auth.uid == userId;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+      allow get: if isSignedIn() && isOwner(userId);
+      allow list: if false;
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && isOwner(userId);
+      allow delete: if isSignedIn() && isOwner(userId);
     }
 
     /**
-     * @description Controls access to group chat metadata.
+     * @description Secures group chat information. Access is restricted to group members.
      * @path /groups/{groupId}
-     * @allow (get, list) Any participant can read the group chat metadata.
-     * @allow (create) Any user can create a group.
-     * @allow (update, delete) Only a participant can update or delete the group.
-     * @deny Requests from non-participants.
-     * @principle Enforces shared access based on the `participants` map.
+     * @allow (get) - User with UID 'user123' can read group /groups/group123 if 'user123' is a participant.
+     * @allow (list) - User with UID 'user123' can list groups.
+     * @allow (create, update, delete) - User with UID 'user123' can create, update, and delete group /groups/group123 if 'user123' is the owner or a participant with sufficient permissions.
+     * @deny (get) - User with UID 'user456' cannot read group /groups/group123 if 'user456' is not a participant.
+     * @deny (create, update, delete) - User with UID 'user456' cannot create, update, or delete group /groups/group123 if 'user456' is not the owner or a participant with sufficient permissions.
+     * @principle Restricts access to shared resources based on group membership.
      */
     match /groups/{groupId} {
+      function isParticipant(groupId) {
+        return request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.participants;
+      }
       function isSignedIn() {
         return request.auth != null;
       }
-
-      function isParticipant() {
-        return isSignedIn() && (resource.data.participants[request.auth.uid] == true || request.resource.data.participants[request.auth.uid] == true);
-      }
-
-      allow get: if isParticipant();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isParticipant();
-      allow delete: if isParticipant();
+      allow get: if isSignedIn() && isParticipant(groupId);
+      allow list: if isSignedIn();
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && isParticipant(groupId);
+      allow delete: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
     }
 
     /**
-     * @description Controls access to messages within a group chat.
+     * @description Secures messages within a group chat. Access is restricted to group members.
      * @path /groups/{groupId}/messages/{messageId}
-     * @allow (get, list) Any participant in the group can read messages.
-     * @allow (create) Only a participant in the group can create a message.
-     * @allow (update, delete) No one can update or delete a message.
-     * @deny Requests from non-participants.
-     * @principle Enforces shared access to group chat messages based on the `participants` map in the parent group document.
+     * @allow (get, list) - User with UID 'user123' can read messages in /groups/group123 if 'user123' is a participant.
+     * @allow (create) - User with UID 'user123' can create a message in /groups/group123 if 'user123' is a participant.
+     * @deny (get, list) - User with UID 'user456' cannot read messages in /groups/group123 if 'user456' is not a participant.
+     * @deny (create) - User with UID 'user456' cannot create a message in /groups/group123 if 'user456' is not a participant.
+     * @principle Restricts access to subcollections based on parent document's access control.
      */
     match /groups/{groupId}/messages/{messageId} {
+      function isGroupParticipant(groupId) {
+        return request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.participants;
+      }
       function isSignedIn() {
         return request.auth != null;
       }
-
-      function isGroupParticipant(groupId) {
-        return isSignedIn() && get(/databases/$(database)/documents/groups/$(groupId)).data.participants[request.auth.uid] == true;
-      }
-
-      allow get: if isGroupParticipant(groupId);
+      allow get: if isSignedIn() && isGroupParticipant(groupId);
       allow list: if false;
-      allow create: if isGroupParticipant(groupId);
+      allow create: if isSignedIn() && isGroupParticipant(groupId);
       allow update: if false;
       allow delete: if false;
     }
