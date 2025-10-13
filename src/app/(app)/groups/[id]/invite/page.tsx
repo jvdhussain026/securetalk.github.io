@@ -163,14 +163,20 @@ export default function GroupInvitePage() {
                     ) : filteredContacts && filteredContacts.length > 0 ? (
                         <div className="space-y-2">
                             {filteredContacts.map(contact => (
-                                <button key={contact.id} onClick={() => toggleContactSelection(contact.id)} className={cn("w-full flex items-center gap-3 p-2 rounded-lg hover:bg-accent", selectedContacts.includes(contact.id) && "bg-accent")}>
-                                    <Avatar className="h-10 w-10">
-                                        <AvatarImage src={contact.avatar} alt={contact.name} />
-                                        <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-                                    </Avatar>
-                                    <span className="flex-1 text-left font-medium">{contact.displayName || contact.name}</span>
-                                    <Checkbox checked={selectedContacts.includes(contact.id)} />
-                                </button>
+                                <div
+                                  key={contact.id}
+                                  role="button"
+                                  aria-pressed={selectedContacts.includes(contact.id)}
+                                  onClick={() => toggleContactSelection(contact.id)}
+                                  className={cn("w-full flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-accent", selectedContacts.includes(contact.id) && "bg-accent")}
+                                >
+                                  <Avatar className="h-10 w-10 pointer-events-none">
+                                    <AvatarImage src={contact.avatar} alt={contact.name} />
+                                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                                  </Avatar>
+                                  <span className="flex-1 text-left font-medium pointer-events-none">{contact.displayName || contact.name}</span>
+                                  <Checkbox checked={selectedContacts.includes(contact.id)} readOnly />
+                                </div>
                             ))}
                         </div>
                     ) : (
