@@ -2,7 +2,7 @@
 'use client';
 
 import { firebaseConfig } from '@/firebase/config';
-import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
+import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
@@ -23,22 +23,6 @@ const storage = getStorage(firebaseApp);
 export { firebaseApp, auth, firestore, storage };
 
 // --- End of Centralized Initialization ---
-
-
-// IMPORTANT: DO NOT MODIFY THIS FUNCTION - It is now DEPRECATED
-export function initializeFirebase() {
-    const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
-    return getSdks(app);
-}
-
-export function getSdks(app: FirebaseApp) {
-  return {
-    firebaseApp: app,
-    auth: getAuth(app),
-    firestore: getFirestore(app),
-    storage: getStorage(app),
-  };
-}
 
 export * from './provider';
 export * from './client-provider';
