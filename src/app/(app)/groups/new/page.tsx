@@ -12,15 +12,15 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, Timestamp, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
+import { createGroup } from '@/ai/flows/create-group-flow';
 
 export default function NewGroupPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user, firestore, storage } = useFirebase();
+  const { user, storage } = useFirebase();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -30,7 +30,7 @@ export default function NewGroupPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCreateGroup = async () => {
-    if (!name || !user || !firestore) {
+    if (!name || !user) {
       toast({
         variant: 'destructive',
         title: 'Group Name Required',
@@ -42,50 +42,33 @@ export default function NewGroupPage() {
     setIsCreating(true);
 
     try {
-      // 1. Generate a new document reference with a unique ID first.
-      const newGroupDocRef = doc(collection(firestore, 'groups'));
-      const groupId = newGroupDocRef.id;
-
-      // 2. Prepare all group data, including the ID.
-      const groupData = {
-        id: groupId, // Include the ID in the document data
+      const groupInput = {
         name,
         description,
         avatar,
         ownerId: user.uid,
-        participants: {
-          [user.uid]: true,
-        },
-        createdAt: Timestamp.now(), // Use client-side Timestamp
       };
-      
-      // 3. Create the document with a single setDoc call.
-      await setDoc(newGroupDocRef, groupData);
 
-      // 4. Add the group to the creator's contact list
-      const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
-      await setDoc(userContactRef, {
-        id: groupId,
-        name: name,
-        avatar: avatar,
-        isGroup: true,
-        lastMessageTimestamp: Timestamp.now(), // Use client-side Timestamp
-      }, { merge: true });
+      const result = await createGroup(groupInput);
+
+      if (!result.groupId) {
+        throw new Error(result.error || "Group creation failed and did not return a group ID.");
+      }
 
       toast({
         title: 'Group Created!',
         description: 'Now you can invite members.',
       });
 
-      // 5. Redirect to the invite page
-      router.push(`/groups/${groupId}/invite`);
+      // Redirect to the invite page
+      router.push(`/groups/${result.groupId}/invite`);
 
     } catch (error: any) {
       console.error("Detailed error creating group:", error);
       toast({
         variant: 'destructive',
         title: 'Creation Failed',
-        description: error.message || 'Could not create the group. Please check your network or permissions and try again.',
+        description: error.message || 'Could not create the group. Please try again.',
       });
     } finally {
         setIsCreating(false);
