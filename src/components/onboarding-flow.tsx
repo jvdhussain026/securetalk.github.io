@@ -12,7 +12,7 @@ import { ShieldCheck, User, ArrowRight, ArrowLeft, LoaderCircle, MessageCircle, 
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
-import { signInAnonymously, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInAnonymously } from 'firebase/auth';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
@@ -28,17 +28,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-const GoogleIcon = (props: React.SVGProps<SVGSVGElement>) => (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width="24px" height="24px" {...props}>
-        <path fill="#FFC107" d="M43.611,20.083H42V20H24v8h11.303c-1.649,4.657-6.08,8-11.303,8c-6.627,0-12-5.373-12-12s5.373-12,12-12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C12.955,4,4,12.955,4,24s8.955,20,20,20s20-8.955,20-20C44,22.659,43.862,21.35,43.611,20.083z" />
-        <path fill="#FF3D00" d="M6.306,14.691l6.571,4.819C14.655,15.108,18.961,12,24,12c3.059,0,5.842,1.154,7.961,3.039l5.657-5.657C34.046,6.053,29.268,4,24,4C16.318,4,9.656,8.337,6.306,14.691z" />
-        <path fill="#4CAF50" d="M24,44c5.166,0,9.86-1.977,13.409-5.192l-6.19-5.238C29.211,35.091,26.715,36,24,36c-5.222,0-9.565-3.108-11.127-7.462l-6.522,5.025C9.505,39.556,16.227,44,24,44z" />
-        <path fill="#1976D2" d="M43.611,20.083H42V20H24v8h11.303c-0.792,2.237-2.231,4.166-4.087,5.574l6.19,5.238C39.902,35.619,44,29.89,44,24C44,22.659,43.862,21.35,43.611,20.083z" />
-    </svg>
-);
-
-
-const WelcomeStep = ({ onNext }: { onNext: () => void; }) => {
+const WelcomeStep = ({ onNext, isSigningIn }: { onNext: () => void; isSigningIn: boolean; }) => {
     return (
         <div className="h-full w-full flex flex-col p-8 text-foreground text-center bg-background">
              <ScrollArea className="flex-1 -mx-8">
@@ -82,45 +72,14 @@ const WelcomeStep = ({ onNext }: { onNext: () => void; }) => {
                  transition={{ duration: 0.5, delay: 0.8 }}
                  className="shrink-0 pt-8"
             >
-                <Button size="lg" className="w-full" onClick={onNext}>
-                    Get Started
-                    <ArrowRight className="ml-2" />
+                <Button size="lg" className="w-full" onClick={onNext} disabled={isSigningIn}>
+                    {isSigningIn ? <LoaderCircle className="animate-spin mr-2" /> : <ArrowRight className="ml-2" />}
+                    {isSigningIn ? 'Securing your session...' : 'Get Started'}
                 </Button>
             </motion.div>
         </div>
     );
 };
-
-const AccountTypeStep = ({ onGoogleSignIn, onAnonymousSignIn, isSigningIn, onBack }: { onGoogleSignIn: () => void; onAnonymousSignIn: () => void; isSigningIn: boolean; onBack: () => void; }) => {
-    return (
-        <div className="h-full w-full flex flex-col p-8 bg-background">
-            <ScrollArea className="flex-1 -mx-8">
-                <div className="flex flex-col justify-center items-center px-8 pt-8 min-h-full">
-                    <Card className="w-full max-w-sm">
-                        <CardHeader className="text-center">
-                            <CardTitle>Create Your Account</CardTitle>
-                            <CardDescription>Get started anonymously or with Google.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <Button size="lg" className="w-full" onClick={onGoogleSignIn} disabled={isSigningIn}>
-                                {isSigningIn ? <LoaderCircle className="animate-spin mr-2" /> : <GoogleIcon className="mr-2" />}
-                                {isSigningIn ? 'Signing in...' : 'Sign in with Google'}
-                            </Button>
-                            <Button size="lg" variant="outline" className="w-full" onClick={onAnonymousSignIn} disabled={isSigningIn}>
-                                {isSigningIn ? <LoaderCircle className="animate-spin mr-2" /> : null}
-                                Continue Anonymously
-                            </Button>
-                        </CardContent>
-                    </Card>
-                </div>
-            </ScrollArea>
-             <div className="shrink-0 pt-8 flex justify-center">
-                <Button variant="link" onClick={onBack}>Back</Button>
-            </div>
-        </div>
-    );
-};
-
 
 // Step 2: Name Input
 const NameStep = ({ onNext, onBack, isSaving }: { onNext: (name: string) => void; onBack: () => void; isSaving: boolean; }) => {
@@ -273,10 +232,29 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const { toast } = useToast();
     const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [isSigningIn, setIsSigningIn] = useState(false);
-    const [isAnonWarningOpen, setIsAnonWarningOpen] = useState(false);
 
     const nextStep = () => setStep(s => s + 1);
     const prevStep = () => setStep(s => s > 0 ? s - 1 : 0);
+
+    const handleGetStarted = async () => {
+        if (user) {
+            nextStep();
+            return;
+        }
+        if (!auth) return;
+
+        setIsSigningIn(true);
+        try {
+            await signInAnonymously(auth);
+            nextStep(); // Go to Name step
+        } catch (error) {
+            console.error("Anonymous sign-in failed:", error);
+            toast({ variant: "destructive", title: "Authentication Failed", description: "Could not start a secure session."});
+        } finally {
+            setIsSigningIn(false);
+        }
+    };
+
 
     const createUserProfile = async (currentUser: any, profileData: any) => {
         const userRef = doc(firestore, 'users', currentUser.uid);
@@ -321,62 +299,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         }
     };
 
-
-    const handleGoogleSignIn = async () => {
-        if (!auth || !firestore) return;
-        setIsSigningIn(true);
-        const provider = new GoogleAuthProvider();
-        try {
-            const result = await signInWithPopup(auth, provider);
-            const gUser = result.user;
-            const profileData = {
-                id: gUser.uid,
-                name: gUser.displayName,
-                email: gUser.email,
-                profilePictureUrl: gUser.photoURL,
-                bio: 'Just joined Secure Talk!',
-                language: 'en',
-                lastConnection: null,
-                createdAt: serverTimestamp(),
-            };
-            await createUserProfile(gUser, profileData);
-            setStep(3); // Go to Terms
-        } catch (error: any) {
-            let title = "Google Sign-in Failed";
-            let description = "An unexpected error occurred. Please try again.";
-
-            if (error.code === 'auth/popup-closed-by-user') {
-                title = "Sign-in Cancelled";
-                description = "The sign-in window was closed. If this was a mistake, please try again. If the issue persists, check your browser's pop-up settings.";
-            } else if (error.code === 'auth/unauthorized-domain') {
-                 title = "Domain Not Authorized";
-                 description = "This app's domain is not authorized for sign-in. This is a developer configuration issue."
-            }
-            toast({ variant: 'destructive', title, description });
-        } finally {
-            setIsSigningIn(false);
-        }
-    };
-
-    const confirmAnonymousSignIn = async () => {
-        if (!auth) return;
-        setIsAnonWarningOpen(false);
-        setIsSigningIn(true);
-        try {
-            await signInAnonymously(auth);
-            nextStep(); // Go to Name step
-        } catch (error) {
-            console.error("Anonymous sign-in failed:", error);
-            toast({ variant: "destructive", title: "Authentication Failed", description: "Could not start a secure session."});
-        } finally {
-            setIsSigningIn(false);
-        }
-    };
-
-    const handleAnonymousSignIn = () => {
-        setIsAnonWarningOpen(true);
-    }
-
     const handleNameNext = async (name: string) => {
         if (name.trim().length < 2) {
              toast({ variant: "destructive", title: "Please enter a valid name."});
@@ -409,8 +331,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     }
 
     const steps = [
-        <WelcomeStep key="welcome" onNext={nextStep} />,
-        <AccountTypeStep key="account" onGoogleSignIn={handleGoogleSignIn} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} onBack={prevStep} />,
+        <WelcomeStep key="welcome" onNext={handleGetStarted} isSigningIn={isSigningIn}/>,
         <NameStep key="name" onNext={handleNameNext} onBack={prevStep} isSaving={isSavingProfile} />,
         <TermsStep key="terms" onNext={nextStep} onBack={prevStep} />,
         <NotificationsStep key="notifs" onNext={onComplete} onBack={prevStep} />,
@@ -431,20 +352,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
                     {steps[step]}
                 </motion.div>
             </AnimatePresence>
-            <AlertDialog open={isAnonWarningOpen} onOpenChange={setIsAnonWarningOpen}>
-                <AlertDialogContent>
-                    <AlertDialogHeader>
-                        <AlertDialogTitle>Continue Anonymously?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                            Anonymous accounts are great for testing, but they are not recoverable. If you clear your browser data or switch devices, you will lose access to this account and its messages permanently.
-                        </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                        <AlertDialogCancel>Go Back</AlertDialogCancel>
-                        <AlertDialogAction onClick={confirmAnonymousSignIn}>Yes, continue</AlertDialogAction>
-                    </AlertDialogFooter>
-                </AlertDialogContent>
-            </AlertDialog>
         </div>
     );
 }
