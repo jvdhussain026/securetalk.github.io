@@ -12,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, Timestamp, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
@@ -56,7 +56,7 @@ export default function NewGroupPage() {
         participants: {
           [user.uid]: true,
         },
-        createdAt: serverTimestamp(),
+        createdAt: Timestamp.now(), // Use client-side Timestamp
       };
       
       // 3. Create the document with a single setDoc call.
@@ -69,7 +69,7 @@ export default function NewGroupPage() {
         name: name,
         avatar: avatar,
         isGroup: true,
-        lastMessageTimestamp: serverTimestamp(),
+        lastMessageTimestamp: Timestamp.now(), // Use client-side Timestamp
       }, { merge: true });
 
       toast({
@@ -87,7 +87,8 @@ export default function NewGroupPage() {
         title: 'Creation Failed',
         description: error.message || 'Could not create the group. Please check your network or permissions and try again.',
       });
-      setIsCreating(false);
+    } finally {
+        setIsCreating(false);
     }
   };
   
