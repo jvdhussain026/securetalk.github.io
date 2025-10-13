@@ -73,8 +73,9 @@ const WelcomeStep = ({ onNext, isSigningIn }: { onNext: () => void; isSigningIn:
                  className="shrink-0 pt-8"
             >
                 <Button size="lg" className="w-full" onClick={onNext} disabled={isSigningIn}>
-                    {isSigningIn ? <LoaderCircle className="animate-spin mr-2" /> : <ArrowRight className="ml-2" />}
+                    {isSigningIn ? <LoaderCircle className="animate-spin mr-2" /> : null}
                     {isSigningIn ? 'Securing your session...' : 'Get Started'}
+                    {!isSigningIn && <ArrowRight className="ml-2" />}
                 </Button>
             </motion.div>
         </div>
@@ -196,12 +197,10 @@ const NotificationsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () 
         const permission = await Notification.requestPermission();
         if (permission !== 'granted') {
             toast({ variant: 'destructive', title: 'Notifications not enabled.' });
-            onNext();
-            return;
+        } else {
+            toast({ title: 'Notifications enabled!' });
         }
-        
-        toast({ title: 'Notifications enabled!' });
-        onNext();
+        onNext(); // Proceed whether permission was granted or not
     };
 
     return (
@@ -333,8 +332,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const steps = [
         <WelcomeStep key="welcome" onNext={handleGetStarted} isSigningIn={isSigningIn}/>,
         <NameStep key="name" onNext={handleNameNext} onBack={prevStep} isSaving={isSavingProfile} />,
-        <TermsStep key="terms" onNext={nextStep} onBack={prevStep} />,
-        <NotificationsStep key="notifs" onNext={onComplete} onBack={prevStep} />,
+        <TermsStep key="terms" onNext={onComplete} onBack={prevStep} />,
     ];
 
 
@@ -355,5 +353,3 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         </div>
     );
 }
-
-    
