@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef } from 'react';
@@ -15,12 +14,12 @@ import { useFirebase } from '@/firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
-import { createGroup } from '@/ai/flows/create-group-flow';
+import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
 
 export default function NewGroupPage() {
   const { toast } = useToast();
   const router = useRouter();
-  const { user, storage } = useFirebase();
+  const { user, storage, firestore } = useFirebase();
 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -30,7 +29,7 @@ export default function NewGroupPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleCreateGroup = async () => {
-    if (!name || !user) {
+    if (!name || !user || !firestore) {
       toast({
         variant: 'destructive',
         title: 'Group Name Required',
@@ -42,18 +41,44 @@ export default function NewGroupPage() {
     setIsCreating(true);
 
     try {
-      const groupInput = {
+      // 1. Create a new document reference for the group
+      const newGroupRef = doc(collection(firestore, 'groups'));
+      const groupId = newGroupRef.id;
+
+      // 2. Create a reference for the user's contact entry for this group
+      const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
+
+      // 3. Create a write batch
+      const batch = writeBatch(firestore);
+
+      // 4. Define the group data
+      const groupData = {
+        id: groupId,
         name,
-        description,
-        avatar,
+        description: description || '',
+        avatar: avatar || '',
         ownerId: user.uid,
+        participants: {
+          [user.uid]: true,
+        },
+        createdAt: Timestamp.now(),
       };
 
-      const result = await createGroup(groupInput);
+      // 5. Define the user's contact data for the group
+      const userContactData = {
+        id: groupId,
+        name,
+        avatar: avatar || '',
+        isGroup: true,
+        lastMessageTimestamp: Timestamp.now(),
+      };
 
-      if (!result.groupId) {
-        throw new Error(result.error || "Group creation failed and did not return a group ID.");
-      }
+      // 6. Add operations to the batch
+      batch.set(newGroupRef, groupData);
+      batch.set(userContactRef, userContactData);
+
+      // 7. Commit the batch
+      await batch.commit();
 
       toast({
         title: 'Group Created!',
@@ -61,7 +86,7 @@ export default function NewGroupPage() {
       });
 
       // Redirect to the invite page
-      router.push(`/groups/${result.groupId}/invite`);
+      router.push(`/groups/${groupId}/invite`);
 
     } catch (error: any) {
       console.error("Detailed error creating group:", error);
