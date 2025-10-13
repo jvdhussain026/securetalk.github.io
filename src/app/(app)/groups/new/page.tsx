@@ -11,7 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useFirebase, setDocumentNonBlocking } from '@/firebase';
 import { collection, serverTimestamp, doc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -59,7 +59,14 @@ export default function NewGroupPage() {
         createdAt: serverTimestamp(),
       };
       
-      await setDocumentNonBlocking(newGroupRef, groupData, {});
+      // Using a try-catch with the non-blocking update to handle errors gracefully
+      try {
+        await setDocumentNonBlocking(newGroupRef, groupData, {});
+      } catch (e: any) {
+        // This will catch if setDocumentNonBlocking fails internally before the promise rejection
+        throw new Error(e.message || "Failed to initiate group creation.");
+      }
+      
 
       // 2. Add the group to the creator's contact list
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
@@ -84,7 +91,7 @@ export default function NewGroupPage() {
       toast({
         variant: 'destructive',
         title: 'Creation Failed',
-        description: 'Could not create the group. Please try again.',
+        description: 'Could not create the group. Please check your network or permissions and try again.',
       });
       setIsCreating(false);
     }
