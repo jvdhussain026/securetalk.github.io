@@ -57,16 +57,18 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
   const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const remoteUserDocRef = useMemoFirebase(() => {
-    if(!firestore || !contact.id) return null;
+    if(!firestore || !contact.id || contact.isGroup) return null;
     return doc(firestore, 'users', contact.id);
-  }, [firestore, contact.id]);
+  }, [firestore, contact.id, contact.isGroup]);
+
   const { data: remoteUser } = useDoc<Contact>(remoteUserDocRef);
 
 
   const chatId = useMemo(() => {
     if (!user?.uid || !contact.id) return null;
+    if (contact.isGroup) return contact.id;
     return [user.uid, contact.id].sort().join('_');
-  }, [user?.uid, contact.id]);
+  }, [user?.uid, contact.id, contact.isGroup]);
 
   useEffect(() => {
     if (!firestore || !chatId) {
@@ -74,8 +76,10 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
       return;
     };
 
+    const messagesCollection = contact.isGroup ? `groups/${chatId}/messages` : `chats/${chatId}/messages`;
+
     const messagesQuery = query(
-      collection(firestore, "chats", chatId, "messages"),
+      collection(firestore, messagesCollection),
       orderBy("timestamp", "desc"),
     );
 
@@ -94,7 +98,7 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
     });
 
     return () => unsubscribe();
-  }, [firestore, chatId]);
+  }, [firestore, chatId, contact.isGroup]);
 
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -104,7 +108,7 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
 
   const lastMessageText = useMemo(() => {
     if (isLoading) return 'Loading...';
-    if (!lastMessage) return 'No messages yet.';
+    if (!lastMessage) return contact.isGroup ? 'Group created' : 'No messages yet.';
 
     const prefix = lastMessage.senderId === user?.uid ? 'You: ' : '';
     
@@ -122,7 +126,7 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
       return `${prefix}${type.charAt(0).toUpperCase() + type.slice(1)} attachment`;
     }
     return '...';
-  }, [lastMessage, isLoading, user?.uid]);
+  }, [lastMessage, isLoading, user?.uid, contact.isGroup]);
   
   const handleTouchStart = () => {
     longPressTimerRef.current = setTimeout(() => {
@@ -137,11 +141,13 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
   };
   
   const displayName = contact.displayName || contact.name;
+  const chatLink = contact.isGroup ? `/chats/group_${contact.id}` : `/chats/${contact.id}`;
+
 
   return (
       <>
         <Link 
-            href={`/chats/${contact.id}`} 
+            href={chatLink} 
             className="flex items-center gap-4 p-4"
             onContextMenu={(e) => { e.preventDefault(); onLongPress(contact); }}
             onTouchStart={handleTouchStart}
@@ -154,7 +160,7 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
                     <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
                     <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                 {remoteUser?.status === 'online' && (
+                 {!contact.isGroup && remoteUser?.status === 'online' && (
                     <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card" />
                  )}
             </div>
@@ -278,6 +284,8 @@ export default function ChatsPage() {
       router.push('/broadcast/new');
     } else if (action === 'archived') {
       router.push('/archived');
+    } else if (action === 'newGroup') {
+      router.push('/groups/new');
     } else {
       setIsModalOpen(true);
     }

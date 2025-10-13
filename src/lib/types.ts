@@ -28,8 +28,18 @@ export type Chat = {
     createdAt: Timestamp;
 };
 
+export type Group = {
+  id: string;
+  name: string;
+  description?: string;
+  avatar: string;
+  ownerId: string;
+  participants: Record<string, boolean>;
+  createdAt: Timestamp;
+}
+
 export type Contact = {
-  id:string; // This will be the user's UID
+  id:string; // This will be the user's UID or a group's ID
   name: string;
   displayName?: string; // User-editable nickname
   avatar: string;
@@ -60,6 +70,7 @@ export type Contact = {
   receiveBroadcasts?: boolean;
   isPinned?: boolean;
   isArchived?: boolean; // Added for archive feature
+  isGroup?: boolean; // Flag to identify if it's a group chat
 };
 
 export type UserProfile = {

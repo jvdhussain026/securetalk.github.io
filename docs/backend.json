@@ -160,6 +160,25 @@
         "userId",
         "contactUserId"
       ]
+    },
+    "Group": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Group",
+      "type": "object",
+      "description": "Represents a group chat.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "avatar": { "type": "string", "format": "uri" },
+        "ownerId": { "type": "string" },
+        "participants": {
+          "type": "object",
+          "additionalProperties": { "type": "boolean" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "ownerId", "participants", "createdAt"]
     }
   },
   "auth": {
@@ -174,76 +193,48 @@
         "path": "users/{userId}",
         "definition": {
           "entityName": "User",
-          "schema": {
-            "$ref": "#/backend/entities/User"
-          },
-          "description": "Stores user profile information.",
-          "rules": "allow read, write: if request.auth != null;",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/User" },
+          "description": "Stores user profile information."
         }
       },
       {
         "path": "chats/{chatId}",
         "definition": {
           "entityName": "Chat",
-          "schema": {
-            "$ref": "#/backend/entities/Chat"
-          },
-          "description": "Stores chat session information.",
-          "rules": "allow read, write: if request.auth != null;",
-          "params": [
-            {
-              "name": "chatId",
-              "description": "The unique identifier of the chat."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Chat" },
+          "description": "Stores 1-on-1 chat session information."
         }
       },
       {
         "path": "chats/{chatId}/messages/{messageId}",
         "definition": {
           "entityName": "Message",
-          "schema": {
-            "$ref": "#/backend/entities/Message"
-          },
-          "description": "Stores messages within a chat session. Includes denormalized 'chatId' for efficient querying.",
-          "rules": "allow read, write: if request.auth != null;",
-          "params": [
-            {
-              "name": "chatId",
-              "description": "The unique identifier of the chat."
-            },
-            {
-              "name": "messageId",
-              "description": "The unique identifier of the message."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Message" },
+          "description": "Stores messages within a 1-on-1 chat session."
         }
       },
       {
         "path": "users/{userId}/contacts/{contactId}",
         "definition": {
           "entityName": "Contact",
-          "schema": {
-            "$ref": "#/backend/entities/Contact"
-          },
-          "description": "Stores contact information for a user. Includes 'userId' to ensure that only the user can access their contacts.",
-          "rules": "allow read, write: if request.auth != null;",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user."
-            },
-            {
-              "name": "contactId",
-              "description": "The unique identifier of the contact."
-            }
-          ]
+          "schema": { "$ref": "#/backend/entities/Contact" },
+          "description": "Stores contact information for a user."
+        }
+      },
+      {
+        "path": "groups/{groupId}",
+        "definition": {
+          "entityName": "Group",
+          "schema": { "$ref": "#/backend/entities/Group" },
+          "description": "Stores group chat information."
+        }
+      },
+      {
+        "path": "groups/{groupId}/messages/{messageId}",
+        "definition": {
+          "entityName": "Message",
+          "schema": { "$ref": "#/backend/entities/Message" },
+          "description": "Stores messages within a group chat session."
         }
       }
     ]
