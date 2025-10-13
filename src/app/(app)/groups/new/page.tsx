@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useRef } from 'react';
@@ -12,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc, addDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
@@ -42,13 +41,9 @@ export default function NewGroupPage() {
     setIsCreating(true);
 
     try {
-      // 1. Create the group document
+      // 1. Create the group document using addDoc
       const groupsRef = collection(firestore, 'groups');
-      const newGroupRef = doc(groupsRef); // Create a reference with a new ID
-      const groupId = newGroupRef.id;
-
       const groupData = {
-        id: groupId,
         name,
         description,
         avatar,
@@ -57,10 +52,13 @@ export default function NewGroupPage() {
           [user.uid]: true,
         },
         createdAt: serverTimestamp(),
+        // id will be added in a moment
       };
+      const newGroupDocRef = await addDoc(groupsRef, groupData);
+      const groupId = newGroupDocRef.id;
       
-      await setDoc(newGroupRef, groupData);
-      
+      // Now update the group with its own ID
+      await setDoc(newGroupDocRef, { id: groupId }, { merge: true });
 
       // 2. Add the group to the creator's contact list
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
