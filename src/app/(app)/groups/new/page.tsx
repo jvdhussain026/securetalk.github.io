@@ -11,8 +11,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, serverTimestamp, doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
@@ -59,18 +59,12 @@ export default function NewGroupPage() {
         createdAt: serverTimestamp(),
       };
       
-      // Using a try-catch with the non-blocking update to handle errors gracefully
-      try {
-        await setDocumentNonBlocking(newGroupRef, groupData, {});
-      } catch (e: any) {
-        // This will catch if setDocumentNonBlocking fails internally before the promise rejection
-        throw new Error(e.message || "Failed to initiate group creation.");
-      }
+      await setDoc(newGroupRef, groupData);
       
 
       // 2. Add the group to the creator's contact list
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
-      await setDocumentNonBlocking(userContactRef, {
+      await setDoc(userContactRef, {
         id: groupId,
         name: name,
         avatar: avatar,
@@ -86,12 +80,12 @@ export default function NewGroupPage() {
       // 3. Redirect to the invite page
       router.push(`/groups/${groupId}/invite`);
 
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating group:", error);
       toast({
         variant: 'destructive',
         title: 'Creation Failed',
-        description: 'Could not create the group. Please check your network or permissions and try again.',
+        description: error.message || 'Could not create the group. Please check your network or permissions and try again.',
       });
       setIsCreating(false);
     }
