@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -222,6 +223,32 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     );
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id, isSender]);
   
+    if (currentText?.startsWith('[GROUP_INVITE]')) {
+        try {
+            const jsonString = currentText.replace('[GROUP_INVITE]\n', '');
+            const inviteData = JSON.parse(jsonString);
+            return (
+                <div className="p-2.5">
+                    <div className="flex flex-col items-center text-center p-4 bg-black/10 rounded-lg">
+                        <Avatar className="h-16 w-16 mb-2">
+                           <AvatarImage src={inviteData.groupAvatar} />
+                           <AvatarFallback><Users/></AvatarFallback>
+                        </Avatar>
+                        <h3 className="font-bold">You're invited to join a group</h3>
+                        <p className="text-lg font-semibold mb-3">{inviteData.groupName}</p>
+                        <Button size="sm" asChild>
+                            <Link href={`/groups/join?id=${inviteData.groupId}`}>Join Group</Link>
+                        </Button>
+                    </div>
+                </div>
+            );
+        } catch (error) {
+            console.error("Failed to parse group invite", error);
+            return <div className="p-2.5">Invalid group invite</div>
+        }
+    }
+
+
   if (currentText && currentText.startsWith('[Broadcast]')) {
     const body = currentText.replace(/^\[Broadcast\]\s*/, '');
     const match = body.match(/^\*\*(.*?)\*\*\s*\n\n([\s\S]*)/);
@@ -332,51 +359,56 @@ export default function ChatPage() {
   const router = useRouter();
   const { firestore, user, userProfile } = useFirebase();
 
-  const currentUserId = user?.uid;
-  const contactId = params.id as string;
+  const isGroupChat = params.id.toString().startsWith('group_');
+  const chatId = isGroupChat ? params.id.toString().replace('group_', '') : null;
+  const contactId = isGroupChat ? null : params.id as string;
+  const finalChatId = isGroupChat ? chatId : createChatId(user?.uid || '', contactId || '');
 
   const contactDocRef = useMemoFirebase(() => {
-    if (!firestore || !currentUserId || !contactId) return null;
-    return doc(firestore, 'users', currentUserId, 'contacts', contactId);
-  }, [firestore, currentUserId, contactId]);
+    if (isGroupChat || !firestore || !user?.uid || !contactId) return null;
+    return doc(firestore, 'users', user.uid, 'contacts', contactId);
+  }, [firestore, user?.uid, contactId, isGroupChat]);
   
   const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
+  const groupDocRef = useMemoFirebase(() => {
+      if (!isGroupChat || !firestore || !chatId) return null;
+      return doc(firestore, 'groups', chatId);
+  }, [firestore, chatId, isGroupChat]);
+  
+  const { data: group, isLoading: isGroupLoading } = useDoc<Contact>(groupDocRef);
+
+
   const remoteUserDocRef = useMemoFirebase(() => {
-    if(!firestore || !contactId) return null;
+    if (isGroupChat || !firestore || !contactId) return null;
     return doc(firestore, 'users', contactId);
-  }, [firestore, contactId]);
+  }, [firestore, contactId, isGroupChat]);
 
   const { data: remoteUser } = useDoc<Contact>(remoteUserDocRef);
 
-  const chatId = useMemo(() => {
-    if (!currentUserId || !contactId) return null;
-    return createChatId(currentUserId, contactId);
-  }, [currentUserId, contactId]);
-
   const chatDocRef = useMemoFirebase(() => {
-    if (!firestore || !chatId) return null;
-    return doc(firestore, 'chats', chatId);
-  }, [firestore, chatId]);
+    if (!firestore || !finalChatId || isGroupChat) return null;
+    return doc(firestore, 'chats', finalChatId);
+  }, [firestore, finalChatId, isGroupChat]);
 
   const { data: chat, isLoading: isChatLoading } = useDoc(chatDocRef);
 
 
   useEffect(() => {
     const ensureChatDocument = async () => {
-      if (!firestore || !chatId || !currentUserId || !contactId || isChatLoading || chat) return;
+      if (isGroupChat || !firestore || !finalChatId || !user?.uid || !contactId || isChatLoading || chat) return;
 
-      const newChatDocRef = doc(firestore, 'chats', chatId);
+      const newChatDocRef = doc(firestore, 'chats', finalChatId);
       try {
         const chatDoc = await getDocumentNonBlocking(newChatDocRef);
         if (!chatDoc || !chatDoc.exists()) {
             const chatData = {
               participants: {
-                [currentUserId]: true,
+                [user.uid]: true,
                 [contactId]: true,
               },
               typing: {
-                [currentUserId]: false,
+                [user.uid]: false,
                 [contactId]: false,
               },
               createdAt: serverTimestamp(),
@@ -389,13 +421,13 @@ export default function ChatPage() {
     };
 
     ensureChatDocument();
-  }, [firestore, chatId, currentUserId, contactId, chat, isChatLoading]);
-
+  }, [firestore, finalChatId, user?.uid, contactId, chat, isChatLoading, isGroupChat]);
 
   const messagesQuery = useMemoFirebase(() => {
-    if (!firestore || !chatId || !chat) return null; // Wait for chat doc to exist
-    return query(collection(firestore, "chats", chatId, "messages"), orderBy("timestamp", "asc"));
-  }, [firestore, chatId, chat]);
+    if (!firestore || !finalChatId) return null;
+    const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
+    return query(collection(firestore, collectionPath), orderBy("timestamp", "asc"));
+  }, [firestore, finalChatId, isGroupChat]);
 
   const { data: messages, isLoading: areMessagesLoading } = useCollection<Message>(messagesQuery);
   
@@ -499,15 +531,15 @@ export default function ChatPage() {
     const lastMessage = messages[messages.length - 1];
     
     // Only show toast for new incoming messages and if the document is hidden
-    if (lastMessage.senderId !== currentUserId && document.hidden) {
+    if (lastMessage.senderId !== user?.uid && document.hidden) {
         toast({
-            title: `New message from ${contact?.displayName || contact?.name}`,
+            title: `New message from ${contact?.displayName || contact?.name || group?.name}`,
             description: lastMessage.text || 'Sent an attachment',
         });
     }
 
     prevMessagesCountRef.current = messages.length;
-  }, [messages, contact?.displayName, contact?.name, currentUserId, toast]);
+  }, [messages, contact?.displayName, contact?.name, group?.name, user?.uid, toast]);
 
   useEffect(() => {
     const lang = localStorage.getItem('preferredLang');
@@ -519,7 +551,7 @@ export default function ChatPage() {
   }, []);
 
   const handleAutoTranslate = useCallback(async (messageToTranslate: Message, lang: string) => {
-    if (!lang || !contact?.liveTranslationEnabled || !messageToTranslate.text || messageToTranslate.senderId === currentUserId) {
+    if (!lang || !contact?.liveTranslationEnabled || !messageToTranslate.text || messageToTranslate.senderId === user?.uid) {
       return;
     }
      // Check if it's already translated or currently being translated
@@ -542,7 +574,7 @@ export default function ChatPage() {
         return newSet;
       });
     }
-  }, [contact?.liveTranslationEnabled, currentUserId, translatedMessages, isTranslating]);
+  }, [contact?.liveTranslationEnabled, user?.uid, translatedMessages, isTranslating]);
 
 
   
@@ -613,9 +645,9 @@ export default function ChatPage() {
         const lastMessage = messages[messages.length - 1];
 
         // If a new message arrives from the other user, and we are near the bottom, auto-scroll.
-        if (lastMessage && lastMessage.senderId !== currentUserId && isScrolledToBottom) {
+        if (lastMessage && lastMessage.senderId !== user?.uid && isScrolledToBottom) {
              setTimeout(scrollToBottom, 100);
-        } else if (lastMessage && lastMessage.senderId === currentUserId) {
+        } else if (lastMessage && lastMessage.senderId === user?.uid) {
             // Always scroll down for our own new messages
              setTimeout(scrollToBottom, 100);
         }
@@ -665,7 +697,7 @@ export default function ChatPage() {
     const textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
 
-    if ((textToSend === '' && attachmentsToUpload.length === 0) || !contact || !chatId || !firestore || !currentUserId || !userProfile) return;
+    if ((textToSend === '' && attachmentsToUpload.length === 0) || !finalChatId || !firestore || !user?.uid || !userProfile) return;
 
     setNewMessage('');
     setAttachmentsToSend([]);
@@ -679,7 +711,7 @@ export default function ChatPage() {
     let finalText = textToSend;
 
     // Handle outbound translation if enabled
-    if (contact.liveTranslationEnabled && textToSend) {
+    if (contact?.liveTranslationEnabled && textToSend) {
         setIsOutboundTranslating(true);
         try {
             const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
@@ -697,9 +729,10 @@ export default function ChatPage() {
     }
 
     const currentTimestamp = serverTimestamp();
+    const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
 
     if (editingMessage) {
-        const messageRef = doc(firestore, "chats", chatId, "messages", editingMessage.id);
+        const messageRef = doc(firestore, collectionPath, editingMessage.id);
         await updateDoc(messageRef, {
             text: finalText,
             isEdited: true,
@@ -708,40 +741,44 @@ export default function ChatPage() {
         toast({ title: "Message updated" });
     } else {
         // Add message to Firestore
-        const collectionRef = collection(firestore, "chats", chatId, "messages");
+        const collectionRef = collection(firestore, collectionPath);
         const messageData = {
             text: finalText,
             attachments: attachmentsToUpload,
-            senderId: currentUserId,
+            senderId: user.uid,
             timestamp: currentTimestamp,
             replyTo: replyingTo?.id || null,
         };
         addDocumentNonBlocking(collectionRef, messageData);
         
-        // Trigger push notification
-        const notificationPayload = {
-            userId: contact.id,
-            payload: {
-                title: userProfile.name || 'New Message',
-                body: finalText || 'Sent an attachment',
-                icon: userProfile.profilePictureUrl || '/icons/icon-192x192.png',
-                tag: chatId,
-            }
-        };
-        sendPushNotification(notificationPayload).catch(err => {
-            console.error("Failed to send push notification:", err);
-        });
+        // Push notifications for 1-on-1 chats only
+        if (contact) {
+            const notificationPayload = {
+                userId: contact.id,
+                payload: {
+                    title: userProfile.name || 'New Message',
+                    body: finalText || 'Sent an attachment',
+                    icon: userProfile.profilePictureUrl || '/icons/icon-192x192.png',
+                    tag: finalChatId,
+                }
+            };
+            sendPushNotification(notificationPayload).catch(err => {
+                console.error("Failed to send push notification:", err);
+            });
+        }
     }
 
-    // Update last message timestamp for both users and increment unread count for the other user
-    const userContactRef = doc(firestore, 'users', currentUserId, 'contacts', contactId);
-    updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
-    
-    const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', currentUserId);
-    updateDocumentNonBlocking(otherUserContactRef, { 
-      lastMessageTimestamp: currentTimestamp,
-      unreadCount: increment(1)
-    });
+    if (!isGroupChat && contactId) {
+        // Update last message timestamp for both users and increment unread count for the other user
+        const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
+        updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
+        
+        const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
+        updateDocumentNonBlocking(otherUserContactRef, { 
+          lastMessageTimestamp: currentTimestamp,
+          unreadCount: increment(1)
+        });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
@@ -848,7 +885,7 @@ export default function ChatPage() {
 
   const stopRecordingAndSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
-    if (mediaRecorderRef.current && isRecording && chatId && firestore && currentUserId) {
+    if (mediaRecorderRef.current && isRecording && finalChatId && firestore && user?.uid) {
       
       mediaRecorderRef.current.onstop = async () => {
         const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
@@ -861,12 +898,12 @@ export default function ChatPage() {
               name: `recording_${new Date().toISOString()}.webm`,
               size: `${(audioBlob.size / 1024).toFixed(2)} KB`,
             };
-            
-            const collectionRef = collection(firestore, "chats", chatId, "messages");
+            const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
+            const collectionRef = collection(firestore, collectionPath);
             addDocumentNonBlocking(collectionRef, {
                 text: '',
                 attachments: [newAttachment],
-                senderId: currentUserId,
+                senderId: user.uid,
                 timestamp: serverTimestamp(),
                 replyTo: replyingTo?.id || null,
             });
@@ -982,11 +1019,12 @@ export default function ChatPage() {
   }
 
   const handleToggleStar = async (messagesToStar: Message[]) => {
-    if (!chatId || !firestore) return;
+    if (!finalChatId || !firestore) return;
     const isUnstarring = messagesToStar.every(m => m.isStarred);
+    const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
     
     for (const msg of messagesToStar) {
-      const messageRef = doc(firestore, "chats", chatId, "messages", msg.id);
+      const messageRef = doc(firestore, collectionPath, msg.id);
       updateDocumentNonBlocking(messageRef, { isStarred: !isUnstarring });
     }
     
@@ -995,18 +1033,19 @@ export default function ChatPage() {
   }
 
   const handleDeleteMessages = async ({ forEveryone }: { forEveryone: boolean }) => {
-    if (!chatId || !firestore || !currentUserId) return;
+    if (!finalChatId || !firestore || !user?.uid) return;
 
     const messagesToDelete = selectedMessageIds;
+    const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
 
     for (const msgId of messagesToDelete) {
-        const messageRef = doc(firestore, "chats", chatId, "messages", msgId);
+        const messageRef = doc(firestore, collectionPath, msgId);
         if (forEveryone) {
             // Hard delete
             deleteDoc(messageRef);
         } else {
             // Soft delete
-            updateDoc(messageRef, { deletedFor: arrayUnion(currentUserId) });
+            updateDoc(messageRef, { deletedFor: arrayUnion(user.uid) });
         }
     }
     
@@ -1023,15 +1062,17 @@ export default function ChatPage() {
     }
   };
   
-  const handleAvatarClick = (avatarUrl: string) => {
-      setImagePreview({ urls: [avatarUrl], startIndex: 0 });
+  const handleAvatarClick = (avatarUrl?: string) => {
+      if (avatarUrl) {
+        setImagePreview({ urls: [avatarUrl], startIndex: 0 });
+      }
   };
   
   const handleAction = (action: 'find' | 'mute' | 'theme' | 'more' | 'block' | 'clear' | 'export') => {
     setIsMenuOpen(false);
     if (action === 'find') {
       setIsSearchOpen(true);
-    } else if (action === 'theme') {
+    } else if (action === 'theme' && contactId) {
       router.push(`/chats/${contactId}/wallpaper`);
     } else {
       setIsComingSoonOpen(true);
@@ -1153,12 +1194,12 @@ export default function ChatPage() {
     const currentText = event.currentTarget.textContent || '';
     setNewMessage(currentText);
 
-    if (chatDocRef && currentUserId) {
+    if (chatDocRef && user?.uid) {
         const isTyping = currentText.length > 0;
         
         // Immediately update if status changes
-        if (chat?.typing?.[currentUserId] !== isTyping) {
-            updateDocumentNonBlocking(chatDocRef, { [`typing.${currentUserId}`]: isTyping });
+        if (chat?.typing?.[user.uid] !== isTyping) {
+            updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: isTyping });
         }
 
         // Clear previous timeout
@@ -1169,7 +1210,7 @@ export default function ChatPage() {
         // Set a new timeout to set typing to false
         if (isTyping) {
             typingTimeoutRef.current = setTimeout(() => {
-                updateDocumentNonBlocking(chatDocRef, { [`typing.${currentUserId}`]: false });
+                updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
             }, 3000); // 3 seconds
         }
     }
@@ -1201,7 +1242,7 @@ export default function ChatPage() {
     }
   };
 
-  const isLoading = areMessagesLoading || isContactLoading || isChatLoading;
+  const isLoading = areMessagesLoading || isContactLoading || isGroupLoading || isChatLoading;
 
   const augmentedMessages = useMemo(() => {
       const systemMessages: Message[] = [];
@@ -1233,14 +1274,18 @@ export default function ChatPage() {
     if (!augmentedMessages) return [];
     return augmentedMessages.filter(message => {
       // Hide message if it has been soft-deleted by the current user
-      return !message.deletedFor || !message.deletedFor.includes(currentUserId!);
+      return !message.deletedFor || !message.deletedFor.includes(user?.uid!);
     });
-  }, [augmentedMessages, currentUserId]);
+  }, [augmentedMessages, user?.uid]);
 
-  const displayName = contact?.displayName || contact?.name;
+  const displayName = group?.name || contact?.displayName || contact?.name;
+  const chatAvatar = group?.avatar || contact?.avatar;
 
   const getStatusText = () => {
-      if (chat?.typing?.[contactId]) {
+      if(isGroupChat) {
+          return `${Object.keys(group?.participants || {}).length} members`;
+      }
+      if (chat?.typing?.[contactId || '']) {
         return <span className="text-primary animate-pulse">Typing...</span>;
       }
       if (remoteUser?.status === 'online') {
@@ -1267,10 +1312,10 @@ export default function ChatPage() {
     )
   }
 
-  if (!contact) {
+  if (!contact && !group) {
     return (
       <div className="flex flex-col h-full items-center justify-center">
-        <p>Contact not found.</p>
+        <p>Chat not found.</p>
         <Link href="/chats" className="text-primary hover:underline">Go back to chats</Link>
       </div>
     )
@@ -1304,7 +1349,7 @@ export default function ChatPage() {
   const MessageItem = ({ message, repliedToMessage, translatedText }: { message: Message, repliedToMessage?: Message, translatedText?: string }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
-    const isSender = message.senderId === currentUserId;
+    const isSender = message.senderId === user?.uid;
     const isSelected = selectedMessageIds.includes(message.id);
 
     const onDragEnd = (event: any, info: any) => {
@@ -1427,16 +1472,16 @@ export default function ChatPage() {
                     <span className="sr-only">Back</span>
                 </Link>
                 </Button>
-                <button onClick={() => handleAvatarClick(contact.avatar)}>
+                <button onClick={() => handleAvatarClick(chatAvatar)}>
                 <Avatar className="h-10 w-10">
-                    <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
+                    <AvatarImage src={chatAvatar} alt={displayName} data-ai-hint="person portrait" />
                     <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
                 </Avatar>
                 </button>
                 <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold truncate">{displayName}</h2>
-                    {contact.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
+                    {contact?.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
                   </div>
                   <p className="text-xs text-muted-foreground truncate">{getStatusText()}</p>
                 </button>
@@ -1451,13 +1496,13 @@ export default function ChatPage() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                     <DropdownMenuItem asChild>
-                        <Link href={`/call?contactId=${contact.id}&type=voice&status=outgoing`}>
+                        <Link href={`/call?contactId=${contact?.id}&type=voice&status=outgoing`}>
                             <Phone className="mr-2 h-4 w-4" />
                             <span>Voice Call</span>
                         </Link>
                     </DropdownMenuItem>
                     <DropdownMenuItem asChild>
-                        <Link href={`/call?contactId=${contact.id}&type=video&status=outgoing`}>
+                        <Link href={`/call?contactId=${contact?.id}&type=video&status=outgoing`}>
                             <Video className="mr-2 h-4 w-4" />
                             <span>Video Call</span>
                         </Link>
@@ -1506,7 +1551,7 @@ export default function ChatPage() {
                                             </Label>
                                             <Switch
                                                 id="live-translation-switch"
-                                                checked={!!contact.liveTranslationEnabled}
+                                                checked={!!contact?.liveTranslationEnabled}
                                                 onCheckedChange={(checked) => {
                                                     handleLiveTranslationToggle(checked);
                                                 }}
@@ -1617,7 +1662,7 @@ export default function ChatPage() {
                 {replyingTo && (
                 <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
                     <div className="overflow-hidden">
-                        <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === currentUserId ? "yourself" : displayName}</p>
+                        <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === user?.uid ? "yourself" : displayName}</p>
                         <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
                     </div>
                     <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
@@ -1753,7 +1798,7 @@ export default function ChatPage() {
         selectedMessages={
             messages?.filter(m => selectedMessageIds.includes(m.id) || m.id === selectedMessage?.id) || []
         }
-        currentUserId={currentUserId || ''}
+        currentUserId={user?.uid || ''}
       />
       <ImagePreviewDialog
         imagePreview={imagePreview}
@@ -1762,7 +1807,7 @@ export default function ChatPage() {
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}
         onClose={() => setIsAttachmentSheetOpen(false)}
-        chatId={chatId || ''}
+        chatId={finalChatId || ''}
         onSelect={(option) => {
             setIsAttachmentSheetOpen(false);
             if (fileInputRef.current) {

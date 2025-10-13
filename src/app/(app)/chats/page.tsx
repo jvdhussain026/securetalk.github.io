@@ -76,10 +76,10 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
       return;
     };
 
-    const messagesCollection = contact.isGroup ? `groups/${chatId}/messages` : `chats/${chatId}/messages`;
+    const messagesCollectionPath = contact.isGroup ? `groups/${chatId}/messages` : `chats/${chatId}/messages`;
 
     const messagesQuery = query(
-      collection(firestore, messagesCollection),
+      collection(firestore, messagesCollectionPath),
       orderBy("timestamp", "desc"),
     );
 
