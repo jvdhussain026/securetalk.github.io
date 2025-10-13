@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, serverTimestamp, doc, setDoc, addDoc } from 'firebase/firestore';
+import { collection, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
@@ -41,9 +42,13 @@ export default function NewGroupPage() {
     setIsCreating(true);
 
     try {
-      // 1. Create the group document using addDoc
-      const groupsRef = collection(firestore, 'groups');
+      // 1. Generate a new document reference with a unique ID first.
+      const newGroupDocRef = doc(collection(firestore, 'groups'));
+      const groupId = newGroupDocRef.id;
+
+      // 2. Prepare all group data, including the ID.
       const groupData = {
+        id: groupId, // Include the ID in the document data
         name,
         description,
         avatar,
@@ -52,15 +57,12 @@ export default function NewGroupPage() {
           [user.uid]: true,
         },
         createdAt: serverTimestamp(),
-        // id will be added in a moment
       };
-      const newGroupDocRef = await addDoc(groupsRef, groupData);
-      const groupId = newGroupDocRef.id;
       
-      // Now update the group with its own ID
-      await setDoc(newGroupDocRef, { id: groupId }, { merge: true });
+      // 3. Create the document with a single setDoc call.
+      await setDoc(newGroupDocRef, groupData);
 
-      // 2. Add the group to the creator's contact list
+      // 4. Add the group to the creator's contact list
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
       await setDoc(userContactRef, {
         id: groupId,
@@ -75,7 +77,7 @@ export default function NewGroupPage() {
         description: 'Now you can invite members.',
       });
 
-      // 3. Redirect to the invite page
+      // 5. Redirect to the invite page
       router.push(`/groups/${groupId}/invite`);
 
     } catch (error: any) {
