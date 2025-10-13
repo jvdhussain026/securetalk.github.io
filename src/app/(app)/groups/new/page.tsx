@@ -81,7 +81,7 @@ export default function NewGroupPage() {
       router.push(`/groups/${groupId}/invite`);
 
     } catch (error: any) {
-      console.error("Error creating group:", error);
+      console.error("Detailed error creating group:", error);
       toast({
         variant: 'destructive',
         title: 'Creation Failed',
