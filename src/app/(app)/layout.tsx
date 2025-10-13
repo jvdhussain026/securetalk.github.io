@@ -5,7 +5,6 @@ import React, { useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp as firestoreServerTimestamp } from 'firebase/firestore'
-import { getDatabase, ref, onValue, onDisconnect, set, serverTimestamp as rtdbServerTimestamp } from 'firebase/database';
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import type { Contact, Message } from '@/lib/types'
@@ -60,32 +59,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (!user || !firestore) return;
 
-    const db = getDatabase();
-    const myStatusRef = ref(db, `status/${user.uid}`);
-    const connectedRef = ref(db, '.info/connected');
-
     const userStatusFirestoreRef = doc(firestore, `users/${user.uid}`);
 
-    onValue(connectedRef, (snap) => {
-        if (snap.val() === true) {
-            // We're connected (or reconnected).
-            // Set RTDB presence
-            set(myStatusRef, { isOnline: true, lastOnline: rtdbServerTimestamp() });
-
-            // When I disconnect, update RTDB
-            onDisconnect(myStatusRef).set({ isOnline: false, lastOnline: rtdbServerTimestamp() });
-            
-            // Update Firestore status to 'online'
-             updateDoc(userStatusFirestoreRef, {
-                status: 'online',
-                lastSeen: firestoreServerTimestamp()
-            });
-        }
+    // Set online status on mount
+    updateDoc(userStatusFirestoreRef, {
+        status: 'online',
+        lastSeen: firestoreServerTimestamp()
     });
 
-    // Firestore onDisconnect is not as reliable as RTDB's for web clients.
-    // We'll rely on the RTDB listener to update Firestore for other users.
-    // However, we can set a fallback for when the browser tab is closed gracefully.
     const handleBeforeUnload = () => {
         updateDoc(userStatusFirestoreRef, {
             status: 'offline',
@@ -97,6 +78,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
+         updateDoc(userStatusFirestoreRef, {
+            status: 'offline',
+            lastSeen: firestoreServerTimestamp()
+        });
     }
   }, [user, firestore]);
 

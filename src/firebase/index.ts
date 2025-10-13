@@ -5,8 +5,6 @@ import { firebaseConfig } from '@/firebase/config';
 import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
-import { getDatabase } from 'firebase/database';
-import { getMessaging } from 'firebase/messaging';
 import { getStorage } from 'firebase/storage';
 
 // --- Start of Centralized Initialization ---
@@ -21,9 +19,8 @@ if (!getApps().length) {
 const auth = getAuth(firebaseApp);
 const firestore = getFirestore(firebaseApp);
 const storage = getStorage(firebaseApp);
-const database = getDatabase(firebaseApp);
 
-export { firebaseApp, auth, firestore, storage, database };
+export { firebaseApp, auth, firestore, storage };
 
 // --- End of Centralized Initialization ---
 
@@ -39,7 +36,6 @@ export function getSdks(app: FirebaseApp) {
     firebaseApp: app,
     auth: getAuth(app),
     firestore: getFirestore(app),
-    database: getDatabase(app),
     storage: getStorage(app),
   };
 }
