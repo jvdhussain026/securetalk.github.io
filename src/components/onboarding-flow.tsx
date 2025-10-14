@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { doc, setDoc, collection, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc, serverTimestamp, writeBatch, updateDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 
@@ -358,6 +358,62 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         }
     };
 
+    const handlePendingConnection = async (newUser: any, newUserProfile: any) => {
+        const pendingContactId = localStorage.getItem('pendingConnectionId');
+        if (!pendingContactId || !firestore) return;
+
+        try {
+            const contactDocRef = doc(firestore, 'users', pendingContactId);
+            const contactDoc = await getDocumentNonBlocking(contactDocRef);
+
+            if (contactDoc && contactDoc.exists()) {
+                const contactData = contactDoc.data();
+                const currentTimestamp = serverTimestamp();
+                
+                const batch = writeBatch(firestore);
+
+                // Add contact to new user's list
+                const newUserContactRef = doc(firestore, 'users', newUser.uid, 'contacts', pendingContactId);
+                batch.set(newUserContactRef, {
+                    id: pendingContactId,
+                    name: contactData.name,
+                    avatar: contactData.profilePictureUrl,
+                    bio: contactData.bio,
+                    language: contactData.language || 'en',
+                    verified: contactData.verified || false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+
+                // Add new user to contact's list
+                const contactUserContactsRef = doc(firestore, 'users', pendingContactId, 'contacts', newUser.uid);
+                batch.set(contactUserContactsRef, {
+                    id: newUser.uid,
+                    name: newUserProfile.name,
+                    avatar: newUserProfile.profilePictureUrl,
+                    bio: newUserProfile.bio,
+                    language: newUserProfile.language || 'en',
+                    verified: false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+                
+                // Trigger realtime update for the other user
+                batch.update(contactDocRef, { lastConnection: newUser.uid });
+                
+                await batch.commit();
+
+                toast({
+                    title: 'Connection Added!',
+                    description: `You are now connected with ${contactData.name}.`,
+                });
+            }
+        } catch (error) {
+            console.error("Failed to process pending connection:", error);
+            toast({ variant: "destructive", title: "Connection Failed", description: "Could not connect with the user from the link." });
+        } finally {
+            localStorage.removeItem('pendingConnectionId');
+        }
+    }
+
     const handleNameNext = async (name: string) => {
         if (name.trim().length < 2) {
              toast({ variant: "destructive", title: "Please enter a valid name."});
@@ -375,8 +431,8 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         const profileData = {
             id: user.uid,
             name: name,
-            email: user.email,
-            username: name.replace(/\s+/g, '').toLowerCase(),
+            email: user.email, // Can be null for anonymous
+            username: name.replace(/\s+/g, '').toLowerCase(), // basic username
             profilePictureUrl: `https://picsum.photos/seed/${user.uid}/200/200`,
             bio: 'Just joined Secure Talk!',
             language: 'en',
@@ -385,6 +441,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         };
         batch.set(userRef, profileData, { merge: true });
 
+        // Add the developer as a default contact
         const devId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
         const devDocRef = doc(firestore, 'users', devId);
         
@@ -394,6 +451,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
                 const devData = devDoc.data();
                 const currentTimestamp = serverTimestamp();
 
+                // Add dev to user's contacts
                 const userContactRef = doc(firestore, 'users', user.uid, 'contacts', devId);
                 batch.set(userContactRef, {
                     id: devId,
@@ -406,6 +464,7 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
                     lastMessageTimestamp: currentTimestamp,
                 }, { merge: true });
 
+                // Add user to dev's contacts
                 const devContactRef = doc(firestore, 'users', devId, 'contacts', user.uid);
                 batch.set(devContactRef, {
                     id: user.uid,
@@ -418,15 +477,15 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
                     lastMessageTimestamp: currentTimestamp,
                 }, { merge: true });
             }
-            
-            await batch.commit();
-            nextStep();
 
+            await batch.commit();
+            await handlePendingConnection(user, profileData);
+            nextStep();
         } catch (error) {
-            console.error("Failed to save profile and add developer contact:", error);
-            toast({ variant: "destructive", title: "Profile Creation Failed", description: "Could not save your profile. Please try again."});
+            console.error("Failed to save profile and add dev contact:", error);
+            toast({ variant: "destructive", title: "Profile Creation Failed" });
         } finally {
-             setIsSavingProfile(false);
+            setIsSavingProfile(false);
         }
     }
     
@@ -476,3 +535,5 @@ const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElemen
   )
 );
 Card.displayName = "Card"
+
+    
