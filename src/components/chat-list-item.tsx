@@ -135,7 +135,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
             onTouchMove={handleTouchEnd}
         >
             <div className="relative">
-                <Avatar className={cn("h-12 w-12", contact.isGroup && "rounded-lg")} onClick={handleAvatarClick}>
+                <Avatar className={cn(contact.isGroup && "rounded-lg")} onClick={handleAvatarClick}>
                     <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
                     <AvatarFallback className={cn(contact.isGroup && "bg-muted text-muted-foreground")}>
                         {contact.isGroup ? <Users className="h-6 w-6"/> : displayName.charAt(0)}
@@ -144,8 +144,9 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
             </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                         <p className="font-bold truncate text-base">{displayName}</p>
+                        {contact.isGroup && <Badge variant="secondary">Group</Badge>}
                         {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                     </div>
                     <ClientOnly>
