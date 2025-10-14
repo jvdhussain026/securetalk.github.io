@@ -4,10 +4,10 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, UserPlus } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment, getDocs, writeBatch } from "firebase/firestore";
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown';
 
@@ -234,7 +234,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                     <div className="flex flex-col items-center text-center p-4 bg-black/10 rounded-lg">
                         <Avatar className="h-16 w-16 mb-2">
                            <AvatarImage src={inviteData.groupAvatar} />
-                           <AvatarFallback><UserPlus/></AvatarFallback>
+                           <AvatarFallback><Users/></AvatarFallback>
                         </Avatar>
                         <h3 className="font-bold">You're invited to join a group</h3>
                         <p className="text-lg font-semibold mb-3">{inviteData.groupName}</p>
@@ -379,6 +379,21 @@ export default function ChatPage() {
   }, [firestore, chatId, isGroupChat]);
   
   const { data: group, isLoading: isGroupLoading } = useDoc<Group>(groupDocRef);
+  
+  // New: Fetch all users to get member details for groups
+  const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
+  const { data: allUsers } = useCollection<Contact>(allUsersQuery);
+  
+  const groupMembers = useMemo(() => {
+    if (!isGroupChat || !allUsers) return new Map<string, Contact>();
+    const membersMap = new Map<string, Contact>();
+    allUsers.forEach(u => {
+        if (group?.participants[u.id]) {
+            membersMap.set(u.id, u);
+        }
+    });
+    return membersMap;
+  }, [isGroupChat, allUsers, group]);
 
 
   const remoteUserDocRef = useMemoFirebase(() => {
@@ -739,7 +754,6 @@ export default function ChatPage() {
         setEditingMessage(null);
         toast({ title: "Message updated" });
     } else {
-        // Add message to Firestore
         const collectionRef = collection(firestore, collectionPath);
         const messageData = {
             text: finalText,
@@ -750,7 +764,6 @@ export default function ChatPage() {
         };
         addDocumentNonBlocking(collectionRef, messageData);
         
-        // Push notifications for 1-on-1 chats only
         if (contact) {
             const notificationPayload = {
                 userId: contact.id,
@@ -767,19 +780,20 @@ export default function ChatPage() {
         }
     }
 
-    // Update contact lists for sorting and unread counts
     if (isGroupChat && group) {
-        const participantIds = Object.keys(group.participants || {});
-        participantIds.forEach(pid => {
-            const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
-            const updateData: any = { lastMessageTimestamp: currentTimestamp };
-            if (pid !== user.uid) {
-                updateData.unreadCount = increment(1);
-            }
-            updateDocumentNonBlocking(contactRef, updateData);
-        });
+      const participantIds = Object.keys(group.participants || {});
+      const batch = writeBatch(firestore);
+      participantIds.forEach(pid => {
+        const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
+        const updateData: any = { lastMessageTimestamp: currentTimestamp };
+        if (pid !== user.uid) {
+          updateData.unreadCount = increment(1);
+        }
+        batch.update(contactRef, updateData);
+      });
+      await batch.commit();
+
     } else if (!isGroupChat && contactId) {
-        // Update last message timestamp for both users and increment unread count for the other user
         const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
         updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
         
@@ -1356,7 +1370,7 @@ export default function ChatPage() {
 
   const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
-  const MessageItem = ({ message, repliedToMessage, translatedText }: { message: Message, repliedToMessage?: Message, translatedText?: string }) => {
+  const MessageItem = ({ message, repliedToMessage, translatedText, sender }: { message: Message, repliedToMessage?: Message, translatedText?: string, sender?: Contact }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
     const isSender = message.senderId === user?.uid;
@@ -1372,6 +1386,8 @@ export default function ChatPage() {
     };
 
     const backgroundOpacity = useTransform(x, isSender ? [-100, 0] : [0, 100], [1, 0]);
+    
+    const showSenderInfo = isGroupChat && !isSender && sender;
 
     return (
       <div 
@@ -1383,7 +1399,13 @@ export default function ChatPage() {
         onTouchMove={handleTouchEnd}
         onClick={() => handleMessageClick(message)}
       >
-        <div className={cn("flex w-full items-end", isSender ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
+            {showSenderInfo && (
+                 <Avatar className="h-6 w-6">
+                    <AvatarImage src={sender.avatar} />
+                    <AvatarFallback>{sender.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+            )}
             <motion.div
                 style={{ opacity: backgroundOpacity }}
                 className={cn(
@@ -1402,7 +1424,7 @@ export default function ChatPage() {
                 style={{ x }}
                 animate={controls}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className="max-w-[75%] lg:max-w-[65%] relative"
+                className={cn("max-w-[75%] lg:max-w-[65%] relative", showSenderInfo && "ml-8")}
             >
               <div
                   className={cn(
@@ -1412,6 +1434,9 @@ export default function ChatPage() {
                       isSelected && "bg-blue-500/30"
                   )}
               >
+                 {showSenderInfo && (
+                    <div className="px-2.5 pt-1.5 font-bold text-primary text-sm">{sender.name}</div>
+                )}
                 <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={displayName} />
                 
                 <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
@@ -1547,7 +1572,7 @@ export default function ChatPage() {
                                 {menuPage === 1 ? (
                                     <>
                                         <DropdownMenuItem onSelect={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
-                                            {isGroupChat ? <User className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
+                                            {isGroupChat ? <Users className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
                                             <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('find'); setIsMenuOpen(false);}}>
@@ -1622,6 +1647,7 @@ export default function ChatPage() {
               {filteredMessages.map((message, messageIndex) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
+                const sender = isGroupChat ? groupMembers.get(message.senderId) : undefined;
                 
                 if (message.text && message.text.startsWith('[SYSTEM]')) {
                     return <SystemMessage key={message.id} text={message.text} />;
@@ -1647,6 +1673,7 @@ export default function ChatPage() {
                         message={message}
                         repliedToMessage={repliedToMessage}
                         translatedText={translatedText}
+                        sender={sender}
                       />
                   </React.Fragment>
                 );
@@ -1871,6 +1898,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
