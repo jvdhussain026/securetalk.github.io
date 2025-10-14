@@ -475,6 +475,8 @@ export default function ChatPage() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   
+  const [newlyReceivedMessageIds, setNewlyReceivedMessageIds] = useState<Set<string>>(new Set());
+  
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -531,6 +533,20 @@ export default function ChatPage() {
     }
 
     const lastMessage = messages[messages.length - 1];
+    
+    if (lastMessage.senderId !== user?.uid) {
+        // Add new message ID to the set
+        setNewlyReceivedMessageIds(prev => new Set(prev).add(lastMessage.id));
+
+        // Remove the "New" tag after a delay
+        setTimeout(() => {
+            setNewlyReceivedMessageIds(prev => {
+                const newSet = new Set(prev);
+                newSet.delete(lastMessage.id);
+                return newSet;
+            });
+        }, 5000); // 5 seconds
+    }
     
     // Only show toast for new incoming messages and if the document is hidden
     if (lastMessage.senderId !== user?.uid && document.hidden) {
@@ -770,7 +786,18 @@ export default function ChatPage() {
         }
     }
 
-    if (!isGroupChat && contactId) {
+    // Update contact lists for sorting and unread counts
+    if (isGroupChat && group) {
+        const participantIds = Object.keys(group.participants || {});
+        participantIds.forEach(pid => {
+            const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
+            const updateData: any = { lastMessageTimestamp: currentTimestamp };
+            if (pid !== user.uid) {
+                updateData.unreadCount = increment(1);
+            }
+            updateDocumentNonBlocking(contactRef, updateData);
+        });
+    } else if (!isGroupChat && contactId) {
         // Update last message timestamp for both users and increment unread count for the other user
         const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
         updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
@@ -1348,7 +1375,7 @@ export default function ChatPage() {
 
   const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
-  const MessageItem = ({ message, repliedToMessage, translatedText }: { message: Message, repliedToMessage?: Message, translatedText?: string }) => {
+  const MessageItem = ({ message, repliedToMessage, translatedText, isNewlyReceived }: { message: Message, repliedToMessage?: Message, translatedText?: string, isNewlyReceived: boolean }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
     const isSender = message.senderId === user?.uid;
@@ -1434,6 +1461,20 @@ export default function ChatPage() {
                 </div>
               </div>
             </motion.div>
+             <AnimatePresence>
+                {isNewlyReceived && (
+                    <motion.div
+                        layoutId={`new-tag-${message.id}`}
+                        initial={{ opacity: 0, scale: 0.5, y: 10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
+                        className="ml-2"
+                    >
+                        <Badge variant="secondary">New</Badge>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
       </div>
     );
@@ -1639,6 +1680,7 @@ export default function ChatPage() {
                         message={message}
                         repliedToMessage={repliedToMessage}
                         translatedText={translatedText}
+                        isNewlyReceived={newlyReceivedMessageIds.has(message.id)}
                       />
                   </React.Fragment>
                 );
@@ -1863,3 +1905,4 @@ export default function ChatPage() {
 
 
     
+
