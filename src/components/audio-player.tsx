@@ -94,8 +94,7 @@ export function AudioPlayer({ src, isSender }: AudioPlayerProps) {
           onValueChange={handleSliderChange}
           className={cn(
             "w-full",
-            isSender ? "[&>span>span]:bg-white" : "",
-            "[&>span:last-child]:h-3 [&>span:last-child]:w-3"
+            isSender ? "[&>span>span]:bg-white" : ""
           )}
         />
         <div className="flex justify-between items-center text-xs mt-1">
