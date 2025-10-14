@@ -73,15 +73,14 @@ export default function NewGroupPage() {
     batch.set(userContactRef, userContactData);
 
     // 3. Commit the batch and handle potential errors
-    batch.commit()
-      .then(() => {
+    try {
+        await batch.commit();
         toast({
             title: 'Group Created!',
             description: 'Now you can invite members.',
         });
         router.push(`/groups/${groupId}/invite`);
-      })
-      .catch((serverError) => {
+    } catch (serverError) {
         // Create and emit the specialized error for debugging
         const contextualError = new FirestorePermissionError({
           path: newGroupRef.path,
@@ -89,10 +88,9 @@ export default function NewGroupPage() {
           requestResourceData: groupData,
         });
         errorEmitter.emit('permission-error', contextualError);
-      })
-      .finally(() => {
+    } finally {
         setIsCreating(false);
-      });
+    }
   };
   
   const handleAvatarChangeClick = () => {
