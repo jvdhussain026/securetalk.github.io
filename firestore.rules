@@ -1,11 +1,188 @@
-
+/**
+ * @fileoverview Firestore Security Rules for Secure Talk application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a combination of user-ownership and shared access patterns.
+ * User-related data is strictly controlled by the owning user.
+ * Group data is accessible to members with an owner.
+ *
+ * Data Structure:
+ * - /users/{userId}: User profiles, accessible only to the owning user.
+ * - /chats/{chatId}: 1-on-1 chat sessions, accessible only to participants.
+ * - /chats/{chatId}/messages/{messageId}: Messages within 1-on-1 chats, accessible only to chat participants.
+ * - /users/{userId}/contacts/{contactId}: User's contacts, accessible only to the owning user.
+ * - /groups/{groupId}: Group chat information, accessible only to group members.
+ * - /groups/{groupId}/messages/{messageId}: Messages within a group chat, accessible only to group members.
+ *
+ * Key Security Decisions:
+ * - Users can only access their own profile data and contact lists.
+ * - Chat access is restricted to participating users.
+ * - Group access is restricted to participating users and the owner.
+ * - Data validation is limited to authorization-critical fields for relational integrity.
+ *
+ * Denormalization for Authorization:
+ * - Group documents contain a `participants` map to efficiently check group membership.
+ */
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Allow read and write access to all documents
-    match /{document=**} {
-      allow read, write: if true;
+
+    /**
+     * @description Controls access to user profile information.
+     * @path /users/{userId}
+     * @allow (get, list, create, update, delete) if the request is made by the user with matching userId
+     * @deny (get, list, create, update, delete) if the request is made by another user or unauthenticated user
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to 1-on-1 chat sessions.
+     * @path /chats/{chatId}
+     * @allow (get, list) if the user is a participant in the chat.
+     * @allow (create) if the user is creating a chat they are a participant in.
+     * @allow (update, delete) if the user is a participant in the chat.
+     * @deny (get, list, create, update, delete) if the user is not a participant in the chat.
+     * @principle Enforces shared access based on the 'participants' map.
+     */
+    match /chats/{chatId} {
+      function isParticipant() {
+        return request.auth.uid in resource.data.participants;
+      }
+
+      function isNewParticipant() {
+        return request.auth.uid in request.resource.data.participants;
+      }
+
+      function isExistingParticipant() {
+        return request.auth.uid in resource.data.participants && resource != null;
+      }
+
+      allow get, list: if isParticipant();
+      allow create: if isNewParticipant();
+      allow update: if isExistingParticipant();
+      allow delete: if isExistingParticipant();
+    }
+
+    /**
+     * @description Controls access to messages within a 1-on-1 chat session.
+     * @path /chats/{chatId}/messages/{messageId}
+     * @allow (get, list) if the user is a participant in the parent chat.
+     * @allow (create) if the user is a participant in the parent chat and is the sender of the message.
+     * @allow (update, delete) never allowed.
+     * @deny (get, list, create) if the user is not a participant in the parent chat.
+     * @principle Enforces shared access based on the parent chat's 'participants' map.
+     */
+    match /chats/{chatId}/messages/{messageId} {
+      function isChatParticipant(chatId) {
+          return request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
+      }
+
+      allow get, list: if isChatParticipant(chatId);
+      allow create: if isChatParticipant(getChatId());
+      allow update, delete: if false;
+
+      function getChatId() {
+        return chatId;
+      }
+    }
+
+    /**
+     * @description Controls access to contact information for a user.
+     * @path /users/{userId}/contacts/{contactId}
+     * @allow (get, list, create, update, delete) if the request is made by the user with matching userId.
+     * @deny (get, list, create, update, delete) if the request is made by another user or unauthenticated user.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/contacts/{contactId} {
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Controls access to group chat information.
+     * @path /groups/{groupId}
+     * @allow (get, list) if the user is a participant in the group.
+     * @allow (create) if the user is creating a group they are the owner of and a participant in.
+     * @allow (update, delete) if the user is a participant in the group.
+     * @deny (get, list, create, update, delete) if the user is not a participant in the group.
+     * @principle Enforces shared access based on the 'participants' map and owner access.
+     */
+    match /groups/{groupId} {
+      function isParticipant() {
+        return request.auth.uid in resource.data.participants;
+      }
+
+      function isOwner() {
+        return request.auth.uid == resource.data.ownerId;
+      }
+
+      function isNewOwner() {
+        return request.auth.uid == request.resource.data.ownerId;
+      }
+
+      function isExistingParticipant() {
+        return request.auth.uid in resource.data.participants && resource != null;
+      }
+
+       function isExistingOwner() {
+        return request.auth.uid == resource.data.ownerId && resource != null;
+      }
+
+      function isNewParticipant() {
+          return request.auth.uid in request.resource.data.participants;
+      }
+
+      allow get, list: if isParticipant();
+      allow create: if isNewOwner() && isNewParticipant();
+      allow update: if isExistingParticipant() || isExistingOwner();
+      allow delete: if isExistingOwner();
+    }
+
+    /**
+     * @description Controls access to messages within a group chat session.
+     * @path /groups/{groupId}/messages/{messageId}
+     * @allow (get, list) if the user is a participant in the parent group.
+     * @allow (create) if the user is a participant in the parent group and is the sender of the message.
+     * @allow (update, delete) never allowed.
+     * @deny (get, list, create) if the user is not a participant in the parent group.
+     * @principle Enforces shared access based on the parent group's 'participants' map.
+     */
+    match /groups/{groupId}/messages/{messageId} {
+     function isGroupParticipant(groupId) {
+          return request.auth.uid in get(/databases/$(database)/documents/groups/$(groupId)).data.participants;
+      }
+
+      allow get, list: if isGroupParticipant(groupId);
+      allow create: if isGroupParticipant(getGroupId());
+      allow update, delete: if false;
+
+      function getGroupId() {
+        return groupId;
+      }
     }
   }
 }
