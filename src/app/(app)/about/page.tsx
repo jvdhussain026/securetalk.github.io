@@ -28,9 +28,10 @@ export default function AboutUsPage() {
   const [selectedDeveloper, setSelectedDeveloper] = useState<Contact | null>(null);
 
   const developerDocRef = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return doc(firestore, 'users', developerId);
-  }, [firestore]);
+    if (!firestore || !currentUser) return null;
+    // Fetch the developer's info from the current user's contact list for security
+    return doc(firestore, 'users', currentUser.uid, 'contacts', developerId);
+  }, [firestore, currentUser]);
 
   const { data: developer, isLoading: isDeveloperLoading } = useDoc<Contact>(developerDocRef);
 
@@ -71,7 +72,7 @@ export default function AboutUsPage() {
     setDocumentNonBlocking(userContactRef, {
         id: devToConnect.id,
         name: devToConnect.name,
-        avatar: devToConnect.profilePictureUrl, // Use profilePictureUrl from the main user doc
+        avatar: devToConnect.profilePictureUrl || devToConnect.avatar,
         bio: devToConnect.bio,
         language: devToConnect.language || 'en',
         verified: devToConnect.verified,
