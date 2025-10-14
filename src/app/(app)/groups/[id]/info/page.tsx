@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter, useParams } from 'next/navigation';
-import { ArrowLeft, Users, User, BadgeCheck, Shield, Edit, Save, X, LoaderCircle, Camera, Search, UserX, LogOut } from 'lucide-react';
+import { ArrowLeft, Users, User, BadgeCheck, Shield, Edit, Save, X, LoaderCircle, Camera, Search, UserX, LogOut, UserPlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
