@@ -57,7 +57,6 @@ import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 import { GroupInfoSheet } from '@/components/group-info-sheet'
 import { Badge } from '@/components/ui/badge'
-import { Users } from 'lucide-react'
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -1403,12 +1402,6 @@ export default function ChatPage() {
         onClick={() => handleMessageClick(message)}
       >
         <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
-            {showSenderInfo && (
-                 <Avatar className="h-6 w-6 self-start mt-1">
-                    <AvatarImage src={sender.avatar} />
-                    <AvatarFallback>{sender.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-            )}
             <motion.div
                 style={{ opacity: backgroundOpacity }}
                 className={cn(
@@ -1901,6 +1894,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
