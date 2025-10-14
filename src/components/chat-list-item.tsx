@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -116,12 +117,6 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   const displayName = contact.displayName || contact.name;
   const chatLink = contact.isGroup ? `/chats/group_${contact.id}` : `/chats/${contact.id}`;
   
-  const isNewChat = useMemo(() => {
-    if (!contact.createdAt) return false;
-    const minutesSinceCreation = differenceInMinutes(new Date(), contact.createdAt.toDate());
-    return minutesSinceCreation < 5 && !lastMessage;
-  }, [contact.createdAt, lastMessage]);
-
 
   return (
       <>
@@ -150,9 +145,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
                         {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                     </div>
                     <ClientOnly>
-                      {isNewChat ? (
-                          <Badge variant="secondary">New</Badge>
-                      ) : contact.lastMessageTimestamp && (
+                      {contact.lastMessageTimestamp && (
                         <p className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatLastMessageTimestamp(contact.lastMessageTimestamp)}
                         </p>

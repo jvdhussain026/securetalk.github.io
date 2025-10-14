@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users as UsersIcon, UserPlus } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, UserPlus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -234,7 +234,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                     <div className="flex flex-col items-center text-center p-4 bg-black/10 rounded-lg">
                         <Avatar className="h-16 w-16 mb-2">
                            <AvatarImage src={inviteData.groupAvatar} />
-                           <AvatarFallback><UsersIcon/></AvatarFallback>
+                           <AvatarFallback><UserPlus/></AvatarFallback>
                         </Avatar>
                         <h3 className="font-bold">You're invited to join a group</h3>
                         <p className="text-lg font-semibold mb-3">{inviteData.groupName}</p>
@@ -476,7 +476,6 @@ export default function ChatPage() {
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
   
-  const [newlyReceivedMessageIds, setNewlyReceivedMessageIds] = useState<Set<string>>(new Set());
   
   const { toast } = useToast()
   const scrollAreaRef = useRef<HTMLDivElement>(null)
@@ -528,36 +527,17 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    if (!messages || messages.length <= prevMessagesCountRef.current) {
-        prevMessagesCountRef.current = messages?.length || 0;
-        return;
-    }
-
-    const lastMessage = messages[messages.length - 1];
-    
-    if (lastMessage.senderId !== user?.uid) {
-        // Add new message ID to the set
-        setNewlyReceivedMessageIds(prev => new Set(prev).add(lastMessage.id));
-
-        // Remove the "New" tag after a delay
-        setTimeout(() => {
-            setNewlyReceivedMessageIds(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(lastMessage.id);
-                return newSet;
-            });
-        }, 5000); // 5 seconds
-    }
-    
     // Only show toast for new incoming messages and if the document is hidden
-    if (lastMessage.senderId !== user?.uid && document.hidden) {
-        toast({
-            title: `New message from ${contact?.displayName || contact?.name || group?.name}`,
-            description: lastMessage.text || 'Sent an attachment',
-        });
+    if (messages && messages.length > prevMessagesCountRef.current) {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage.senderId !== user?.uid && document.hidden) {
+            toast({
+                title: `New message from ${contact?.displayName || contact?.name || group?.name}`,
+                description: lastMessage.text || 'Sent an attachment',
+            });
+        }
+        prevMessagesCountRef.current = messages.length;
     }
-
-    prevMessagesCountRef.current = messages.length;
   }, [messages, contact?.displayName, contact?.name, group?.name, user?.uid, toast]);
 
   useEffect(() => {
@@ -1376,7 +1356,7 @@ export default function ChatPage() {
 
   const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
-  const MessageItem = ({ message, repliedToMessage, translatedText, isNewlyReceived }: { message: Message, repliedToMessage?: Message, translatedText?: string, isNewlyReceived: boolean }) => {
+  const MessageItem = ({ message, repliedToMessage, translatedText }: { message: Message, repliedToMessage?: Message, translatedText?: string }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
     const isSender = message.senderId === user?.uid;
@@ -1462,20 +1442,6 @@ export default function ChatPage() {
                 </div>
               </div>
             </motion.div>
-             <AnimatePresence>
-                {isNewlyReceived && (
-                    <motion.div
-                        layoutId={`new-tag-${message.id}`}
-                        initial={{ opacity: 0, scale: 0.5, y: 10 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.5 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 15 }}
-                        className="ml-2"
-                    >
-                        <Badge variant="secondary">New</Badge>
-                    </motion.div>
-                )}
-            </AnimatePresence>
         </div>
       </div>
     );
@@ -1581,7 +1547,7 @@ export default function ChatPage() {
                                 {menuPage === 1 ? (
                                     <>
                                         <DropdownMenuItem onSelect={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
-                                            {isGroupChat ? <UsersIcon className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
+                                            {isGroupChat ? <User className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
                                             <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('find'); setIsMenuOpen(false);}}>
@@ -1681,7 +1647,6 @@ export default function ChatPage() {
                         message={message}
                         repliedToMessage={repliedToMessage}
                         translatedText={translatedText}
-                        isNewlyReceived={newlyReceivedMessageIds.has(message.id)}
                       />
                   </React.Fragment>
                 );
@@ -1906,5 +1871,6 @@ export default function ChatPage() {
 
 
     
+
 
 
