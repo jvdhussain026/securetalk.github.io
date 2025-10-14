@@ -13,7 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import {
@@ -183,47 +183,6 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
     );
 };
 
-// Step 4: Notification Permission
-const NotificationsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void; }) => {
-    const { toast } = useToast();
-
-    const handleRequestPermission = async () => {
-        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
-            toast({ variant: 'destructive', title: 'Push notifications are not supported in this browser.' });
-            onNext();
-            return;
-        }
-
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            toast({ variant: 'destructive', title: 'Notifications not enabled.' });
-        } else {
-            toast({ title: 'Notifications enabled!' });
-        }
-        onNext(); // Proceed whether permission was granted or not
-    };
-
-    return (
-        <div className="h-full w-full flex flex-col p-8 bg-background">
-            <ScrollArea className="-mx-8 flex-1">
-                <div className="flex flex-col justify-center items-center min-h-full px-8 pt-8 text-center">
-                    <h2 className="text-2xl font-bold mb-2 font-headline">Don't miss a message</h2>
-                    <p className="text-muted-foreground mb-8 max-w-md">Enable push notifications to get real-time alerts for new messages, even when the app is closed.</p>
-                </div>
-            </ScrollArea>
-            <div className="w-full max-w-sm space-y-2 mx-auto shrink-0 pt-8">
-                 <Button size="lg" className="w-full" onClick={handleRequestPermission}>
-                    Enable Notifications
-                </Button>
-                 <Button size="lg" variant="ghost" className="w-full" onClick={onNext}>
-                    Maybe Later
-                </Button>
-                 <Button variant="link" className="mt-8" onClick={onBack}>Back</Button>
-            </div>
-        </div>
-    );
-};
-
 // Main Onboarding Flow Component
 export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const [step, setStep] = useState(0);
@@ -321,11 +280,64 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
 
         try {
             await createUserProfile(user, profileData);
+            await handlePendingConnection(user, profileData);
             nextStep(); // Go to Terms
         } catch (error) {
             toast({ variant: "destructive", title: "Profile Creation Failed", description: "Could not save your profile."});
         } finally {
             setIsSavingProfile(false);
+        }
+    }
+    
+    const handlePendingConnection = async (newUser: any, newUserProfile: any) => {
+        const pendingContactId = localStorage.getItem('pendingConnectionId');
+        if (!pendingContactId || !firestore) return;
+
+        try {
+            const contactDocRef = doc(firestore, 'users', pendingContactId);
+            const contactDoc = await getDocumentNonBlocking(contactDocRef);
+
+            if (contactDoc && contactDoc.exists()) {
+                const contactData = contactDoc.data();
+                const currentTimestamp = serverTimestamp();
+
+                // Add contact to new user's list
+                const newUserContactRef = doc(firestore, 'users', newUser.uid, 'contacts', pendingContactId);
+                await setDocumentNonBlocking(newUserContactRef, {
+                    id: pendingContactId,
+                    name: contactData.name,
+                    avatar: contactData.profilePictureUrl,
+                    bio: contactData.bio,
+                    language: contactData.language || 'en',
+                    verified: contactData.verified || false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+
+                // Add new user to contact's list
+                const contactUserContactsRef = doc(firestore, 'users', pendingContactId, 'contacts', newUser.uid);
+                await setDocumentNonBlocking(contactUserContactsRef, {
+                    id: newUser.uid,
+                    name: newUserProfile.name,
+                    avatar: newUserProfile.profilePictureUrl,
+                    bio: newUserProfile.bio,
+                    language: newUserProfile.language || 'en',
+                    verified: false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+                
+                // Trigger realtime update for the other user
+                await updateDoc(contactDocRef, { lastConnection: newUser.uid });
+
+                toast({
+                    title: 'Connection Added!',
+                    description: `You are now connected with ${contactData.name}.`,
+                });
+            }
+        } catch (error) {
+            console.error("Failed to process pending connection:", error);
+            toast({ variant: "destructive", title: "Connection Failed", description: "Could not connect with the user from the link." });
+        } finally {
+            localStorage.removeItem('pendingConnectionId');
         }
     }
 

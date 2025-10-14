@@ -14,14 +14,25 @@ import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
 function Connect() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const { firestore, user: currentUser, userProfile } = useFirebase();
+    const { firestore, user: currentUser, userProfile, isUserLoading } = useFirebase();
     const { toast } = useToast();
 
     const connectUsers = useCallback(async () => {
         const newContactId = searchParams.get('userId');
 
-        if (!firestore || !currentUser || !userProfile) {
-            // Data not ready, wait for re-render
+        if (isUserLoading) {
+            // Wait for authentication state to be resolved
+            return;
+        }
+
+        if (!currentUser || !userProfile) {
+            // New user, not logged in
+            if (newContactId) {
+                // Store the ID of the user they want to connect with
+                localStorage.setItem('pendingConnectionId', newContactId);
+            }
+            // Redirect to the main page which will trigger onboarding
+            router.push('/chats');
             return;
         }
 
@@ -102,7 +113,7 @@ function Connect() {
             toast({ variant: 'destructive', title: 'Connection Failed', description: 'Could not add new contact.' });
             router.push('/chats');
         }
-    }, [firestore, currentUser, userProfile, searchParams, router, toast]);
+    }, [firestore, currentUser, userProfile, searchParams, router, toast, isUserLoading]);
 
     useEffect(() => {
         connectUsers();
