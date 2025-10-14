@@ -7,7 +7,7 @@ import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, Users } from 'lucide-react';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { doc, serverTimestamp, arrayUnion, collection, addDoc } from 'firebase/firestore';
 import type { Group } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
