@@ -56,14 +56,6 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
   const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
   const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
-  const remoteUserDocRef = useMemoFirebase(() => {
-    if(!firestore || !contact.id || contact.isGroup) return null;
-    return doc(firestore, 'users', contact.id);
-  }, [firestore, contact.id, contact.isGroup]);
-
-  const { data: remoteUser } = useDoc<Contact>(remoteUserDocRef);
-
-
   const chatId = useMemo(() => {
     if (!user?.uid || !contact.id) return null;
     if (contact.isGroup) return contact.id;
@@ -160,9 +152,7 @@ function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress:
                     <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
                     <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
                 </Avatar>
-                 {!contact.isGroup && remoteUser?.status === 'online' && (
-                    <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-card" />
-                 )}
+                 {/* Online status indicator removed */}
             </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">
