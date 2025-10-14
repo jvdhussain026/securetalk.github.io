@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment, getDocs, writeBatch } from "firebase/firestore";
@@ -57,6 +57,7 @@ import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 import { GroupInfoSheet } from '@/components/group-info-sheet'
 import { Badge } from '@/components/ui/badge'
+import { Users } from 'lucide-react'
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -784,12 +785,14 @@ export default function ChatPage() {
       const participantIds = Object.keys(group.participants || {});
       const batch = writeBatch(firestore);
       participantIds.forEach(pid => {
-        const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
-        const updateData: any = { lastMessageTimestamp: currentTimestamp };
-        if (pid !== user.uid) {
-          updateData.unreadCount = increment(1);
+        if (!pid.startsWith('group_')) { // Ensure we are not trying to update a group as a user
+            const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
+            const updateData: any = { lastMessageTimestamp: currentTimestamp };
+            if (pid !== user.uid) {
+              updateData.unreadCount = increment(1);
+            }
+            batch.update(contactRef, updateData);
         }
-        batch.update(contactRef, updateData);
       });
       await batch.commit();
 
@@ -1401,7 +1404,7 @@ export default function ChatPage() {
       >
         <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
             {showSenderInfo && (
-                 <Avatar className="h-6 w-6">
+                 <Avatar className="h-6 w-6 self-start mt-1">
                     <AvatarImage src={sender.avatar} />
                     <AvatarFallback>{sender.name.charAt(0)}</AvatarFallback>
                 </Avatar>
@@ -1424,7 +1427,7 @@ export default function ChatPage() {
                 style={{ x }}
                 animate={controls}
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={cn("max-w-[75%] lg:max-w-[65%] relative", showSenderInfo && "ml-8")}
+                className={cn("max-w-[75%] lg:max-w-[65%] relative")}
             >
               <div
                   className={cn(
@@ -1898,6 +1901,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
