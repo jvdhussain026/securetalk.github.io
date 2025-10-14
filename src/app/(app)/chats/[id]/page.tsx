@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users, UserPlus } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users as UsersIcon, UserPlus } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -25,7 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ClientOnly } from '@/components/ui/client-only'
+import { ClientOnly } from '@/components/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
@@ -56,6 +56,7 @@ import { Separator } from '@/components/ui/separator'
 import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 import { GroupInfoSheet } from '@/components/group-info-sheet'
+import { Badge } from '@/components/ui/badge'
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -233,7 +234,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                     <div className="flex flex-col items-center text-center p-4 bg-black/10 rounded-lg">
                         <Avatar className="h-16 w-16 mb-2">
                            <AvatarImage src={inviteData.groupAvatar} />
-                           <AvatarFallback><Users/></AvatarFallback>
+                           <AvatarFallback><UsersIcon/></AvatarFallback>
                         </Avatar>
                         <h3 className="font-bold">You're invited to join a group</h3>
                         <p className="text-lg font-semibold mb-3">{inviteData.groupName}</p>
@@ -1580,7 +1581,7 @@ export default function ChatPage() {
                                 {menuPage === 1 ? (
                                     <>
                                         <DropdownMenuItem onSelect={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
-                                            {isGroupChat ? <Users className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
+                                            {isGroupChat ? <UsersIcon className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
                                             <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('find'); setIsMenuOpen(false);}}>
@@ -1905,4 +1906,5 @@ export default function ChatPage() {
 
 
     
+
 
