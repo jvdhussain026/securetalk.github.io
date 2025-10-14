@@ -15,7 +15,7 @@ import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase'
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
-import { collection, doc, setDoc, addDoc, Timestamp, writeBatch } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, Timestamp, writeBatch, serverTimestamp } from 'firebase/firestore';
 
 export default function NewGroupPage() {
   const { toast } = useToast();
@@ -56,7 +56,7 @@ export default function NewGroupPage() {
       participants: {
         [user.uid]: true,
       },
-      createdAt: Timestamp.now(),
+      createdAt: serverTimestamp(),
     };
     
     batch.set(newGroupRef, groupData);
@@ -68,7 +68,7 @@ export default function NewGroupPage() {
       name,
       avatar: avatar || '',
       isGroup: true,
-      lastMessageTimestamp: Timestamp.now(),
+      lastMessageTimestamp: serverTimestamp(),
     };
     batch.set(userContactRef, userContactData);
 

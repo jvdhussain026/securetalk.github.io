@@ -26,7 +26,10 @@ export default function GroupInvitePage() {
   const { user, firestore } = useFirebase();
 
   const groupId = params.id as string;
-  const groupDocRef = useMemoFirebase(() => doc(firestore, 'groups', groupId), [firestore, groupId]);
+  const groupDocRef = useMemoFirebase(() => {
+      if(!firestore || !groupId) return null;
+      return doc(firestore, 'groups', groupId)
+  }, [firestore, groupId]);
   const { data: group, isLoading: isGroupLoading } = useDoc<Group>(groupDocRef);
 
   const contactsQuery = useMemoFirebase(() => {
@@ -90,12 +93,9 @@ export default function GroupInvitePage() {
         };
         addDocumentNonBlocking(messagesRef, messageData);
 
-        // Update last message timestamp for both users
+        // Update last message timestamp for the sender's contact entry
         const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
-        setDocumentNonBlocking(userContactRef, { lastMessageTimestamp: serverTimestamp() }, { merge: true });
-
-        const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
-        return setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: serverTimestamp() }, { merge: true });
+        return setDocumentNonBlocking(userContactRef, { lastMessageTimestamp: serverTimestamp() }, { merge: true });
     });
 
     await Promise.all(promises);
@@ -112,6 +112,14 @@ export default function GroupInvitePage() {
     !c.isGroup && (c.displayName || c.name).toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  if (isGroupLoading) {
+    return (
+      <div className="flex h-full items-center justify-center">
+        <LoaderCircle className="animate-spin h-8 w-8" />
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
       <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
@@ -127,12 +135,10 @@ export default function GroupInvitePage() {
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <Card>
             <CardHeader className="items-center text-center">
-                {isGroupLoading ? <LoaderCircle className="h-12 w-12 animate-spin" /> : (
-                    <Avatar className="h-20 w-20">
-                        <AvatarImage src={group?.avatar} alt={group?.name} />
-                        <AvatarFallback><Users /></AvatarFallback>
-                    </Avatar>
-                )}
+                <Avatar className="h-20 w-20">
+                    <AvatarImage src={group?.avatar} alt={group?.name} />
+                    <AvatarFallback><Users /></AvatarFallback>
+                </Avatar>
                 <CardTitle>{group?.name || 'Loading group...'}</CardTitle>
                 <CardDescription>Group created successfully. Now, invite people!</CardDescription>
             </CardHeader>
