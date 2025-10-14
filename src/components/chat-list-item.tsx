@@ -14,7 +14,7 @@ import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { ClientOnly } from '@/components/client-only'
 import { cn } from '@/lib/utils'
 import type { Contact, Message } from '@/lib/types'
-import { BadgeCheck, Pin } from 'lucide-react'
+import { BadgeCheck, Pin, Users } from 'lucide-react'
 
 
 function formatLastMessageTimestamp(timestamp: any) {
@@ -135,11 +135,12 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
             onTouchMove={handleTouchEnd}
         >
             <div className="relative">
-                <Avatar className="h-12 w-12" onClick={handleAvatarClick}>
+                <Avatar className={cn("h-12 w-12", contact.isGroup && "rounded-lg")} onClick={handleAvatarClick}>
                     <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
-                    <AvatarFallback>{displayName.charAt(0)}</AvatarFallback>
+                    <AvatarFallback className={cn(contact.isGroup && "bg-muted text-muted-foreground")}>
+                        {contact.isGroup ? <Users className="h-6 w-6"/> : displayName.charAt(0)}
+                    </AvatarFallback>
                 </Avatar>
-                 {/* Online status indicator removed */}
             </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">
