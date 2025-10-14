@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { useFirebase } from '@/firebase'
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
-import { format, isToday, isYesterday } from 'date-fns'
+import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
@@ -115,6 +115,12 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   
   const displayName = contact.displayName || contact.name;
   const chatLink = contact.isGroup ? `/chats/group_${contact.id}` : `/chats/${contact.id}`;
+  
+  const isNewChat = useMemo(() => {
+    if (!contact.createdAt) return false;
+    const minutesSinceCreation = differenceInMinutes(new Date(), contact.createdAt.toDate());
+    return minutesSinceCreation < 5 && !lastMessage;
+  }, [contact.createdAt, lastMessage]);
 
 
   return (
@@ -142,7 +148,9 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
                         {contact.verified && <BadgeCheck className="h-4 w-4 text-primary" />}
                     </div>
                     <ClientOnly>
-                      {contact.lastMessageTimestamp && (
+                      {isNewChat ? (
+                          <Badge variant="secondary">New</Badge>
+                      ) : contact.lastMessageTimestamp && (
                         <p className="text-xs text-muted-foreground whitespace-nowrap">
                             {formatLastMessageTimestamp(contact.lastMessageTimestamp)}
                         </p>
