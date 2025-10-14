@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Users, Info as InfoIcon, UserPlus } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Users, Info as InfoIcon } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -12,7 +12,7 @@ import Image from 'next/image'
 import ReactMarkdown from 'react-markdown';
 
 
-import type { Message, Attachment, Contact } from '@/lib/types'
+import type { Message, Attachment, Contact, Group } from '@/lib/types'
 import { cn } from '@/lib/utils'
 import { useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { useFirebase } from '@/firebase/provider';
@@ -55,6 +55,7 @@ import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
 import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
+import { GroupInfoSheet } from '@/components/group-info-sheet'
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -376,7 +377,7 @@ export default function ChatPage() {
       return doc(firestore, 'groups', chatId);
   }, [firestore, chatId, isGroupChat]);
   
-  const { data: group, isLoading: isGroupLoading } = useDoc<Contact>(groupDocRef);
+  const { data: group, isLoading: isGroupLoading } = useDoc<Group>(groupDocRef);
 
 
   const remoteUserDocRef = useMemoFirebase(() => {
@@ -434,6 +435,7 @@ export default function ChatPage() {
   const [newMessage, setNewMessage] = useState('')
   const [attachmentsToSend, setAttachmentsToSend] = useState<Attachment[]>([])
   const [isUserDetailsOpen, setIsUserDetailsOpen] = useState(false)
+  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false)
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null)
   const [editingMessage, setEditingMessage] = useState<Message | null>(null);
   const [replyingTo, setReplyingTo] = useState<Message | null>(null);
@@ -1478,7 +1480,7 @@ export default function ChatPage() {
                     <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
                 </Avatar>
                 </button>
-                <button onClick={() => setIsUserDetailsOpen(true)} className="flex-1 min-w-0 text-left">
+                <button onClick={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true) }} className="flex-1 min-w-0 text-left">
                   <div className="flex items-center gap-2">
                     <h2 className="text-lg font-bold truncate">{displayName}</h2>
                     {contact?.verified && <BadgeCheck className="h-5 w-5 text-primary flex-shrink-0" />}
@@ -1487,10 +1489,8 @@ export default function ChatPage() {
                 </button>
                 <div className="ml-auto flex items-center">
                     {isGroupChat ? (
-                       <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12">
-                          <Link href={`/groups/${group?.id}/info`}>
-                            <UserPlus />
-                          </Link>
+                       <Button variant="ghost" size="icon" className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12" onClick={() => setIsGroupInfoOpen(true)}>
+                            <InfoIcon />
                         </Button>
                     ) : (
                         <DropdownMenu>
@@ -1536,7 +1536,7 @@ export default function ChatPage() {
                             >
                                 {menuPage === 1 ? (
                                     <>
-                                        <DropdownMenuItem onSelect={() => {setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
+                                        <DropdownMenuItem onSelect={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
                                             {isGroupChat ? <Users className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
                                             <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
@@ -1774,7 +1774,8 @@ export default function ChatPage() {
         )}
         </AnimatePresence>
       </div>
-      {contact && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={remoteUser || contact} messages={messages || []} />}
+      {contact && !isGroupChat && <UserDetailsSheet open={isUserDetailsOpen} onOpenChange={setIsUserDetailsOpen} contact={remoteUser || contact} messages={messages || []} />}
+      {group && isGroupChat && <GroupInfoSheet open={isGroupInfoOpen} onOpenChange={setIsGroupInfoOpen} group={group} />}
        <AnimatePresence>
         {selectedMessage && (
             <MessageOptions
