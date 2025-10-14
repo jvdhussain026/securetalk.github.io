@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Users, Info as InfoIcon, UserPlus } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -25,7 +25,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { ScrollArea } from '@/components/ui/scroll-area'
-import { ClientOnly } from '@/components/client-only'
+import { ClientOnly } from '@/components/ui/client-only'
 import { UserDetailsSheet } from '@/components/user-details-sheet'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu"
 import { MessageOptions } from '@/components/message-options'
@@ -56,6 +56,7 @@ import { Separator } from '@/components/ui/separator'
 import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 import { GroupInfoSheet } from '@/components/group-info-sheet'
+import { UserPlus } from 'lucide-react'
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -488,6 +489,8 @@ export default function ChatPage() {
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [wallpaper, setWallpaper] = useState<string | null>(null);
+  
+  const [newlyAddedMessages, setNewlyAddedMessages] = useState<string[]>([]);
 
   useEffect(() => {
     // This now reads both the global and chat-specific wallpaper
@@ -531,6 +534,13 @@ export default function ChatPage() {
     }
 
     const lastMessage = messages[messages.length - 1];
+    
+    if (initialScrollDoneRef.current && lastMessage.senderId !== user?.uid) {
+        setNewlyAddedMessages(prev => [...prev, lastMessage.id]);
+        setTimeout(() => {
+            setNewlyAddedMessages(prev => prev.filter(id => id !== lastMessage.id));
+        }, 5000); // Remove "new" tag after 5 seconds
+    }
     
     // Only show toast for new incoming messages and if the document is hidden
     if (lastMessage.senderId !== user?.uid && document.hidden) {
@@ -1348,7 +1358,7 @@ export default function ChatPage() {
 
   const dividerIndex = filteredMessages.length - unreadCountOnLoad;
 
-  const MessageItem = ({ message, repliedToMessage, translatedText }: { message: Message, repliedToMessage?: Message, translatedText?: string }) => {
+  const MessageItem = ({ message, repliedToMessage, translatedText, isNew }: { message: Message, repliedToMessage?: Message, translatedText?: string, isNew: boolean }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
     const isSender = message.senderId === user?.uid;
@@ -1375,7 +1385,19 @@ export default function ChatPage() {
         onTouchMove={handleTouchEnd}
         onClick={() => handleMessageClick(message)}
       >
-        <div className={cn("flex w-full", isSender ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full items-end", isSender ? "justify-end" : "justify-start")}>
+             {isNew && !isSender && (
+                <AnimatePresence>
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.5 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.5 }}
+                        className="text-xs text-primary font-bold mr-2 mb-1"
+                    >
+                        New
+                    </motion.div>
+                </AnimatePresence>
+            )}
             <motion.div
                 style={{ opacity: backgroundOpacity }}
                 className={cn(
@@ -1490,8 +1512,8 @@ export default function ChatPage() {
                 <div className="ml-auto flex items-center">
                     {isGroupChat ? (
                         <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12">
-                           <Link href={`/groups/${group?.id}/info`}>
-                             <InfoIcon />
+                           <Link href={`/groups/${group?.id}/invite`}>
+                             <UserPlus />
                            </Link>
                          </Button>
                     ) : (
@@ -1538,7 +1560,7 @@ export default function ChatPage() {
                             >
                                 {menuPage === 1 ? (
                                     <>
-                                        <DropdownMenuItem onSelect={() => { isGroupChat ? router.push(`/groups/${group?.id}/info`) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
+                                        <DropdownMenuItem onSelect={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
                                             {isGroupChat ? <Users className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
                                             <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
@@ -1620,6 +1642,7 @@ export default function ChatPage() {
                 }
 
                 const showDivider = unreadCountOnLoad > 0 && messageIndex === dividerIndex;
+                const isNew = newlyAddedMessages.includes(message.id);
 
                 return (
                     <React.Fragment key={message.id}>
@@ -1639,6 +1662,7 @@ export default function ChatPage() {
                         message={message}
                         repliedToMessage={repliedToMessage}
                         translatedText={translatedText}
+                        isNew={isNew}
                       />
                   </React.Fragment>
                 );
