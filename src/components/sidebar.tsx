@@ -13,6 +13,7 @@ import {
   Users,
   BadgeCheck,
   Shield,
+  LogOut,
 } from 'lucide-react'
 import {
   Sheet,
@@ -27,6 +28,10 @@ import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-p
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
+import { useToast } from '@/hooks/use-toast';
 
 type SidebarProps = {
   open: boolean
@@ -36,7 +41,9 @@ type SidebarProps = {
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
-  const { firestore, user } = useFirebase();
+  const { firestore, auth, user } = useFirebase();
+  const router = useRouter();
+  const { toast } = useToast();
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -44,6 +51,19 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   }, [firestore, user]);
 
   const { data: userProfile } = useDoc(userDocRef);
+
+  const handleSignOut = async () => {
+    try {
+      await signOut(auth);
+      toast({ title: 'Signed Out', description: 'You have been successfully signed out.' });
+      onOpenChange(false);
+      // Full page reload to clear all state and force re-authentication
+      window.location.href = '/'; 
+    } catch (error) {
+      console.error("Sign out error:", error);
+      toast({ variant: 'destructive', title: 'Sign Out Failed' });
+    }
+  };
 
   const menuItems = [
     { icon: User, label: 'My Profile', href: '/profile', show: true },
@@ -101,6 +121,12 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
                 </div>
             )
           ))}
+        </div>
+        <div className="p-4 mt-auto border-t">
+          <Button variant="outline" className="w-full" onClick={handleSignOut}>
+            <LogOut className="mr-2" />
+            Sign Out
+          </Button>
         </div>
       </SheetContent>
     </Sheet>
