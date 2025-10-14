@@ -4,7 +4,7 @@
 import React, { useEffect, useState, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
-import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp as firestoreServerTimestamp } from 'firebase/firestore'
+import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp as firestoreServerTimestamp, setDoc } from 'firebase/firestore'
 import { cn } from '@/lib/utils'
 import { useToast } from '@/hooks/use-toast'
 import type { Contact, Message } from '@/lib/types'
@@ -62,26 +62,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const userStatusFirestoreRef = doc(firestore, `users/${user.uid}`);
 
     // Set online status on mount
-    updateDoc(userStatusFirestoreRef, {
+    setDoc(userStatusFirestoreRef, {
         status: 'online',
         lastSeen: firestoreServerTimestamp()
-    });
+    }, { merge: true });
 
     const handleBeforeUnload = () => {
-        updateDoc(userStatusFirestoreRef, {
+        setDoc(userStatusFirestoreRef, {
             status: 'offline',
             lastSeen: firestoreServerTimestamp()
-        });
+        }, { merge: true });
     };
     
     window.addEventListener('beforeunload', handleBeforeUnload);
 
     return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
-         updateDoc(userStatusFirestoreRef, {
+         setDoc(userStatusFirestoreRef, {
             status: 'offline',
             lastSeen: firestoreServerTimestamp()
-        });
+        }, { merge: true });
     }
   }, [user, firestore]);
 
