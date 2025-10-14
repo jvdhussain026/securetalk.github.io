@@ -41,17 +41,17 @@ export default function NewGroupPage() {
     setIsCreating(true);
 
     try {
-      // 1. Create a new document reference for the group
+      // 1. Get a new document reference *with an auto-generated ID* from the 'groups' collection.
       const newGroupRef = doc(collection(firestore, 'groups'));
       const groupId = newGroupRef.id;
 
-      // 2. Create a reference for the user's contact entry for this group
+      // 2. Create a reference to where the group will be stored in the user's contact list.
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
 
-      // 3. Create a write batch
+      // 3. Create a write batch to perform an atomic operation.
       const batch = writeBatch(firestore);
 
-      // 4. Define the group data
+      // 4. Define the data for the new group document.
       const groupData = {
         id: groupId,
         name,
@@ -61,23 +61,23 @@ export default function NewGroupPage() {
         participants: {
           [user.uid]: true,
         },
-        createdAt: Timestamp.now(),
+        createdAt: Timestamp.now(), // Use client-side Timestamp
       };
-
-      // 5. Define the user's contact data for the group
+      
+      // 5. Define the data for the user's contact entry for this group.
       const userContactData = {
         id: groupId,
         name,
         avatar: avatar || '',
         isGroup: true,
-        lastMessageTimestamp: Timestamp.now(),
+        lastMessageTimestamp: Timestamp.now(), // Use client-side Timestamp
       };
 
-      // 6. Add operations to the batch
+      // 6. Add the two write operations to the batch.
       batch.set(newGroupRef, groupData);
       batch.set(userContactRef, userContactData);
 
-      // 7. Commit the batch
+      // 7. Commit the batch. This is a single, atomic transaction.
       await batch.commit();
 
       toast({
