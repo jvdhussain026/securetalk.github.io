@@ -8,73 +8,58 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, User, ArrowRight, ArrowLeft, LoaderCircle, MessageCircle, Settings, Send, UserX, UserPlus } from 'lucide-react';
+import { ShieldCheck, Wifi, Users, ArrowRight, ArrowLeft, LoaderCircle, MessageCircle, Settings, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { signInAnonymously } from 'firebase/auth';
-import { doc, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, setDoc, collection, addDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 
-const WelcomeStep = ({ onNext, isSigningIn }: { onNext: () => void; isSigningIn: boolean; }) => {
+
+// Step 1: Welcome Screen
+const WelcomeStep = ({ onNext, onAnonymousSignIn, isSigningIn }: { onNext: () => void; onAnonymousSignIn: () => void; isSigningIn: boolean; }) => {
+    
+    const handleGetStarted = () => {
+        onAnonymousSignIn();
+    };
+
     return (
-        <div className="h-full w-full flex flex-col p-8 text-foreground text-center bg-background">
-             <ScrollArea className="flex-1 -mx-8">
-                <div className="flex flex-col justify-center items-center px-8 pt-8 min-h-full">
-                    <motion.div
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 0.5, delay: 0.2 }}
-                    >
-                        <ShieldCheck className="w-20 h-20 mb-6 text-primary drop-shadow-lg" />
-                    </motion.div>
-                    <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.5, delay: 0.4 }}
-                        className="flex flex-col items-center"
-                    >
-                        <h1 className="text-4xl font-bold font-headline drop-shadow-md">Welcome to Secure Talk</h1>
-                        <p className="mt-2 font-semibold text-lg text-primary">(Developer Preview)</p>
-                        <p className="mt-4 text-md text-muted-foreground max-w-md">
-                            You’re among the first to try Secure Talk! 🎉
-                            <br />
-                            This early release is for testers and developers. Your feedback shapes the future of private communication.
-                        </p>
-                        <div className="mt-6 text-left max-w-sm bg-muted p-4 rounded-lg">
-                            <p className='font-bold text-center mb-2'>💬 Share feedback directly with us:</p>
-                            <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
-                                <li>Open <Settings className="inline h-4 w-4" /> Settings → <Send className="inline h-4 w-4" /> Feedback & Report</li>
-                                <li>Chat directly with <span className="font-bold text-primary">Secure Talk Dev</span> (we'll add them for you).</li>
-                            </ul>
-                        </div>
-                        <p className="mt-6 text-md text-muted-foreground max-w-md">
-                            Thanks for helping us build something truly secure. 🔐
-                        </p>
-                    </motion.div>
+        <div className="h-full w-full flex flex-col justify-between p-8 text-foreground text-center bg-background">
+             <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 1, delay: 0.2 }}
+                className="flex-1 flex flex-col justify-center items-center"
+            >
+                <ShieldCheck className="w-20 h-20 mb-6 text-primary drop-shadow-lg" />
+                <h1 className="text-4xl font-bold font-headline drop-shadow-md">Welcome to Secure Talk</h1>
+                <p className="mt-2 font-semibold text-lg text-primary">(Developer Preview)</p>
+                <p className="mt-4 text-md text-muted-foreground max-w-md">
+                    You’re among the first to try Secure Talk! 🎉
+                    <br />
+                    This early release is for testers and developers. Your feedback shapes the future of private communication.
+                </p>
+                <div className="mt-6 text-left max-w-sm bg-muted p-4 rounded-lg">
+                    <p className='font-bold text-center mb-2'>💬 Share feedback directly with us:</p>
+                    <ul className="list-disc list-inside space-y-2 text-sm text-muted-foreground">
+                        <li>Open <Settings className="inline h-4 w-4" /> Settings → <Send className="inline h-4 w-4" /> Feedback & Report</li>
+                        <li>Chat directly with <span className="font-bold text-primary">Secure Talk Dev</span> (we'll add them for you).</li>
+                    </ul>
                 </div>
-            </ScrollArea>
+                 <p className="mt-6 text-md text-muted-foreground max-w-md">
+                    Thanks for helping us build something truly secure. 🔐
+                 </p>
+            </motion.div>
             <motion.div
                  initial={{ opacity: 0, y: 20 }}
                  animate={{ opacity: 1, y: 0 }}
                  transition={{ duration: 0.5, delay: 0.8 }}
-                 className="shrink-0 pt-8"
             >
-                <Button size="lg" className="w-full" onClick={onNext} disabled={isSigningIn}>
-                    {isSigningIn ? <LoaderCircle className="animate-spin mr-2" /> : null}
-                    {isSigningIn ? 'Securing your session...' : 'Get Started'}
+                <Button size="lg" className="w-full" onClick={handleGetStarted} disabled={isSigningIn}>
+                    {isSigningIn && <LoaderCircle className="animate-spin mr-2" />}
+                    {isSigningIn ? 'Securing your session...' : 'Get Started'} 
                     {!isSigningIn && <ArrowRight className="ml-2" />}
                 </Button>
             </motion.div>
@@ -83,32 +68,21 @@ const WelcomeStep = ({ onNext, isSigningIn }: { onNext: () => void; isSigningIn:
 };
 
 // Step 2: Name Input
-const NameStep = ({ onNext, onBack, isSaving }: { onNext: (name: string) => void; onBack: () => void; isSaving: boolean; }) => {
+const NameStep = ({ onNext, isSaving }: { onNext: (name: string) => void; isSaving: boolean; }) => {
     const [name, setName] = useState('');
     return (
-        <div className="h-full w-full flex flex-col p-8 bg-background">
-            <ScrollArea className="flex-1 -mx-8">
-                <div className="flex flex-col justify-center items-center px-8 pt-8 min-h-full">
-                    <Card className="w-full max-w-sm">
-                         <CardHeader className="text-center">
-                            <CardTitle>What should we call you?</CardTitle>
-                            <CardDescription>This name will be visible to your contacts.</CardDescription>
-                        </CardHeader>
-                        <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="name">Display Name</Label>
-                                <Input id="name" placeholder="E.g., Javed Hussain" value={name} onChange={(e) => setName(e.target.value)} autoFocus/>
-                            </div>
-                            <Button size="lg" className="w-full" onClick={() => onNext(name)} disabled={name.length < 2 || isSaving}>
-                                {isSaving && <LoaderCircle className="animate-spin mr-2" />}
-                                {isSaving ? 'Creating Profile...' : 'Next'}
-                            </Button>
-                        </CardContent>
-                    </Card>
+        <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
+            <h2 className="text-2xl font-bold mb-2 font-headline text-center">What should we call you?</h2>
+            <p className="text-muted-foreground mb-8 text-center">This name will be visible to your contacts.</p>
+            <div className="w-full max-w-sm space-y-4">
+                <div className="space-y-2">
+                    <Label htmlFor="name">Display Name</Label>
+                    <Input id="name" placeholder="E.g., Javed Hussain" value={name} onChange={(e) => setName(e.target.value)} autoFocus/>
                 </div>
-            </ScrollArea>
-             <div className="shrink-0 pt-8 flex justify-center">
-                <Button variant="link" onClick={onBack}>Back</Button>
+                <Button size="lg" className="w-full" onClick={() => onNext(name)} disabled={name.length < 2 || isSaving}>
+                    {isSaving && <LoaderCircle className="animate-spin mr-2" />}
+                    {isSaving ? 'Creating Profile...' : 'Next'}
+                </Button>
             </div>
         </div>
     );
@@ -123,8 +97,7 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                 <p className="text-muted-foreground">Please read and agree to continue.</p>
             </div>
             <Card className="flex-1 flex flex-col min-h-0">
-              <CardContent className="p-0 flex-1">
-                <ScrollArea className="h-full p-6 text-sm text-muted-foreground">
+                <ScrollArea className="flex-1 p-6 text-sm text-muted-foreground">
                     <h3 className="font-bold text-foreground mb-2">Conditions of Use – Secure Talk</h3>
                     <p className="mb-4">Welcome to Secure Talk. By creating an account or using this application, you agree to the following terms and conditions. Please read them carefully before proceeding. If you do not agree with any part of these conditions, you must not use this application.</p>
                     
@@ -164,7 +137,6 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
                     <h3 className="font-bold text-foreground mb-2">8. Disclaimer of Liability</h3>
                     <p className="mb-4">Secure Talk is provided “as is” without warranties of any kind. While we make every effort to ensure security and privacy, no digital service can be 100% secure. You use this application at your own risk.</p>
                 </ScrollArea>
-              </CardContent>
             </Card>
             <div className="shrink-0 mt-4 space-y-2">
                 <p className="text-xs text-muted-foreground text-center pb-2">
@@ -183,77 +155,206 @@ const TermsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void;
     );
 };
 
+
+// Function to convert VAPID public key string to a Uint8Array
+function urlBase64ToUint8Array(base64String: string) {
+    const padding = '='.repeat((4 - base64String.length % 4) % 4);
+    const base64 = (base64String + padding)
+        .replace(/\-/g, '+')
+        .replace(/_/g, '/');
+
+    const rawData = window.atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+
+    for (let i = 0; i < rawData.length; ++i) {
+        outputArray[i] = rawData.charCodeAt(i);
+    }
+    return outputArray;
+}
+
+// Step 4: Notification Permission
+const NotificationsStep = ({ onNext, onBack }: { onNext: () => void; onBack: () => void; }) => {
+    const { toast } = useToast();
+    const [isSubscribing, setIsSubscribing] = useState(false);
+
+    const handleRequestPermission = async () => {
+        if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+            toast({ variant: 'destructive', title: 'Push notifications are not supported in this browser.' });
+            onNext();
+            return;
+        }
+
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            toast({ variant: 'destructive', title: 'Notifications not enabled.' });
+            onNext();
+            return;
+        }
+
+        // Logic to get and save subscription is now in the main notifications settings page.
+        // We just prompt for permission here.
+        toast({ title: 'Notifications enabled!' });
+        onNext();
+    };
+
+    return (
+        <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
+            <h2 className="text-2xl font-bold mb-2 font-headline text-center">Don't miss a message</h2>
+            <p className="text-muted-foreground mb-8 text-center max-w-md">Enable push notifications to get real-time alerts for new messages, even when the app is closed.</p>
+            <div className="w-full max-w-sm space-y-2">
+                 <Button size="lg" className="w-full" onClick={handleRequestPermission} disabled={isSubscribing}>
+                    {isSubscribing ? <LoaderCircle className="animate-spin mr-2" /> : null}
+                    {isSubscribing ? 'Subscribing...' : 'Enable Notifications'}
+                </Button>
+                 <Button size="lg" variant="ghost" className="w-full" onClick={onNext}>
+                    Maybe Later
+                </Button>
+            </div>
+             <Button variant="link" className="mt-8" onClick={onBack}>Back</Button>
+        </div>
+    );
+};
+
+// Step 5: Interactive Tour
+type TourStepInfo = {
+    elementId: string;
+    title: string;
+    description: string;
+};
+const tourSteps: TourStepInfo[] = [
+    { elementId: 'sidebar-button', title: 'Your Profile & Settings', description: 'Tap here to view your profile, manage connections, and access all app settings.' },
+    { elementId: 'connect-button', title: 'Add New Connections', description: 'Quickly add friends by sharing your QR code or scanning theirs.' },
+    { elementId: 'footer-nav', title: 'Navigate the App', description: 'Easily switch between your chats, calls, and the offline "Nearby" feature.' },
+];
+
+export const TourStep = ({ onComplete }: { onComplete: () => void }) => {
+    const [stepIndex, setStepIndex] = useState(0);
+
+    const handleNext = () => {
+        if (stepIndex < tourSteps.length - 1) {
+            setStepIndex(stepIndex + 1);
+        } else {
+            onComplete();
+        }
+    };
+    
+    const handleSkip = () => {
+        onComplete();
+    };
+
+    const currentStep = tourSteps[stepIndex];
+    
+    const [element, setElement] = useState<HTMLElement | null>(null);
+
+    useEffect(() => {
+        // This is a workaround to wait for the main app to render
+        const timer = setTimeout(() => {
+             const el = document.getElementById(currentStep.elementId);
+             setElement(el);
+        }, 100);
+        return () => clearTimeout(timer);
+    }, [currentStep.elementId]);
+
+    if (!element) return <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50" />;
+
+    const rect = element.getBoundingClientRect();
+    const isBottomHalf = rect.top > window.innerHeight / 2;
+
+    const tooltipWidth = 256; // w-64
+    const screenPadding = 16; // p-4 or similar
+
+    let left = rect.left + rect.width / 2 - tooltipWidth / 2;
+    
+    if (left < screenPadding) {
+        left = screenPadding;
+    } else if (left + tooltipWidth > window.innerWidth - screenPadding) {
+        left = window.innerWidth - screenPadding - tooltipWidth;
+    }
+    
+    const tooltipStyle: React.CSSProperties = {
+        position: 'fixed',
+        width: `${''}${tooltipWidth}px`,
+        top: isBottomHalf ? rect.top - 16 : rect.bottom + 16,
+        left: `${''}${left}px`,
+        transform: isBottomHalf ? 'translateY(-100%)' : 'translateY(0)',
+    };
+    
+    // Adjust arrow position based on the centered element, not the adjusted tooltip
+    const arrowLeft = rect.left + rect.width / 2 - left;
+
+    const arrowStyle: React.CSSProperties = {
+        position: 'absolute',
+        left: `${''}${arrowLeft}px`,
+        transform: 'translateX(-50%)',
+        width: 0,
+        height: 0,
+        borderLeft: '8px solid transparent',
+        borderRight: '8px solid transparent',
+        ...(isBottomHalf 
+            ? { bottom: '-8px', borderTop: '8px solid hsl(var(--card))' } 
+            : { top: '-8px', borderBottom: '8px solid hsl(var(--card))' }
+        ),
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 animate-in fade-in-0">
+             <div style={{
+                position: 'fixed',
+                top: rect.top,
+                left: rect.left,
+                width: rect.width,
+                height: rect.height,
+                boxShadow: '0 0 0 9999px rgba(0, 0, 0, 0.6)',
+                borderRadius: 'var(--radius)',
+                transition: 'all 0.3s ease-in-out',
+             }} />
+             <div style={tooltipStyle} className="z-[100] bg-card p-4 rounded-lg shadow-2xl max-w-[calc(100vw-2rem)] transition-all duration-300 ease-in-out">
+                <div style={arrowStyle} />
+                 <h3 className="font-bold mb-1">{currentStep.title}</h3>
+                 <p className="text-sm text-muted-foreground mb-4">{currentStep.description}</p>
+                 <div className="flex justify-between items-center">
+                    <Button variant="ghost" size="sm" onClick={handleSkip}>Skip</Button>
+                    <div className="flex items-center gap-2">
+                        <div className="flex gap-1.5">
+                            {tourSteps.map((_, index) => (
+                                <div key={index} className={cn("h-1.5 w-1.5 rounded-full", stepIndex === index ? 'bg-primary' : 'bg-muted')}/>
+                            ))}
+                        </div>
+                        <Button size="sm" onClick={handleNext}>
+                            {stepIndex === tourSteps.length - 1 ? 'Finish' : 'Next'}
+                        </Button>
+                    </div>
+                 </div>
+             </div>
+        </div>
+    );
+};
+
+
 // Main Onboarding Flow Component
 export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     const [step, setStep] = useState(0);
     const { auth, firestore, user } = useFirebase();
     const { toast } = useToast();
-    const [isSavingProfile, setIsSavingProfile] = useState(false);
     const [isSigningIn, setIsSigningIn] = useState(false);
-
+    const [isSavingProfile, setIsSavingProfile] = useState(false);
+    
     const nextStep = () => setStep(s => s + 1);
-    const prevStep = () => setStep(s => s > 0 ? s - 1 : 0);
+    const prevStep = () => setStep(s => s - 1);
 
-    const handleGetStarted = async () => {
-        if (user) {
-            nextStep();
-            return;
-        }
+    const handleAnonymousSignIn = async () => {
         if (!auth) return;
-
         setIsSigningIn(true);
         try {
-            await signInAnonymously(auth);
-            nextStep(); // Go to Name step
-        } catch (error) {
-            console.error("Anonymous sign-in failed:", error);
-            toast({ variant: "destructive", title: "Authentication Failed", description: "Could not start a secure session."});
-        } finally {
-            setIsSigningIn(false);
-        }
-    };
-
-
-    const createUserProfile = async (currentUser: any, profileData: any) => {
-        const userRef = doc(firestore, 'users', currentUser.uid);
-        await setDocumentNonBlocking(userRef, profileData, { merge: true });
-
-        // Add the developer as a default contact
-        const devId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
-        const devDocRef = doc(firestore, 'users', devId);
-        
-        try {
-            const devDoc = await getDocumentNonBlocking(devDocRef);
-            if (devDoc && devDoc.exists()) {
-                const devData = devDoc.data();
-                const currentTimestamp = serverTimestamp();
-
-                const userContactRef = doc(firestore, 'users', currentUser.uid, 'contacts', devId);
-                setDocumentNonBlocking(userContactRef, {
-                    id: devId,
-                    name: devData.name,
-                    avatar: devData.profilePictureUrl,
-                    bio: devData.bio,
-                    language: 'en',
-                    verified: true,
-                    liveTranslationEnabled: false,
-                    lastMessageTimestamp: currentTimestamp,
-                }, { merge: true });
-
-                const devContactRef = doc(firestore, 'users', devId, 'contacts', currentUser.uid);
-                setDocumentNonBlocking(devContactRef, {
-                    id: currentUser.uid,
-                    name: profileData.name,
-                    avatar: profileData.profilePictureUrl,
-                    bio: profileData.bio,
-                    language: 'en',
-                    verified: false,
-                    liveTranslationEnabled: false,
-                    lastMessageTimestamp: currentTimestamp,
-                }, { merge: true });
+            const userCredential = await signInAnonymously(auth);
+            if (userCredential.user) {
+              setIsSigningIn(false);
+              nextStep();
             }
         } catch (error) {
-            console.error("Failed to add developer contact:", error);
+            console.error("Anonymous sign-in failed:", error);
+            toast({ variant: 'destructive', title: "Authentication Failed", description: "Could not start a secure session."});
+            setIsSigningIn(false);
         }
     };
 
@@ -267,86 +368,82 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             return;
         }
         setIsSavingProfile(true);
+
+        const batch = writeBatch(firestore);
+
+        const userRef = doc(firestore, 'users', user.uid);
         const profileData = {
             id: user.uid,
             name: name,
-            email: user.email, 
+            email: user.email,
+            username: name.replace(/\s+/g, '').toLowerCase(),
             profilePictureUrl: `https://picsum.photos/seed/${user.uid}/200/200`,
             bio: 'Just joined Secure Talk!',
             language: 'en',
             lastConnection: null,
             createdAt: serverTimestamp(),
         };
+        batch.set(userRef, profileData, { merge: true });
 
+        const devId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
+        const devDocRef = doc(firestore, 'users', devId);
+        
         try {
-            await createUserProfile(user, profileData);
-            await handlePendingConnection(user, profileData);
-            nextStep(); // Go to Terms
+            const devDoc = await getDocumentNonBlocking(devDocRef);
+            if (devDoc && devDoc.exists()) {
+                const devData = devDoc.data();
+                const currentTimestamp = serverTimestamp();
+
+                const userContactRef = doc(firestore, 'users', user.uid, 'contacts', devId);
+                batch.set(userContactRef, {
+                    id: devId,
+                    name: devData.name,
+                    avatar: devData.profilePictureUrl,
+                    bio: devData.bio,
+                    language: 'en',
+                    verified: true,
+                    liveTranslationEnabled: false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+
+                const devContactRef = doc(firestore, 'users', devId, 'contacts', user.uid);
+                batch.set(devContactRef, {
+                    id: user.uid,
+                    name: profileData.name,
+                    avatar: profileData.profilePictureUrl,
+                    bio: profileData.bio,
+                    language: 'en',
+                    verified: false,
+                    liveTranslationEnabled: false,
+                    lastMessageTimestamp: currentTimestamp,
+                }, { merge: true });
+            }
+            
+            await batch.commit();
+            nextStep();
+
         } catch (error) {
-            toast({ variant: "destructive", title: "Profile Creation Failed", description: "Could not save your profile."});
+            console.error("Failed to save profile and add developer contact:", error);
+            toast({ variant: "destructive", title: "Profile Creation Failed", description: "Could not save your profile. Please try again."});
         } finally {
-            setIsSavingProfile(false);
+             setIsSavingProfile(false);
         }
     }
     
-    const handlePendingConnection = async (newUser: any, newUserProfile: any) => {
-        const pendingContactId = localStorage.getItem('pendingConnectionId');
-        if (!pendingContactId || !firestore) return;
-
-        try {
-            const contactDocRef = doc(firestore, 'users', pendingContactId);
-            const contactDoc = await getDocumentNonBlocking(contactDocRef);
-
-            if (contactDoc && contactDoc.exists()) {
-                const contactData = contactDoc.data();
-                const currentTimestamp = serverTimestamp();
-
-                // Add contact to new user's list
-                const newUserContactRef = doc(firestore, 'users', newUser.uid, 'contacts', pendingContactId);
-                await setDocumentNonBlocking(newUserContactRef, {
-                    id: pendingContactId,
-                    name: contactData.name,
-                    avatar: contactData.profilePictureUrl,
-                    bio: contactData.bio,
-                    language: contactData.language || 'en',
-                    verified: contactData.verified || false,
-                    lastMessageTimestamp: currentTimestamp,
-                }, { merge: true });
-
-                // Add new user to contact's list
-                const contactUserContactsRef = doc(firestore, 'users', pendingContactId, 'contacts', newUser.uid);
-                await setDocumentNonBlocking(contactUserContactsRef, {
-                    id: newUser.uid,
-                    name: newUserProfile.name,
-                    avatar: newUserProfile.profilePictureUrl,
-                    bio: newUserProfile.bio,
-                    language: newUserProfile.language || 'en',
-                    verified: false,
-                    lastMessageTimestamp: currentTimestamp,
-                }, { merge: true });
-                
-                // Trigger realtime update for the other user
-                await updateDoc(contactDocRef, { lastConnection: newUser.uid });
-
-                toast({
-                    title: 'Connection Added!',
-                    description: `You are now connected with ${contactData.name}.`,
-                });
-            }
-        } catch (error) {
-            console.error("Failed to process pending connection:", error);
-            toast({ variant: "destructive", title: "Connection Failed", description: "Could not connect with the user from the link." });
-        } finally {
-            localStorage.removeItem('pendingConnectionId');
-        }
+    const handleTermsNext = () => {
+        nextStep();
     }
 
-    const steps = [
-        <WelcomeStep key="welcome" onNext={handleGetStarted} isSigningIn={isSigningIn}/>,
-        <NameStep key="name" onNext={handleNameNext} onBack={prevStep} isSaving={isSavingProfile} />,
-        <TermsStep key="terms" onNext={onComplete} onBack={prevStep} />,
-    ];
+    const handleNotificationsNext = () => {
+        onComplete();
+    };
 
+    const steps = [
+        <WelcomeStep key="welcome" onNext={nextStep} onAnonymousSignIn={handleAnonymousSignIn} isSigningIn={isSigningIn} />,
+        <NameStep key="name" onNext={handleNameNext} isSaving={isSavingProfile} />,
+        <TermsStep key="terms" onNext={handleTermsNext} onBack={prevStep} />,
+        <NotificationsStep key="notifs" onNext={handleNotificationsNext} onBack={prevStep} />,
+    ];
 
     return (
         <div className="h-full w-full fixed inset-0 z-[60] bg-background">
@@ -366,4 +463,16 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     );
 }
 
-    
+const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
+  ({ className, ...props }, ref) => (
+    <div
+      ref={ref}
+      className={cn(
+        "rounded-lg border bg-card text-card-foreground shadow-sm",
+        className
+      )}
+      {...props}
+    />
+  )
+);
+Card.displayName = "Card"
