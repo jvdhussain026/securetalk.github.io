@@ -12,29 +12,29 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 import React, { useState, useCallback } from 'react';
 import type { Contact } from '@/lib/types';
 import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { useFirebase } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
+
+// Hardcoded developer info to prevent Firestore read errors
+const developer: Contact = {
+    id: '4YaPPGcDw2NLe31LwT05h3TihTz1',
+    name: 'Javed Hussain',
+    avatar: 'https://images.unsplash.com/photo-1590086782792-42dd2350140d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTkxMDU0Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080',
+    bio: 'Lead Developer of Secure Talk. Focused on building private, secure, and user-friendly communication tools.',
+    verified: true,
+    language: 'en',
+};
 
 
 export default function AboutUsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { firestore, user: currentUser, userProfile } = useFirebase();
-  const developerId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDeveloper, setSelectedDeveloper] = useState<Contact | null>(null);
-
-  const developerDocRef = useMemoFirebase(() => {
-    if (!firestore || !currentUser) return null;
-    // Fetch the developer's info from the current user's contact list for security
-    return doc(firestore, 'users', currentUser.uid, 'contacts', developerId);
-  }, [firestore, currentUser]);
-
-  const { data: developer, isLoading: isDeveloperLoading } = useDoc<Contact>(developerDocRef);
-
 
   const corePrinciples = [
     { 
@@ -181,27 +181,19 @@ export default function AboutUsPage() {
               <CardTitle>Meet The Team</CardTitle>
             </CardHeader>
             <CardContent>
-              {isDeveloperLoading ? (
-                <div className="flex items-center justify-center p-4">
-                  <LoaderCircle className="h-6 w-6 animate-spin text-primary" />
+              <button 
+                className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
+                onClick={() => setSelectedDeveloper(developer)}
+              >
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={developer.profilePictureUrl || developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
+                  <AvatarFallback>{developer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="font-semibold">{developer.name}</h3>
+                  <p className="text-sm text-muted-foreground">Lead Developer</p>
                 </div>
-              ) : developer ? (
-                <button 
-                  className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
-                  onClick={() => setSelectedDeveloper(developer)}
-                >
-                  <Avatar className="w-12 h-12">
-                    <AvatarImage src={developer.profilePictureUrl || developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
-                    <AvatarFallback>{developer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <h3 className="font-semibold">{developer.name}</h3>
-                    <p className="text-sm text-muted-foreground">Lead Developer</p>
-                  </div>
-                </button>
-              ) : (
-                <p className="text-center text-muted-foreground p-4">Could not load team information.</p>
-              )}
+              </button>
             </CardContent>
           </Card>
           
