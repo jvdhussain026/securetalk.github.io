@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Users } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserX, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Users, Info as InfoIcon } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment } from "firebase/firestore";
@@ -1486,29 +1486,37 @@ export default function ChatPage() {
                   <p className="text-xs text-muted-foreground truncate">{getStatusText()}</p>
                 </button>
                 <div className="ml-auto flex items-center">
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12">
-                        <Phone className="h-6 w-6" />
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        <span className="sr-only">Call</span>
-                    </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                    <DropdownMenuItem asChild>
-                        <Link href={`/call?contactId=${contact?.id}&type=voice&status=outgoing`}>
-                            <Phone className="mr-2 h-4 w-4" />
-                            <span>Voice Call</span>
-                        </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                        <Link href={`/call?contactId=${contact?.id}&type=video&status=outgoing`}>
-                            <Video className="mr-2 h-4 w-4" />
-                            <span>Video Call</span>
-                        </Link>
-                    </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    {isGroupChat ? (
+                       <Button variant="ghost" size="icon" asChild className="text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12">
+                          <Link href={`/groups/${group?.id}/invite`}>
+                            <UserPlus />
+                          </Link>
+                        </Button>
+                    ) : (
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="flex items-center gap-1 text-foreground hover:bg-accent hover:text-accent-foreground px-2 h-12 w-12">
+                                <Phone className="h-6 w-6" />
+                                <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                                <span className="sr-only">Call</span>
+                            </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/call?contactId=${contact?.id}&type=voice&status=outgoing`}>
+                                    <Phone className="mr-2 h-4 w-4" />
+                                    <span>Voice Call</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem asChild>
+                                <Link href={`/call?contactId=${contact?.id}&type=video&status=outgoing`}>
+                                    <Video className="mr-2 h-4 w-4" />
+                                    <span>Video Call</span>
+                                </Link>
+                            </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    )}
 
                 <DropdownMenu open={isMenuOpen} onOpenChange={setIsMenuOpen}>
                     <DropdownMenuTrigger asChild>
@@ -1529,8 +1537,8 @@ export default function ChatPage() {
                                 {menuPage === 1 ? (
                                     <>
                                         <DropdownMenuItem onSelect={() => {setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
-                                            <User className="mr-2 h-4 w-4" />
-                                            <span>View Profile</span>
+                                            {isGroupChat ? <Users className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
+                                            <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('find'); setIsMenuOpen(false);}}>
                                             <Search className="mr-2 h-4 w-4" />
@@ -1544,19 +1552,21 @@ export default function ChatPage() {
                                             <Palette className="mr-2 h-4 w-4" />
                                             <span>Chat Wallpaper</span>
                                         </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
-                                            <Label htmlFor="live-translation-switch" className="flex items-center gap-2 cursor-pointer">
-                                                <Languages className="mr-2 h-4 w-4" />
-                                                Live Translation
-                                            </Label>
-                                            <Switch
-                                                id="live-translation-switch"
-                                                checked={!!contact?.liveTranslationEnabled}
-                                                onCheckedChange={(checked) => {
-                                                    handleLiveTranslationToggle(checked);
-                                                }}
-                                            />
-                                        </DropdownMenuItem>
+                                        {!isGroupChat && (
+                                            <DropdownMenuItem onSelect={(e) => e.preventDefault()} className="flex items-center justify-between">
+                                                <Label htmlFor="live-translation-switch" className="flex items-center gap-2 cursor-pointer">
+                                                    <Languages className="mr-2 h-4 w-4" />
+                                                    Live Translation
+                                                </Label>
+                                                <Switch
+                                                    id="live-translation-switch"
+                                                    checked={!!contact?.liveTranslationEnabled}
+                                                    onCheckedChange={(checked) => {
+                                                        handleLiveTranslationToggle(checked);
+                                                    }}
+                                                />
+                                            </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem onSelect={(e) => { e.preventDefault(); setMenuPage(2); }}>
                                             <span>More</span>
@@ -1570,13 +1580,15 @@ export default function ChatPage() {
                                             <span>Back</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator />
-                                        <DropdownMenuItem onSelect={() => {handleAction('block'); setIsMenuOpen(false);}}>
-                                            <UserX className="mr-2 h-4 w-4" />
-                                            <span>Block</span>
-                                        </DropdownMenuItem>
+                                        {!isGroupChat && (
+                                            <DropdownMenuItem onSelect={() => {handleAction('block'); setIsMenuOpen(false);}}>
+                                                <UserX className="mr-2 h-4 w-4" />
+                                                <span>Block</span>
+                                            </DropdownMenuItem>
+                                        )}
                                         <DropdownMenuItem onSelect={() => {handleAction('clear'); setIsMenuOpen(false);}} className="text-destructive focus:text-destructive">
                                             <Trash2 className="mr-2 h-4 w-4" />
-                                            <span>Clear chat</span>
+                                            <span>{isGroupChat ? 'Clear group messages' : 'Clear chat'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('export'); setIsMenuOpen(false);}}>
                                             <FileUp className="mr-2 h-4 w-4" />
