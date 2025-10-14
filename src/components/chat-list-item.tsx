@@ -135,7 +135,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
             onTouchMove={handleTouchEnd}
         >
             <div className="relative">
-                <Avatar className={cn(contact.isGroup && "rounded-lg")} onClick={handleAvatarClick}>
+                <Avatar className={cn("h-12 w-12", contact.isGroup && "rounded-lg")} onClick={handleAvatarClick}>
                     <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
                     <AvatarFallback className={cn(contact.isGroup ? "bg-muted text-muted-foreground" : "bg-muted")}>
                         {contact.isGroup ? <Users className="h-6 w-6"/> : displayName.charAt(0)}
