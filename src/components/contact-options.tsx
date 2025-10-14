@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Pin, Archive, Trash2, XCircle, Pencil } from 'lucide-react';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useToast } from '@/hooks/use-toast';
 
 type ContactOptionsProps = {
   isOpen: boolean;
@@ -27,10 +30,33 @@ export function ContactOptions({
   onDelete,
   onEditName,
 }: ContactOptionsProps) {
+  const { firestore, user } = useFirebase();
+  const { toast } = useToast();
+  
+  const handleArchiveToggle = async () => {
+    if (!firestore || !user) return;
+    
+    const contactRef = doc(firestore, 'users', user.uid, 'contacts', contact.id);
+    const newArchiveState = !contact.isArchived;
+
+    try {
+        await updateDoc(contactRef, { isArchived: newArchiveState });
+        toast({
+            title: newArchiveState ? 'Chat Archived' : 'Chat Unarchived',
+        });
+    } catch (error) {
+        console.error("Failed to toggle archive state:", error);
+        toast({ variant: 'destructive', title: 'Failed to update archive state.' });
+    }
+    
+    onClose();
+  };
+
+
   const options = [
     { label: contact.isPinned ? 'Unpin Chat' : 'Pin Chat', icon: Pin, action: onPin },
     { label: 'Edit Name', icon: Pencil, action: onEditName },
-    { label: 'Archive Chat', icon: Archive, action: onArchive },
+    { label: contact.isArchived ? 'Unarchive Chat' : 'Archive Chat', icon: Archive, action: handleArchiveToggle },
     { label: 'Clear Chat', icon: XCircle, action: onClear, isDestructive: true },
     { label: 'Delete Chat', icon: Trash2, action: onDelete, isDestructive: true },
   ];
