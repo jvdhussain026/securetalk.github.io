@@ -14,7 +14,7 @@ import { useFirebase } from '@/firebase';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
-import { collection, doc, writeBatch, Timestamp } from 'firebase/firestore';
+import { collection, doc, setDoc, addDoc, Timestamp } from 'firebase/firestore';
 
 export default function NewGroupPage() {
   const { toast } = useToast();
@@ -41,19 +41,8 @@ export default function NewGroupPage() {
     setIsCreating(true);
 
     try {
-      // 1. Get a new document reference *with an auto-generated ID* from the 'groups' collection.
-      const newGroupRef = doc(collection(firestore, 'groups'));
-      const groupId = newGroupRef.id;
-
-      // 2. Create a reference to where the group will be stored in the user's contact list.
-      const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
-
-      // 3. Create a write batch to perform an atomic operation.
-      const batch = writeBatch(firestore);
-
-      // 4. Define the data for the new group document.
+      // 1. Define the group data.
       const groupData = {
-        id: groupId,
         name,
         description: description || '',
         avatar: avatar || '',
@@ -61,31 +50,35 @@ export default function NewGroupPage() {
         participants: {
           [user.uid]: true,
         },
-        createdAt: Timestamp.now(), // Use client-side Timestamp
+        createdAt: Timestamp.now(),
+        // We will add the id later, after the doc is created.
       };
       
-      // 5. Define the data for the user's contact entry for this group.
+      // 2. Add the document to the 'groups' collection. `addDoc` creates the doc and returns a reference.
+      const groupsCollectionRef = collection(firestore, 'groups');
+      const newGroupRef = await addDoc(groupsCollectionRef, groupData);
+      const groupId = newGroupRef.id;
+
+      // 3. Add the group's ID to its own document for easy reference.
+      await setDoc(newGroupRef, { id: groupId }, { merge: true });
+
+      // 4. Add the group to the user's contacts subcollection.
+      const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
       const userContactData = {
         id: groupId,
         name,
         avatar: avatar || '',
         isGroup: true,
-        lastMessageTimestamp: Timestamp.now(), // Use client-side Timestamp
+        lastMessageTimestamp: Timestamp.now(),
       };
+      await setDoc(userContactRef, userContactData);
 
-      // 6. Add the two write operations to the batch.
-      batch.set(newGroupRef, groupData);
-      batch.set(userContactRef, userContactData);
-
-      // 7. Commit the batch. This is a single, atomic transaction.
-      await batch.commit();
 
       toast({
         title: 'Group Created!',
         description: 'Now you can invite members.',
       });
 
-      // Redirect to the invite page
       router.push(`/groups/${groupId}/invite`);
 
     } catch (error: any) {
