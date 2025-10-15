@@ -38,6 +38,13 @@ export function DeleteMessageDialog({
 }: DeleteMessageDialogProps) {
   const [forEveryone, setForEveryone] = useState(false);
   
+  // Reset 'forEveryone' checkbox when the dialog opens
+  useEffect(() => {
+    if (open) {
+      setForEveryone(false);
+    }
+  }, [open]);
+
   const canDeleteForEveryone = selectedMessages.every(m => m.senderId === currentUserId);
   const title = `Delete ${selectedMessages.length} message${selectedMessages.length > 1 ? 's' : ''}?`;
 
@@ -49,15 +56,8 @@ export function DeleteMessageDialog({
     onCancel();
   };
 
-  const handleOpenChange = (isOpen: boolean) => {
-    if (!isOpen) {
-      setForEveryone(false);
-    }
-    onOpenChange(isOpen);
-  }
-
   return (
-    <AlertDialog open={open} onOpenChange={handleOpenChange}>
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title}</AlertDialogTitle>
