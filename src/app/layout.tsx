@@ -1,3 +1,4 @@
+
 import type { Metadata, Viewport } from 'next';
 import { PT_Sans } from 'next/font/google';
 import Script from 'next/script';
@@ -43,6 +44,9 @@ export const viewport: Viewport = {
     { media: "(prefers-color-scheme: light)", color: "#FFFFFF" },
     { media: "(prefers-color-scheme: dark)", color: "#021425" },
   ],
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
 };
 
 export default function RootLayout({
