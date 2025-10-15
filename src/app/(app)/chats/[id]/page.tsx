@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, Users, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment, getDocs, writeBatch } from "firebase/firestore";
@@ -56,7 +56,6 @@ import { Separator } from '@/components/ui/separator'
 import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 import { GroupInfoSheet } from '@/components/group-info-sheet'
-import { Badge } from '@/components/ui/badge'
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -362,14 +361,14 @@ export default function ChatPage() {
   const { firestore, user, userProfile } = useFirebase();
 
   const isGroupChat = params.id.toString().startsWith('group_');
-  const chatId = isGroupChat ? params.id.toString().replace('group_', '') : null;
-  const contactId = isGroupChat ? null : params.id as string;
+  const chatId = isGroupChat ? params.id.toString() : null;
+  const contactId = isGroupChat ? params.id.toString() : params.id as string;
   const finalChatId = isGroupChat ? chatId : createChatId(user?.uid || '', contactId || '');
 
   const contactDocRef = useMemoFirebase(() => {
-    if (isGroupChat || !firestore || !user?.uid || !contactId) return null;
+    if (!firestore || !user?.uid || !contactId) return null;
     return doc(firestore, 'users', user.uid, 'contacts', contactId);
-  }, [firestore, user?.uid, contactId, isGroupChat]);
+  }, [firestore, user?.uid, contactId]);
   
   const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
@@ -535,10 +534,11 @@ export default function ChatPage() {
     // When entering the chat, store the unread count and then reset it
     if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
         setUnreadCountOnLoad(contact.unreadCount);
+        // This reset is now immediate.
         updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [contact?.id]);
+    // Dependency on contact itself to re-evaluate when it loads/changes
+  }, [contactDocRef, contact]);
 
 
   useEffect(() => {
@@ -764,7 +764,7 @@ export default function ChatPage() {
         };
         addDocumentNonBlocking(collectionRef, messageData);
         
-        if (contact) {
+        if (contact && !contact.isGroup) {
             const notificationPayload = {
                 userId: contact.id,
                 payload: {
@@ -784,7 +784,7 @@ export default function ChatPage() {
       const participantIds = Object.keys(group.participants || {});
       const batch = writeBatch(firestore);
       participantIds.forEach(pid => {
-        if (!pid.startsWith('group_')) { // Ensure we are not trying to update a group as a user
+        if (!pid.startsWith('group_')) {
             const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
             const updateData: any = { lastMessageTimestamp: currentTimestamp };
             if (pid !== user.uid) {
@@ -1414,13 +1414,6 @@ export default function ChatPage() {
       >
         <div className={cn("flex w-full items-start gap-2", isSender ? "justify-end" : "justify-start")}>
             
-            {showSenderInfo && (
-                <Avatar className="h-8 w-8 mt-4">
-                    <AvatarImage src={sender.avatar} />
-                    <AvatarFallback>{sender.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-            )}
-            
             <div className={cn("flex flex-col items-start w-full", isSender ? 'items-end': 'items-start')}>
               
                 <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
@@ -1922,6 +1915,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
