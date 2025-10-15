@@ -361,10 +361,11 @@ export default function ChatPage() {
   const { firestore, user, userProfile } = useFirebase();
 
   const isGroupChat = params.id.toString().startsWith('group_');
-  const chatId = isGroupChat ? params.id.toString().replace('group_', '') : null;
-  const contactId = isGroupChat ? null : params.id as string;
-  const finalChatId = isGroupChat ? chatId : (user?.uid && contactId ? createChatId(user.uid, contactId) : null);
-  const contactDocRefId = isGroupChat ? `group_${chatId}` : contactId;
+  const chatIdFromParams = params.id.toString();
+  const contactId = isGroupChat ? null : (chatIdFromParams);
+  const groupId = isGroupChat ? chatIdFromParams.replace('group_', '') : null;
+  const finalChatId = isGroupChat ? groupId : (user?.uid && contactId ? createChatId(user.uid, contactId) : null);
+  const contactDocRefId = isGroupChat ? `group_${groupId}` : contactId;
 
 
   const contactDocRef = useMemoFirebase(() => {
@@ -375,9 +376,9 @@ export default function ChatPage() {
   const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
   const groupDocRef = useMemoFirebase(() => {
-      if (!isGroupChat || !firestore || !chatId) return null;
-      return doc(firestore, 'groups', chatId);
-  }, [firestore, chatId, isGroupChat]);
+      if (!isGroupChat || !firestore || !groupId) return null;
+      return doc(firestore, 'groups', groupId);
+  }, [firestore, groupId, isGroupChat]);
   
   const { data: group, isLoading: isGroupLoading } = useDoc<Group>(groupDocRef);
   
@@ -1925,6 +1926,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
