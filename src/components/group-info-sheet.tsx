@@ -151,7 +151,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                 [`participants.${user.uid}`]: false
             });
             
-            const userContactRef = doc(firestore, `users/${user.uid}/contacts/${group.id}`);
+            const userContactRef = doc(firestore, `users/${user.uid}/contacts/group_${group.id}`);
             await deleteDoc(userContactRef);
 
             toast({ title: "You have left the group." });
@@ -172,7 +172,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                 [`participants.${memberToRemove.id}`]: false
             });
 
-            const memberContactRef = doc(firestore, 'users', memberToRemove.id, 'contacts', group.id);
+            const memberContactRef = doc(firestore, 'users', memberToRemove.id, 'contacts', `group_${group.id}`);
             await deleteDoc(memberContactRef);
             
             toast({ title: `${memberToRemove.name} has been removed from the group.`});
@@ -223,7 +223,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
         <Drawer.Content className="bg-secondary flex flex-col rounded-t-[10px] h-[95%] fixed bottom-0 left-0 right-0 focus:outline-none z-50 md:max-w-md md:mx-auto">
             <Drawer.Title className="sr-only">Group Information</Drawer.Title>
-           <div className="p-4 bg-card rounded-t-[10px] flex-1 overflow-y-auto">
+           <div className="p-4 bg-card rounded-t-[10px] flex-1">
                 <div className="mx-auto w-12 h-1.5 flex-shrink-0 rounded-full bg-border mb-4" />
                 <div className="max-w-md mx-auto">
                     <header className="flex items-center justify-between p-4 shrink-0 -m-4 mb-0">
@@ -243,7 +243,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                             </div>
                          )}
                     </header>
-
+                    <ScrollArea className="h-[calc(95vh_-_100px)]">
                     <main className="p-4 md:p-6 space-y-6 -mx-4 md:-mx-6">
                         <div className="flex flex-col items-center space-y-4">
                             <div className="relative">
@@ -299,7 +299,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                                 </CardHeader>
                                 <CardContent>
                                     <p className="text-sm font-medium mb-3">Who can edit group info?</p>
-                                    <RadioGroup defaultValue={group.permissions?.editInfo || 'only_owner'} onValueChange={handlePermissionChange}>
+                                    <RadioGroup defaultValue={group.permissions?.editInfo || 'only_owner'} onValueChange={handlePermissionChange as any}>
                                         <div className="flex items-center space-x-2">
                                             <RadioGroupItem value="all_participants" id="r-all" />
                                             <Label htmlFor="r-all">All participants</Label>
@@ -317,7 +317,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                             <CardHeader>
                                 <CardTitle className="flex items-center justify-between">
                                     <span>{members.length} Members</span>
-                                    {isCurrentUserOwner && (
+                                    {canCurrentUserEdit && (
                                     <Button variant="outline" size="sm" asChild>
                                         <Link href={`/groups/${group.id}/invite`}>
                                             <UserPlus className="mr-2 h-4 w-4" />
@@ -375,6 +375,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                             </CardContent>
                         </Card>
                     </main>
+                    </ScrollArea>
                 </div>
             </div>
         </Drawer.Content>

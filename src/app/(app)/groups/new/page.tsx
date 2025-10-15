@@ -68,7 +68,7 @@ export default function NewGroupPage() {
     // 2. Create the contact entry for the user
     const userContactRef = doc(firestore, 'users', user.uid, 'contacts', `group_${groupId}`);
     const userContactData = {
-      id: groupId,
+      id: `group_${groupId}`,
       name,
       avatar: avatar || '',
       isGroup: true,

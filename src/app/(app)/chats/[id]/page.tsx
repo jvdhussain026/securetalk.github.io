@@ -782,12 +782,12 @@ export default function ChatPage() {
     const isVisible = typeof document !== 'undefined' && !document.hidden;
     
     if (isGroupChat && group) {
-      const participantIds = Object.keys(group.participants || {});
+      const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
       const batch = writeBatch(firestore);
 
       participantIds.forEach(pid => {
         if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
-            const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
+            const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
             const updateData: any = { lastMessageTimestamp: currentTimestamp };
             if (pid !== user.uid && !isVisible) {
               updateData.unreadCount = increment(1);
@@ -1327,7 +1327,8 @@ export default function ChatPage() {
   const getStatusText = () => {
       if(isGroupChat) {
           const onlineMembers = allUsers ? allUsers.filter(u => group?.participants[u.id] && u.status === 'online').length : 0;
-          return `${Object.keys(group?.participants || {}).length} members, ${onlineMembers} online`;
+          const totalMembers = Object.values(group?.participants || {}).filter(v => v).length;
+          return `${totalMembers} members, ${onlineMembers} online`;
       }
       if (chat?.typing?.[contactId || '']) {
         return <span className="text-primary animate-pulse">Typing...</span>;
@@ -1924,18 +1925,3 @@ export default function ChatPage() {
 
 
     
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
