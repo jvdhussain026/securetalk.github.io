@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -47,7 +46,7 @@ export default function WallpaperPage() {
     const [activeWallpaper, setActiveWallpaper] = useState<string | null>(null);
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null>(null);
     const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { toast } = useToast();
     const { storage, user } = useFirebase();
@@ -87,38 +86,16 @@ export default function WallpaperPage() {
             return;
         }
 
-        if (!storage || !user) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Storage service not ready. Please try again.' });
-            return;
-        }
-        
-        setIsUploading(true);
-        try {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async (e) => {
-                const dataUrl = e.target?.result as string;
-                try {
-                    const storageRef = ref(storage, `wallpapers/global/${user.uid}/${Date.now()}_${file.name}`);
-                    const snapshot = await uploadString(storageRef, dataUrl, 'data_url');
-                    const downloadURL = await getDownloadURL(snapshot.ref);
-                    
-                    setCustomWallpaper(downloadURL);
-                    setSelectedWallpaper(downloadURL);
-                    localStorage.setItem('customGlobalWallpaper', downloadURL);
-                    toast({ title: 'Upload successful!', description: 'Preview updated.' });
-                } catch (uploadError) {
-                    console.error("Wallpaper upload failed: ", uploadError);
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the selected image.' });
-                } finally {
-                    // This is guaranteed to run, even if the upload fails.
-                    setIsUploading(false);
-                }
-            };
-        } catch (error) {
-            console.error("File reader error:", error);
-            toast({ variant: 'destructive', title: 'File Error', description: 'Could not read the selected file.' });
-            setIsUploading(false);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const dataUrl = reader.result as string;
+            setCustomWallpaper(dataUrl);
+            setSelectedWallpaper(dataUrl);
+            toast({ title: 'Preview updated!', description: 'Click "Save Changes" to apply.' });
+        };
+        reader.onerror = () => {
+             toast({ variant: 'destructive', title: 'File Error', description: 'Could not read the selected file.' });
         }
     };
     
@@ -127,15 +104,29 @@ export default function WallpaperPage() {
         toast({ title: 'Preview reset to default.', description: 'Click Save Changes to apply.' });
     };
     
-    const handleSave = () => {
-        if (selectedWallpaper) {
-            setActiveWallpaper(selectedWallpaper);
-            localStorage.setItem('chatWallpaper', selectedWallpaper);
+    const handleSave = async () => {
+        if (!user || !storage) return;
+
+        setIsSaving(true);
+        try {
+            let finalUrlToSave = selectedWallpaper;
+
+            if (selectedWallpaper && selectedWallpaper.startsWith('data:image')) {
+                 const storageRef = ref(storage, `wallpapers/global/${user.uid}/${Date.now()}.jpeg`);
+                 const snapshot = await uploadString(storageRef, selectedWallpaper, 'data_url');
+                 finalUrlToSave = await getDownloadURL(snapshot.ref);
+                 localStorage.setItem('customGlobalWallpaper', finalUrlToSave);
+            }
+            
+            setActiveWallpaper(finalUrlToSave);
+            localStorage.setItem('chatWallpaper', finalUrlToSave || 'null');
             toast({ title: 'Wallpaper Saved!', description: 'Your new wallpaper has been applied.' });
-        } else {
-            setActiveWallpaper(null);
-            localStorage.setItem('chatWallpaper', 'null'); // Store 'null' string
-            toast({ title: 'Wallpaper Reset!', description: 'Default chat background is active.' });
+
+        } catch (error) {
+            console.error("Failed to save wallpaper:", error);
+            toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the new wallpaper.' });
+        } finally {
+            setIsSaving(false);
         }
     };
     
@@ -175,10 +166,9 @@ export default function WallpaperPage() {
                         <button 
                             onClick={handleFileUploadClick} 
                             className="aspect-square bg-card rounded-lg flex flex-col items-center justify-center gap-2 text-primary border-2 border-dashed hover:bg-accent"
-                            disabled={isUploading}
                         >
-                            {isUploading ? <LoaderCircle className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
-                            <span className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Photo'}</span>
+                            <Upload className="w-8 h-8" />
+                            <span className="text-sm font-medium">Upload Photo</span>
                         </button>
                         <input 
                             type="file" 
@@ -236,8 +226,9 @@ export default function WallpaperPage() {
                     <Button variant="outline" className="w-full" onClick={handleResetToDefault}>
                         <RotateCcw className="mr-2 h-4 w-4" /> Reset
                     </Button>
-                    <Button className="w-full" onClick={handleSave} disabled={!hasChanges}>
-                        <Save className="mr-2 h-4 w-4" /> Save Changes
+                    <Button className="w-full" onClick={handleSave} disabled={!hasChanges || isSaving}>
+                        {isSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>
             </footer>

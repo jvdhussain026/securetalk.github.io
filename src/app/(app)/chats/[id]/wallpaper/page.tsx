@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -63,13 +62,13 @@ export default function PerChatWallpaperPage() {
     const [activeWallpaper, setActiveWallpaper] = useState<string | null | undefined>(undefined);
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null | undefined>(undefined);
     const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
     const defaultGlobalWallpaper = typeof window !== 'undefined' ? localStorage.getItem('chatWallpaper') : null;
 
     useEffect(() => {
-        if (chatData !== undefined) { // Check if chatData has been loaded (can be null)
+        if (chatData !== undefined) {
             const initialWallpaper = chatData?.wallpaper !== undefined 
                 ? chatData.wallpaper 
                 : (defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper);
@@ -77,11 +76,7 @@ export default function PerChatWallpaperPage() {
             setActiveWallpaper(initialWallpaper);
             setSelectedWallpaper(initialWallpaper);
         }
-        const savedCustom = localStorage.getItem(`customChatWallpaper_${chatId}`);
-        if (savedCustom) {
-            setCustomWallpaper(savedCustom);
-        }
-    }, [chatData, defaultGlobalWallpaper, chatId]);
+    }, [chatData, defaultGlobalWallpaper]);
 
     const handleSelectWallpaper = (wallpaperUrl: string | null) => {
         setSelectedWallpaper(wallpaperUrl);
@@ -104,39 +99,17 @@ export default function PerChatWallpaperPage() {
             return;
         }
 
-        if (!storage || !user) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Storage service not ready. Please try again.' });
-            return;
-        }
-
-        setIsUploading(true);
-        try {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = async (e) => {
-                const dataUrl = e.target?.result as string;
-                 try {
-                    const storageRef = ref(storage, `wallpapers/${chatId}/${Date.now()}_${file.name}`);
-                    const snapshot = await uploadString(storageRef, dataUrl, 'data_url');
-                    const downloadURL = await getDownloadURL(snapshot.ref);
-                    
-                    setCustomWallpaper(downloadURL);
-                    setSelectedWallpaper(downloadURL);
-                    localStorage.setItem(`customChatWallpaper_${chatId}`, downloadURL);
-                    toast({ title: 'Upload successful!', description: 'Preview updated.' });
-                } catch (uploadError) {
-                    console.error("Wallpaper upload failed: ", uploadError);
-                    toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the selected image.' });
-                } finally {
-                    // This is guaranteed to run, even if the upload fails.
-                    setIsUploading(false);
-                }
-            };
-        } catch (error) {
-            console.error("File reader error:", error);
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+            const dataUrl = reader.result as string;
+            setCustomWallpaper(dataUrl); // This is now a base64 Data URL
+            setSelectedWallpaper(dataUrl);
+            toast({ title: 'Preview updated!', description: 'Click "Save Changes" to apply.' });
+        };
+        reader.onerror = () => {
             toast({ variant: 'destructive', title: 'File Error', description: 'Could not read the selected file.' });
-            setIsUploading(false);
-        }
+        };
     };
     
     const handleResetToDefault = () => {
@@ -145,16 +118,33 @@ export default function PerChatWallpaperPage() {
         toast({ title: 'Preview reset to global default.', description: 'Click Save Changes to apply to this chat.' });
     };
     
-    const handleSave = () => {
-        if (!chatDocRef) return;
-        
-        // The value to save in Firestore. `null` means it will inherit the global setting.
-        const valueToSave = selectedWallpaper;
+    const handleSave = async () => {
+        if (!chatDocRef || !user || !storage) return;
 
-        updateDocumentNonBlocking(chatDocRef, { wallpaper: valueToSave });
-        setActiveWallpaper(selectedWallpaper);
-        toast({ title: 'Chat Wallpaper Saved!', description: 'Your new wallpaper has been applied to this chat.' });
-        router.back();
+        setIsSaving(true);
+
+        try {
+            let finalUrlToSave = selectedWallpaper;
+
+            // Check if the selected wallpaper is a new custom upload (base64)
+            if (selectedWallpaper && selectedWallpaper.startsWith('data:image')) {
+                const storageRef = ref(storage, `wallpapers/${chatId}/${Date.now()}.jpeg`);
+                const snapshot = await uploadString(storageRef, selectedWallpaper, 'data_url');
+                finalUrlToSave = await getDownloadURL(snapshot.ref);
+            }
+
+            await updateDocumentNonBlocking(chatDocRef, { wallpaper: finalUrlToSave });
+            
+            setActiveWallpaper(selectedWallpaper);
+            toast({ title: 'Chat Wallpaper Saved!', description: 'Your new wallpaper has been applied to this chat.' });
+            router.back();
+
+        } catch (error) {
+            console.error("Failed to save wallpaper:", error);
+            toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the new wallpaper.' });
+        } finally {
+            setIsSaving(false);
+        }
     };
     
     const hasChanges = activeWallpaper !== selectedWallpaper;
@@ -195,10 +185,9 @@ export default function PerChatWallpaperPage() {
                         <button 
                             onClick={handleFileUploadClick} 
                             className="aspect-square bg-card rounded-lg flex flex-col items-center justify-center gap-2 text-primary border-2 border-dashed hover:bg-accent"
-                            disabled={isUploading}
                         >
-                            {isUploading ? <LoaderCircle className="w-8 h-8 animate-spin" /> : <Upload className="w-8 h-8" />}
-                            <span className="text-sm font-medium">{isUploading ? 'Uploading...' : 'Upload Photo'}</span>
+                            <Upload className="w-8 h-8" />
+                            <span className="text-sm font-medium">Upload Photo</span>
                         </button>
                         <input 
                             type="file" 
@@ -255,8 +244,9 @@ export default function PerChatWallpaperPage() {
                     <Button variant="outline" className="w-full" onClick={handleResetToDefault}>
                         <RotateCcw className="mr-2 h-4 w-4" /> Reset to Default
                     </Button>
-                    <Button className="w-full" onClick={handleSave} disabled={!hasChanges}>
-                        <Save className="mr-2 h-4 w-4" /> Save Changes
+                    <Button className="w-full" onClick={handleSave} disabled={!hasChanges || isSaving}>
+                        {isSaving ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
+                        {isSaving ? 'Saving...' : 'Save Changes'}
                     </Button>
                 </div>
             </footer>
