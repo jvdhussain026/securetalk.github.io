@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
@@ -533,12 +534,20 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    // When entering the chat, if there are unread messages, store the count and then reset it.
-    if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
+    // When entering a 1-on-1 chat, if there are unread messages, store the count and then reset it.
+    if (!isGroupChat && contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
         setUnreadCountOnLoad(contact.unreadCount);
         updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
     }
-  }, [contactDocRef, contact]);
+  }, [isGroupChat, contactDocRef, contact]);
+  
+  useEffect(() => {
+    // When entering a group chat, reset the unread count on the contact document.
+    if (isGroupChat && contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
+      setUnreadCountOnLoad(contact.unreadCount);
+      updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
+    }
+  }, [isGroupChat, contactDocRef, contact]);
 
 
   useEffect(() => {
@@ -1926,3 +1935,4 @@ export default function ChatPage() {
 
 
     
+
