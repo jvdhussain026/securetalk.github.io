@@ -91,19 +91,21 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
 
   const isMyMessage = message.senderId === user?.uid;
   const canEdit = isMyMessage && !!message.text && differenceInHours(new Date(), message.timestamp.toDate()) < 3;
+  const isGroupInvite = message.text?.startsWith('[GROUP_INVITE]');
+
 
   const primaryItems = [
-    { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: true },
-    { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: true },
+    { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: !isGroupInvite },
+    { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: !isGroupInvite },
     { label: 'Delete', icon: Trash2, action: handleDeleteClick, show: true, isDestructive: true },
   ];
 
   const secondaryItems = [
-    { label: 'Share', icon: Share2, action: handleShare, show: true },
-    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit },
+    { label: 'Share', icon: Share2, action: handleShare, show: !isGroupInvite },
+    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit && !isGroupInvite },
     { label: message.isStarred ? 'Unstar' : 'Star', icon: Star, action: handleActionWithClose(onStar), show: true },
-    { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text },
-     { label: isTranslated ? 'Original' : 'Translate', icon: Languages, action: handleActionWithClose(onTranslate), show: !!message.text },
+    { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text && !isGroupInvite },
+    { label: isTranslated ? 'Original' : 'Translate', icon: Languages, action: handleActionWithClose(onTranslate), show: !!message.text && !isGroupInvite },
   ];
 
   const renderItem = (item: typeof primaryItems[0] | typeof secondaryItems[0]) => (
@@ -144,7 +146,9 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
             className="p-2 bg-muted rounded-lg mb-4 cursor-pointer"
             onClick={() => onTapMessage(message)}
         >
-          <p className="line-clamp-2 text-sm text-muted-foreground">{message.text || 'Media message'}</p>
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {isGroupInvite ? 'Group Invitation' : message.text || 'Media message'}
+          </p>
         </div>
         <div className="relative h-[84px] overflow-hidden">
         <AnimatePresence>

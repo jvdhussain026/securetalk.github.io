@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useEffect } from 'react';
@@ -45,7 +46,7 @@ export function DeleteMessageDialog({
     }
   }, [open]);
 
-  const canDeleteForEveryone = selectedMessages.every(m => m.senderId === currentUserId);
+  const canDeleteForEveryone = selectedMessages.every(m => m.senderId === currentUserId && !m.text?.startsWith('[GROUP_INVITE]'));
   const title = `Delete ${selectedMessages.length} message${selectedMessages.length > 1 ? 's' : ''}?`;
 
   const handleConfirm = () => {
