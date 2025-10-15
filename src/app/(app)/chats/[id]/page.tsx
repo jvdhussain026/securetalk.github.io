@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users, UserX } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, UserX } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment, getDocs, writeBatch } from "firebase/firestore";
@@ -233,7 +233,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                     <div className="flex flex-col items-center text-center p-4 bg-black/10 rounded-lg">
                         <Avatar className="h-16 w-16 mb-2">
                            <AvatarImage src={inviteData.groupAvatar} />
-                           <AvatarFallback><Users/></AvatarFallback>
+                           <AvatarFallback><UserX/></AvatarFallback>
                         </Avatar>
                         <h3 className="font-bold">You're invited to join a group</h3>
                         <p className="text-lg font-semibold mb-3">{inviteData.groupName}</p>
@@ -782,11 +782,13 @@ export default function ChatPage() {
     if (isGroupChat && group) {
       const participantIds = Object.keys(group.participants || {});
       const batch = writeBatch(firestore);
+      const isVisible = !document.hidden;
+
       participantIds.forEach(pid => {
         if (!pid.startsWith('group_')) {
             const contactRef = doc(firestore, 'users', pid, 'contacts', group.id);
             const updateData: any = { lastMessageTimestamp: currentTimestamp };
-            if (pid !== user.uid) {
+            if (pid !== user.uid && !isVisible) {
               updateData.unreadCount = increment(1);
             }
             batch.update(contactRef, updateData);
@@ -799,10 +801,16 @@ export default function ChatPage() {
         updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
         
         const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
-        updateDocumentNonBlocking(otherUserContactRef, { 
-          lastMessageTimestamp: currentTimestamp,
-          unreadCount: increment(1)
-        });
+        if (!document.hidden) {
+            updateDocumentNonBlocking(otherUserContactRef, {
+                lastMessageTimestamp: currentTimestamp,
+            });
+        } else {
+            updateDocumentNonBlocking(otherUserContactRef, {
+                lastMessageTimestamp: currentTimestamp,
+                unreadCount: increment(1)
+            });
+        }
     }
   };
 
@@ -1411,9 +1419,9 @@ export default function ChatPage() {
         onTouchMove={handleTouchEnd}
         onClick={() => handleMessageClick(message)}
       >
-        <div className={cn("flex w-full items-start gap-2", isSender ? "justify-end" : "justify-start")}>
+        <div className={cn("flex w-full items-start", isSender ? "justify-end" : "justify-start")}>
             
-            <div className={cn("flex flex-col items-start w-full", isSender ? 'items-end': 'items-start')}>
+            <div className={cn("flex flex-col w-full", isSender ? 'items-end': 'items-start')}>
               
                 <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
                     <motion.div
@@ -1584,7 +1592,7 @@ export default function ChatPage() {
                                 {menuPage === 1 ? (
                                     <>
                                         <DropdownMenuItem onSelect={() => { isGroupChat ? setIsGroupInfoOpen(true) : setIsUserDetailsOpen(true); setIsMenuOpen(false);}}>
-                                            {isGroupChat ? <Users className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
+                                            {isGroupChat ? <UserX className="mr-2 h-4 w-4" /> : <User className="mr-2 h-4 w-4" />}
                                             <span>{isGroupChat ? 'Group Info' : 'View Profile'}</span>
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onSelect={() => {handleAction('find'); setIsMenuOpen(false);}}>
@@ -1914,6 +1922,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
