@@ -133,9 +133,11 @@ export default function ChatsPage() {
     if (!contacts) return [];
 
     return [...contacts]
-      .filter(contact =>
-        (contact.displayName || contact.name).toLowerCase().includes(searchQuery.toLowerCase()) && !contact.isArchived
-      )
+      .filter(contact => {
+          const nameToSearch = contact.displayName || contact.name;
+          if (!nameToSearch) return false; // Defensive check
+          return nameToSearch.toLowerCase().includes(searchQuery.toLowerCase()) && !contact.isArchived
+      })
       .sort((a, b) => {
         // Pinned contacts come first
         if (a.isPinned && !b.isPinned) return -1;
@@ -396,5 +398,3 @@ export default function ChatsPage() {
     </>
   )
 }
-
-    
