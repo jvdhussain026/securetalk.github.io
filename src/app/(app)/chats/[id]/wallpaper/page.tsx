@@ -51,7 +51,7 @@ export default function PerChatWallpaperPage() {
     const { toast } = useToast();
     
     const contactId = params.id as string;
-    const chatId = [user?.uid, contactId].sort().join('_');
+    const chatId = user?.uid && contactId ? [user.uid, contactId].sort().join('_') : null;
 
     const chatDocRef = useMemoFirebase(() => {
         if (!firestore || !chatId) return null;
@@ -60,8 +60,8 @@ export default function PerChatWallpaperPage() {
 
     const { data: chatData } = useDoc(chatDocRef);
 
-    const [activeWallpaper, setActiveWallpaper] = useState<string | null>(null);
-    const [selectedWallpaper, setSelectedWallpaper] = useState<string | null>(null);
+    const [activeWallpaper, setActiveWallpaper] = useState<string | null | undefined>(undefined);
+    const [selectedWallpaper, setSelectedWallpaper] = useState<string | null | undefined>(undefined);
     const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
@@ -69,8 +69,8 @@ export default function PerChatWallpaperPage() {
     const defaultGlobalWallpaper = typeof window !== 'undefined' ? localStorage.getItem('chatWallpaper') : null;
 
     useEffect(() => {
-        if (chatData) {
-            const initialWallpaper = chatData.wallpaper !== undefined 
+        if (chatData !== undefined) { // Check if chatData has been loaded (can be null)
+            const initialWallpaper = chatData?.wallpaper !== undefined 
                 ? chatData.wallpaper 
                 : (defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper);
             
@@ -100,6 +100,10 @@ export default function PerChatWallpaperPage() {
                     title: 'Image too large',
                     description: 'Please select an image smaller than 5MB.'
                 });
+                return;
+            }
+            if (!storage || !user) {
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not upload image. Please try again.' });
                 return;
             }
             setIsUploading(true);
@@ -134,12 +138,9 @@ export default function PerChatWallpaperPage() {
     
     const handleSave = () => {
         if (!chatDocRef) return;
-        const globalDefault = defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper;
-        // If selected wallpaper is the same as the global one, save `null` to inherit from global.
-        // Otherwise, save the specific URL.
-        const valueToSave = selectedWallpaper === globalDefault
-            ? null 
-            : selectedWallpaper;
+        
+        // The value to save in Firestore. `null` means it will inherit the global setting.
+        const valueToSave = selectedWallpaper;
 
         updateDocumentNonBlocking(chatDocRef, { wallpaper: valueToSave });
         setActiveWallpaper(selectedWallpaper);
