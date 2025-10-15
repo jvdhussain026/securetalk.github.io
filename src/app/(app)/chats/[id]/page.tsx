@@ -108,6 +108,17 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   const audioAttachments = attachments.filter(a => a.type === 'audio');
   
   const currentText = translatedText || text;
+  const [showFullText, setShowFullText] = useState(false);
+  
+  const textRef = useRef<HTMLDivElement>(null);
+  const [isTextClamped, setIsTextClamped] = useState(false);
+
+  useEffect(() => {
+    if (textRef.current) {
+        // Check if the text is overflowing
+        setIsTextClamped(textRef.current.scrollHeight > textRef.current.clientHeight);
+    }
+  }, [currentText]);
 
   const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
     const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
@@ -129,56 +140,6 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     }
   }
 
-  const renderMediaGrid = () => {
-    if (mediaAttachments.length === 0) return null;
-
-    if (mediaAttachments.length === 1) {
-        const media = mediaAttachments[0];
-        return (
-            <button onClick={() => onMediaClick(message, 0)} className="w-full relative">
-                {renderAttachmentPreview(media, false)}
-            </button>
-        );
-    }
-
-    const itemsToShow = mediaAttachments.slice(0, 4);
-    const remainingItems = mediaAttachments.length - 4;
-
-    return (
-        <div className="grid grid-cols-2 gap-1">
-            {itemsToShow.map((media, index) => (
-                <button key={index} onClick={() => onMediaClick(message, index)} className="relative">
-                    {renderAttachmentPreview(media, true)}
-                     {remainingItems > 0 && index === 3 && (
-                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
-                            <span className="text-white font-bold text-lg">+{remainingItems}</span>
-                        </div>
-                    )}
-                </button>
-            ))}
-        </div>
-    );
-  };
-
-  const renderDoc = (attachment: Attachment) => (
-    <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden" style={{ wordBreak: 'break-word' }}>
-      <div className="p-2 bg-black/10 rounded-md mr-3">
-        <FileText className="w-6 h-6 flex-shrink-0" />
-      </div>
-      <div className="flex-1 overflow-hidden">
-        <p className="text-sm font-medium line-clamp-2">{attachment.name}</p>
-        <p className="text-xs opacity-80">{attachment.size}</p>
-      </div>
-      <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
-    </div>
-  );
-  
-  const renderAudio = (attachment: Attachment) => (
-    <div key={attachment.url} className="mt-1 w-full max-w-xs">
-      <AudioPlayer src={attachment.url} isSender={message.senderId === useFirebase().user?.uid} />
-    </div>
-  );
-  
   const highlightedText = useMemo(() => {
     if (!currentText) return null;
 
@@ -223,6 +184,83 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
       </>
     );
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id, isSender]);
+
+  const renderMediaGrid = () => {
+    if (mediaAttachments.length === 0) return null;
+
+    if (mediaAttachments.length === 1) {
+        const media = mediaAttachments[0];
+        const hasText = currentText && !currentText.startsWith('[Broadcast]');
+        
+        return (
+            <div className="relative w-full">
+                <button onClick={() => onMediaClick(message, 0)} className="w-full">
+                    {renderAttachmentPreview(media, false)}
+                </button>
+                {hasText && (
+                    <div className={cn(
+                        "absolute bottom-0 left-0 right-0 text-white p-2.5",
+                        "bg-gradient-to-t from-black/70 via-black/50 to-transparent",
+                        isSender ? "text-primary-foreground" : "text-white"
+                    )}>
+                        <div 
+                            ref={textRef}
+                            className={cn("whitespace-pre-wrap select-text", !showFullText && "line-clamp-3")}
+                            style={{ wordBreak: 'break-word' }}
+                        >
+                             {highlightedText}
+                        </div>
+                        {isTextClamped && !showFullText && (
+                            <button
+                                onClick={() => setShowFullText(true)}
+                                className="text-xs font-bold text-blue-300 hover:underline mt-1"
+                            >
+                                Show more
+                            </button>
+                        )}
+                    </div>
+                )}
+            </div>
+        );
+    }
+
+    const itemsToShow = mediaAttachments.slice(0, 4);
+    const remainingItems = mediaAttachments.length - 4;
+
+    return (
+        <div className="grid grid-cols-2 gap-1 p-1">
+            {itemsToShow.map((media, index) => (
+                <button key={index} onClick={() => onMediaClick(message, index)} className="relative">
+                    {renderAttachmentPreview(media, true)}
+                     {remainingItems > 0 && index === 3 && (
+                        <div className="absolute inset-0 bg-black/50 flex items-center justify-center rounded-md">
+                            <span className="text-white font-bold text-lg">+{remainingItems}</span>
+                        </div>
+                    )}
+                </button>
+            ))}
+        </div>
+    );
+  };
+
+  const renderDoc = (attachment: Attachment) => (
+    <div key={attachment.url} className="flex items-center p-2 bg-black/10 rounded-lg mt-1 max-w-full overflow-hidden" style={{ wordBreak: 'break-word' }}>
+      <div className="p-2 bg-black/10 rounded-md mr-3">
+        <FileText className="w-6 h-6 flex-shrink-0" />
+      </div>
+      <div className="flex-1 overflow-hidden">
+        <p className="text-sm font-medium line-clamp-2">{attachment.name}</p>
+        <p className="text-xs opacity-80">{attachment.size}</p>
+      </div>
+      <a href={attachment.url} download={attachment.name}><Download className="w-5 h-5 ml-2 opacity-80" /></a>
+    </div>
+  );
+  
+  const renderAudio = (attachment: Attachment) => (
+    <div key={attachment.url} className="mt-1 w-full max-w-xs">
+      <AudioPlayer src={attachment.url} isSender={message.senderId === useFirebase().user?.uid} />
+    </div>
+  );
   
     if (currentText?.startsWith('[GROUP_INVITE]')) {
         try {
@@ -282,11 +320,13 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     }
   }
 
+  const shouldShowTextBelow = mediaAttachments.length > 0 && showFullText && isTextClamped;
+  const shouldRenderTextStandalone = mediaAttachments.length === 0;
 
   return (
       <div className={cn("flex flex-col", (mediaAttachments.length > 0 && !text) ? "" : "p-1")}>
           {renderMediaGrid()}
-           {currentText && !currentText.startsWith('[Broadcast]') && (
+           {(shouldRenderTextStandalone || shouldShowTextBelow) && currentText && !currentText.startsWith('[Broadcast]') && (
             <div className="px-2.5 pt-1.5">
                 <div className="whitespace-pre-wrap select-text" style={{ wordBreak: 'break-word' }}>
                     {highlightedText}
@@ -1494,7 +1534,7 @@ export default function ChatPage() {
                           className={cn(
                               "shadow text-sm flex flex-col transition-colors", 
                               isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
-                              (message.attachments && message.attachments.length > 0 && !message.text) ? "" : "",
+                              (message.attachments && message.attachments.length > 0 && !message.text) ? "p-0" : "",
                               isSelected && "bg-blue-500/30",
                               showSenderInfo && "rounded-tl-none"
                           )}
