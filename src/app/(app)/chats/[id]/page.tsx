@@ -802,7 +802,7 @@ export default function ChatPage() {
             if (pid !== user.uid && !isVisible) {
               updateData.unreadCount = increment(1);
             }
-            batch.update(contactRef, updateData);
+            batch.set(contactRef, updateData, { merge: true });
         }
       });
       await batch.commit();
@@ -1935,4 +1935,5 @@ export default function ChatPage() {
 
 
     
+
 
