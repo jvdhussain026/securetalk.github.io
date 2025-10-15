@@ -39,6 +39,8 @@ export type Group = {
   createdAt: Timestamp;
   permissions?: {
     editInfo: 'only_owner' | 'all_participants';
+    approveMembers: 'only_owner' | 'all_participants';
+    sendMessages: 'only_owner' | 'all_participants';
   };
 }
 

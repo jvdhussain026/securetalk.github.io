@@ -4,7 +4,7 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Drawer } from 'vaul';
-import { Users, BadgeCheck, Shield, Edit, Save, X, LoaderCircle, Camera, Search, UserPlus, LogOut, UserX, Info } from 'lucide-react';
+import { Users, BadgeCheck, Shield, Edit, Save, X, LoaderCircle, Camera, Search, UserPlus, LogOut, UserX, Info, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -21,8 +21,6 @@ import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import { Label } from './ui/label';
 import { cn } from '@/lib/utils';
 
 
@@ -209,13 +207,6 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
         return getDownloadURL(snapshot.ref);
     };
 
-    const handlePermissionChange = async (value: 'all_participants' | 'only_owner') => {
-        if (!isCurrentUserOwner || !firestore) return;
-        const groupDocRef = doc(firestore, 'groups', group.id);
-        await updateDocumentNonBlocking(groupDocRef, { 'permissions.editInfo': value });
-        toast({ title: "Group permissions updated." });
-    };
-
   return (
       <>
     <Drawer.Root open={open} onOpenChange={onOpenChange} snapPoints={[0.95]} modal={true}>
@@ -294,21 +285,14 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">
                                         <Shield className="h-5 w-5" />
-                                        Group Permissions
+                                        Group Settings
                                     </CardTitle>
                                 </CardHeader>
                                 <CardContent>
-                                    <p className="text-sm font-medium mb-3">Who can edit group info?</p>
-                                    <RadioGroup defaultValue={group.permissions?.editInfo || 'only_owner'} onValueChange={handlePermissionChange as any}>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="all_participants" id="r-all" />
-                                            <Label htmlFor="r-all">All participants</Label>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                            <RadioGroupItem value="only_owner" id="r-owner" />
-                                            <Label htmlFor="r-owner">Only owner</Label>
-                                        </div>
-                                    </RadioGroup>
+                                    <Link href={`/groups/${group.id}/permissions`} className="flex items-center justify-between p-3 rounded-lg hover:bg-accent">
+                                        <p>Group Permissions</p>
+                                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                                    </Link>
                                 </CardContent>
                             </Card>
                         )}
