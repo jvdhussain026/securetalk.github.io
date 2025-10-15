@@ -4,7 +4,7 @@
 
 import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon } from 'lucide-react'
+import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, Users, UserX } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
 import { format, formatDistanceToNowStrict, differenceInMinutes, differenceInHours } from 'date-fns'
 import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp, doc, updateDoc, setDoc, deleteDoc, arrayUnion, increment, getDocs, writeBatch } from "firebase/firestore";
@@ -362,13 +362,14 @@ export default function ChatPage() {
 
   const isGroupChat = params.id.toString().startsWith('group_');
   const chatId = isGroupChat ? params.id.toString() : null;
-  const contactId = isGroupChat ? params.id.toString() : params.id as string;
+  const contactId = isGroupChat ? null : params.id as string;
   const finalChatId = isGroupChat ? chatId : createChatId(user?.uid || '', contactId || '');
+  const contactDocRefId = isGroupChat ? chatId : contactId;
 
   const contactDocRef = useMemoFirebase(() => {
-    if (!firestore || !user?.uid || !contactId) return null;
-    return doc(firestore, 'users', user.uid, 'contacts', contactId);
-  }, [firestore, user?.uid, contactId]);
+    if (!firestore || !user?.uid || !contactDocRefId) return null;
+    return doc(firestore, 'users', user.uid, 'contacts', contactDocRefId);
+  }, [firestore, user?.uid, contactDocRefId]);
   
   const { data: contact, isLoading: isContactLoading } = useDoc<Contact>(contactDocRef);
 
@@ -531,13 +532,11 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    // When entering the chat, store the unread count and then reset it
+    // When entering the chat, if there are unread messages, store the count and then reset it.
     if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
         setUnreadCountOnLoad(contact.unreadCount);
-        // This reset is now immediate.
         updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
     }
-    // Dependency on contact itself to re-evaluate when it loads/changes
   }, [contactDocRef, contact]);
 
 
@@ -1915,6 +1914,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
