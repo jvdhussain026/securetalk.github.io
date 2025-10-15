@@ -18,7 +18,7 @@ const APP_NAME = "Secure Talk";
 const APP_DEFAULT_TITLE = "Secure Talk";
 const APP_TITLE_TEMPLATE = "%s - Secure Talk";
 const APP_DESCRIPTION = "A secure real-time messaging application.";
-const GA_MEASUREMENT_ID = process.env.NEXT_PUBLIC_GA_ID;
+const GA_MEASUREMENT_ID = "G-1KKYCS4V7C";
 
 
 export const metadata: Metadata = {
@@ -56,6 +56,19 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full" suppressHydrationWarning>
+      <head>
+          <script
+            dangerouslySetInnerHTML={{
+              __html: `
+                document.addEventListener('touchmove', function(event) {
+                  if (event.touches.length > 1) {
+                    event.preventDefault();
+                  }
+                }, { passive: false });
+              `,
+            }}
+          />
+      </head>
       <body className={`${ptSans.variable} font-body antialiased h-full`}>
         <Suspense>
           {GA_MEASUREMENT_ID && (
