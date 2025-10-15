@@ -174,7 +174,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   );
   
   const renderAudio = (attachment: Attachment) => (
-    <div key={attachment.url} className="mt-1 w-full max-w-xs min-w-[250px]">
+    <div key={attachment.url} className="mt-1 w-full max-w-xs">
       <AudioPlayer src={attachment.url} isSender={message.senderId === useFirebase().user?.uid} />
     </div>
   );
@@ -1972,3 +1972,6 @@ export default function ChatPage() {
 
 
 
+
+
+    
