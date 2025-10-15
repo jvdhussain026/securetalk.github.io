@@ -4,11 +4,10 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, Check, Upload, Save, X, RotateCcw, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, Check, Upload, Save, RotateCcw, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { ChatWallpapers } from '@/lib/placeholder-images';
-import type { ImagePlaceholder } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
@@ -21,7 +20,7 @@ function ChatPreview() {
             <div className="flex justify-end">
                 <div className="bg-primary text-primary-foreground text-sm shadow-md rounded-l-xl rounded-t-xl max-w-[70%]">
                     <div className="px-2.5 pt-1.5">
-                        <p>This is how your chat wallpaper will look!</p>
+                        <p>This is your new wallpaper!</p>
                         <div className="flex items-center justify-end gap-1.5 text-primary-foreground/70 text-xs pt-1 pb-1">
                             <span>10:30 AM</span>
                         </div>
@@ -73,7 +72,7 @@ export default function WallpaperPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -101,11 +100,16 @@ export default function WallpaperPage() {
     
     const handleResetToDefault = () => {
         handleSelectWallpaper(defaultWallpaper);
+        setCustomWallpaper(null); // Also clear the custom wallpaper preview
+        localStorage.removeItem('customGlobalWallpaper');
         toast({ title: 'Preview reset to default.', description: 'Click Save Changes to apply.' });
     };
     
     const handleSave = async () => {
-        if (!user || !storage) return;
+        if (!user || !storage) {
+            toast({ variant: 'destructive', title: 'Error', description: 'User not authenticated or storage not available.' });
+            return;
+        }
 
         setIsSaving(true);
         try {
@@ -116,6 +120,9 @@ export default function WallpaperPage() {
                  const snapshot = await uploadString(storageRef, selectedWallpaper, 'data_url');
                  finalUrlToSave = await getDownloadURL(snapshot.ref);
                  localStorage.setItem('customGlobalWallpaper', finalUrlToSave);
+            } else if (selectedWallpaper === null) {
+                // If user is selecting the default (no wallpaper), remove the custom one
+                localStorage.removeItem('customGlobalWallpaper');
             }
             
             setActiveWallpaper(finalUrlToSave);

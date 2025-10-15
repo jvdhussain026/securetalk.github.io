@@ -86,7 +86,7 @@ export default function PerChatWallpaperPage() {
         fileInputRef.current?.click();
     };
 
-    const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
@@ -119,10 +119,12 @@ export default function PerChatWallpaperPage() {
     };
     
     const handleSave = async () => {
-        if (!chatDocRef || !user || !storage) return;
+        if (!chatDocRef || !user || !storage) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Cannot save wallpaper. User or chat not found.' });
+            return;
+        }
 
         setIsSaving(true);
-
         try {
             let finalUrlToSave = selectedWallpaper;
 
