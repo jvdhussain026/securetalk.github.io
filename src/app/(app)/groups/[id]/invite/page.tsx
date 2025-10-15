@@ -124,7 +124,7 @@ export default function GroupInvitePage() {
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
       <header className="flex items-center gap-4 p-4 shrink-0 bg-card border-b">
         <Button variant="ghost" size="icon" asChild>
-          <Link href="/chats">
+          <Link href={`/chats/group_${groupId}`}>
             <ArrowLeft className="h-6 w-6" />
             <span className="sr-only">Done</span>
           </Link>

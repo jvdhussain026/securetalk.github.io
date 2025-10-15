@@ -13,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL, uploadString } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 import { collection, doc, setDoc, addDoc, Timestamp, writeBatch, serverTimestamp } from 'firebase/firestore';
@@ -60,6 +60,8 @@ export default function NewGroupPage() {
       createdAt: serverTimestamp(),
       permissions: {
         editInfo: 'only_owner',
+        approveMembers: 'only_owner',
+        sendMessages: 'all_participants',
       }
     };
     
@@ -119,24 +121,10 @@ export default function NewGroupPage() {
     if (!storage || !user) throw new Error("Storage not available");
   
     return new Promise((resolve, reject) => {
-      const image = new Image();
-      image.src = croppedImage;
-      image.onload = () => {
-        const canvas = document.createElement('canvas');
-        const MAX_WIDTH = 800;
-        const scaleSize = MAX_WIDTH / image.width;
-        canvas.width = MAX_WIDTH;
-        canvas.height = image.height * scaleSize;
-  
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-          return reject(new Error('Could not get canvas context'));
-        }
-  
-        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-  
-        canvas.toBlob(async (blob) => {
-          if (!blob) {
+      fetch(croppedImage)
+        .then(res => res.blob())
+        .then(async (blob) => {
+           if (!blob) {
             return reject(new Error('Canvas to Blob conversion failed'));
           }
           const storageRef = ref(storage, `group-avatars/${Date.now()}.jpeg`);
@@ -147,9 +135,8 @@ export default function NewGroupPage() {
           } catch (error) {
             reject(error);
           }
-        }, 'image/jpeg', 0.8); // 80% quality
-      };
-      image.onerror = reject;
+        })
+        .catch(reject);
     });
   };
 

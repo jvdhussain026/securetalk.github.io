@@ -169,7 +169,7 @@ export default function ChatsPage() {
     if (!selectedContact || !firestore || !user || !deleteType) return;
 
     if (deleteType === 'clear') {
-        const chatId = selectedContact.isGroup ? selectedContact.id : [user.uid, selectedContact.id].sort().join('_');
+        const chatId = selectedContact.isGroup ? selectedContact.id.replace('group_','') : [user.uid, selectedContact.id].sort().join('_');
         const collectionPath = selectedContact.isGroup ? `groups/${chatId}/messages` : `chats/${chatId}/messages`;
         const messagesRef = collection(firestore, collectionPath);
         const messagesSnap = await getDocs(messagesRef);
@@ -182,21 +182,17 @@ export default function ChatsPage() {
 
         toast({ title: "Chat Cleared", description: `All messages with ${selectedContact.displayName || selectedContact.name} have been deleted.`});
     } else if (deleteType === 'delete') {
-        // This is a more complex operation
-        // 1. Delete the contact from the current user's list
-        const myContactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
-        
         const batch = writeBatch(firestore);
+        const myContactRef = doc(firestore, 'users', user.uid, 'contacts', selectedContact.id);
         batch.delete(myContactRef);
 
         if (!selectedContact.isGroup) {
-          // 2. Delete the current user from the other user's contact list
           const otherUserContactRef = doc(firestore, 'users', selectedContact.id, 'contacts', user.uid);
           batch.delete(otherUserContactRef);
         } else {
-          // If it's a group, remove the user from the participants list
-          const groupRef = doc(firestore, 'groups', selectedContact.id);
-          batch.update(groupRef, { [`participants.${user.uid}`]: false }); // Or delete
+          const groupId = selectedContact.id.replace('group_','');
+          const groupRef = doc(firestore, 'groups', groupId);
+          batch.update(groupRef, { [`participants.${user.uid}`]: false }); 
         }
         
         await batch.commit();
@@ -402,4 +398,3 @@ export default function ChatsPage() {
 }
 
     
-

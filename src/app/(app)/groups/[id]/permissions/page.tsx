@@ -181,7 +181,7 @@ export default function GroupPermissionsPage() {
           title="Edit Group Info"
           description="Choose who can change the group's name, icon, and description."
           permissionValue={editInfoPerm}
-          onValueChange={(value) => setEditInfoPerm(value)}
+          onValueChange={(value) => setEditInfoPerm(value as PermissionValue)}
           disabled={!isOwner}
         />
         <PermissionOptionCard
@@ -189,7 +189,7 @@ export default function GroupPermissionsPage() {
           title="Approve New Members"
           description="Choose who can approve requests to join this group."
           permissionValue={approveMembersPerm}
-          onValueChange={(value) => setApproveMembersPerm(value)}
+          onValueChange={(value) => setApproveMembersPerm(value as PermissionValue)}
           disabled={!isOwner}
         />
         <PermissionOptionCard
@@ -197,7 +197,7 @@ export default function GroupPermissionsPage() {
           title="Send Messages"
           description="Choose who can send messages. 'Only Owner' makes this an announcement group."
           permissionValue={sendMessagesPerm}
-          onValueChange={(value) => setSendMessagesPerm(value)}
+          onValueChange={(value) => setSendMessagesPerm(value as PermissionValue)}
           disabled={!isOwner}
         />
       </main>
