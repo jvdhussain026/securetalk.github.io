@@ -267,7 +267,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                 <Separator className={cn("bg-primary/20", isSender && "bg-primary-foreground/20")} />
                 <div className="pt-2">
                     <h4 className="font-bold text-lg mb-1">{title}</h4>
-                    <div className="whitespace-pre-wrap text-sm select-text" style={{ wordBreak: 'break-word' }}>
+                    <div className="whitespace-pre-wrap select-text" style={{ wordBreak: 'break-word' }}>
                          <ReactMarkdown
                             components={{
                                 a: ({node, ...props}) => <a className="text-blue-400 hover:underline" {...props} />,
@@ -799,13 +799,12 @@ export default function ChatPage() {
         if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
             const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
             const updateData: any = { lastMessageTimestamp: currentTimestamp };
-            if (pid !== user.uid && !isVisible) {
+            if (pid !== user.uid) { // Don't increment for self
               updateData.unreadCount = increment(1);
             }
-            batch.set(contactRef, updateData, { merge: true });
+            setDocumentNonBlocking(contactRef, updateData, { merge: true });
         }
       });
-      await batch.commit();
 
     } else if (!isGroupChat && contactId) {
         const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
@@ -1079,7 +1078,20 @@ export default function ChatPage() {
   const handleDeleteMessages = async ({ forEveryone }: { forEveryone: boolean }) => {
     if (!finalChatId || !firestore || !user?.uid) return;
 
-    const messagesToDelete = selectedMessageIds;
+    let messagesToDelete: string[] = [];
+
+    // Check if we are in multi-select mode or single-select mode
+    if (isMultiSelectMode && selectedMessageIds.length > 0) {
+        messagesToDelete = selectedMessageIds;
+    } else if (selectedMessage) {
+        messagesToDelete = [selectedMessage.id];
+    }
+    
+    if (messagesToDelete.length === 0) {
+        toast({ variant: 'destructive', title: 'No messages selected.' });
+        return;
+    }
+
     const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
 
     for (const msgId of messagesToDelete) {
@@ -1094,8 +1106,10 @@ export default function ChatPage() {
     }
     
     toast({ title: `${messagesToDelete.length} message${messagesToDelete.length > 1 ? 's' : ''} deleted.` });
+    
     handleExitMultiSelect();
-    setIsDeleteAlertOpen(false); // Close dialog if it was open
+    setIsDeleteAlertOpen(false);
+    setSelectedMessage(null); // Clear single selected message as well
   }
 
   const handleMediaClick = (message: Message, clickedIndex: number) => {
@@ -1935,6 +1949,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
