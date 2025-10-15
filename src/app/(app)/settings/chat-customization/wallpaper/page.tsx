@@ -76,21 +76,26 @@ export default function WallpaperPage() {
 
     const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                toast({
-                    variant: 'destructive',
-                    title: 'Image too large',
-                    description: 'Please select an image smaller than 5MB.'
-                });
-                return;
-            }
-            if (!storage || !user) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Could not upload image. Please try again.' });
-                return;
-            }
-            setIsUploading(true);
+        if (!file) return;
+
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            toast({
+                variant: 'destructive',
+                title: 'Image too large',
+                description: 'Please select an image smaller than 5MB.'
+            });
+            return;
+        }
+
+        if (!storage || !user) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Storage service not ready. Please try again.' });
+            return;
+        }
+        
+        setIsUploading(true);
+        try {
             const reader = new FileReader();
+            reader.readAsDataURL(file);
             reader.onload = async (e) => {
                 const dataUrl = e.target?.result as string;
                 try {
@@ -102,14 +107,18 @@ export default function WallpaperPage() {
                     setSelectedWallpaper(downloadURL);
                     localStorage.setItem('customGlobalWallpaper', downloadURL);
                     toast({ title: 'Upload successful!', description: 'Preview updated.' });
-                } catch (error) {
-                    console.error("Wallpaper upload failed: ", error);
+                } catch (uploadError) {
+                    console.error("Wallpaper upload failed: ", uploadError);
                     toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the selected image.' });
                 } finally {
+                    // This is guaranteed to run, even if the upload fails.
                     setIsUploading(false);
                 }
             };
-            reader.readAsDataURL(file);
+        } catch (error) {
+            console.error("File reader error:", error);
+            toast({ variant: 'destructive', title: 'File Error', description: 'Could not read the selected file.' });
+            setIsUploading(false);
         }
     };
     
