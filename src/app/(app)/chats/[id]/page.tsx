@@ -385,7 +385,7 @@ export default function ChatPage() {
   const { data: allUsers } = useCollection<Contact>(allUsersQuery);
   
   const groupMembers = useMemo(() => {
-    if (!isGroupChat || !allUsers) return new Map<string, Contact>();
+    if (!isGroupChat || !allUsers || !group?.participants) return new Map<string, Contact>();
     const membersMap = new Map<string, Contact>();
     allUsers.forEach(u => {
         if (group?.participants[u.id]) {
@@ -393,7 +393,7 @@ export default function ChatPage() {
         }
     });
     return membersMap;
-  }, [isGroupChat, allUsers, group]);
+  }, [isGroupChat, allUsers, group?.participants]);
 
 
   const remoteUserDocRef = useMemoFirebase(() => {
@@ -1271,14 +1271,23 @@ export default function ChatPage() {
   const isLoading = areMessagesLoading || isContactLoading || isGroupLoading || isChatLoading;
 
   const augmentedMessages = useMemo(() => {
+      if (!messages) return [];
       const systemMessages: Message[] = [];
       const firstMessageTimestamp = messages?.[0]?.timestamp;
+      
+      if (!firstMessageTimestamp) {
+        // If there are no messages, create a fake timestamp for system messages
+        const fakeTimestamp = new Date();
+        // @ts-ignore - this is a temporary solution for the UI
+        fakeTimestamp.toDate = () => fakeTimestamp;
+      }
+
 
       const encryptionMessage: Message = {
         id: 'system-encryption-notice',
         text: '[SYSTEM] Messages are end-to-end encrypted. No one outside of this chat, not even Secure Talk, can read them.',
         senderId: 'system',
-        timestamp: firstMessageTimestamp,
+        timestamp: firstMessageTimestamp || new Date(),
       };
       systemMessages.push(encryptionMessage);
 
@@ -1287,12 +1296,12 @@ export default function ChatPage() {
               id: 'system-verified-notice',
               text: '[SYSTEM] You are chatting with an official Secure Talk Developer account. Look for the checkmark for verification.',
               senderId: 'system',
-              timestamp: firstMessageTimestamp,
+              timestamp: firstMessageTimestamp || new Date(),
           };
           systemMessages.push(verifiedNotice);
       }
 
-      return messages ? [...systemMessages, ...messages] : systemMessages;
+      return [...systemMessages, ...messages];
   }, [messages, contact?.verified]);
 
 
@@ -1309,7 +1318,8 @@ export default function ChatPage() {
 
   const getStatusText = () => {
       if(isGroupChat) {
-          return `${Object.keys(group?.participants || {}).length} members`;
+          const onlineMembers = allUsers ? allUsers.filter(u => group?.participants[u.id] && u.status === 'online').length : 0;
+          return `${Object.keys(group?.participants || {}).length} members, ${onlineMembers} online`;
       }
       if (chat?.typing?.[contactId || '']) {
         return <span className="text-primary animate-pulse">Typing...</span>;
@@ -1398,71 +1408,85 @@ export default function ChatPage() {
         onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
         onTouchStart={() => handleTouchStart(message)}
         onTouchEnd={handleTouchEnd}
+        onTouchCancel={handleTouchEnd}
         onTouchMove={handleTouchEnd}
         onClick={() => handleMessageClick(message)}
       >
-        <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
-            <motion.div
-                style={{ opacity: backgroundOpacity }}
-                className={cn(
-                    "absolute inset-y-0 flex items-center",
-                    isSender ? "right-full mr-4" : "left-full ml-4"
-                )}
-            >
-                <Reply className="h-5 w-5 text-muted-foreground" />
-            </motion.div>
+        <div className={cn("flex w-full items-start gap-2", isSender ? "justify-end" : "justify-start")}>
             
-            <motion.div
-                drag={isMultiSelectMode ? false : "x"}
-                dragConstraints={isSender ? { left: -100, right: 0 } : { left: 0, right: 100 }}
-                dragElastic={0.2}
-                onDragEnd={onDragEnd}
-                style={{ x }}
-                animate={controls}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={cn("max-w-[75%] lg:max-w-[65%] relative")}
-            >
-              <div
-                  className={cn(
-                      "shadow text-sm flex flex-col transition-colors", 
-                      isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
-                      (message.attachments && message.attachments.length > 0 && !message.text) ? "" : "",
-                      isSelected && "bg-blue-500/30"
-                  )}
-              >
-                 {showSenderInfo && (
-                    <div className="px-2.5 pt-1.5 font-bold text-primary text-sm">{sender.name}</div>
-                )}
-                <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={displayName} />
-                
-                <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
-                  {isTranslating.has(message.id) ? (
-                    <div className="flex items-center gap-2 px-2.5 pt-1.5 pb-1 text-sm text-muted-foreground">
-                      <LoaderCircle className="h-4 w-4 animate-spin"/>
-                      <span>Translating...</span>
-                    </div>
-                  ) : (
-                    <MessageContent
-                      message={message}
-                      isSender={isSender}
-                      isSearchOpen={isSearchOpen}
-                      searchQuery={searchQuery}
-                      searchMatches={searchMatches}
-                      currentMatchIndex={currentMatchIndex}
-                      onMediaClick={handleMediaClick}
-                      translatedText={translatedText}
-                      onShowOriginal={() => {
-                        setTranslatedMessages(prev => {
-                          const newTranslations = {...prev};
-                          delete newTranslations[message.id];
-                          return newTranslations;
-                        });
-                      }}
-                    />
-                  )}
+            {showSenderInfo && (
+                <Avatar className="h-8 w-8 mt-4">
+                    <AvatarImage src={sender.avatar} />
+                    <AvatarFallback>{sender.name.charAt(0)}</AvatarFallback>
+                </Avatar>
+            )}
+            
+            <div className={cn("flex flex-col items-start w-full", isSender ? 'items-end': 'items-start')}>
+              
+                <div className={cn("flex w-full items-end gap-2", isSender ? "justify-end" : "justify-start")}>
+                    <motion.div
+                        style={{ opacity: backgroundOpacity }}
+                        className={cn(
+                            "absolute inset-y-0 flex items-center",
+                            isSender ? "right-full mr-4" : "left-full ml-4"
+                        )}
+                    >
+                        <Reply className="h-5 w-5 text-muted-foreground" />
+                    </motion.div>
+                    
+                    <motion.div
+                        drag={isMultiSelectMode ? false : "x"}
+                        dragConstraints={isSender ? { left: -100, right: 0 } : { left: 0, right: 100 }}
+                        dragElastic={0.2}
+                        onDragEnd={onDragEnd}
+                        style={{ x }}
+                        animate={controls}
+                        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                        className={cn("max-w-[75%] lg:max-w-[65%] relative")}
+                    >
+                      <div
+                          className={cn(
+                              "shadow text-sm flex flex-col transition-colors", 
+                              isSender ? "bg-primary text-primary-foreground rounded-l-xl rounded-t-xl" : "bg-card border rounded-r-xl rounded-t-xl",
+                              (message.attachments && message.attachments.length > 0 && !message.text) ? "" : "",
+                              isSelected && "bg-blue-500/30"
+                          )}
+                      >
+                         {showSenderInfo && (
+                            <div className="px-2.5 pt-1.5 font-bold text-primary text-sm">{sender.name}</div>
+                        )}
+                        <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={displayName} />
+                        
+                        <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
+                          {isTranslating.has(message.id) ? (
+                            <div className="flex items-center gap-2 px-2.5 pt-1.5 pb-1 text-sm text-muted-foreground">
+                              <LoaderCircle className="h-4 w-4 animate-spin"/>
+                              <span>Translating...</span>
+                            </div>
+                          ) : (
+                            <MessageContent
+                              message={message}
+                              isSender={isSender}
+                              isSearchOpen={isSearchOpen}
+                              searchQuery={searchQuery}
+                              searchMatches={searchMatches}
+                              currentMatchIndex={currentMatchIndex}
+                              onMediaClick={handleMediaClick}
+                              translatedText={translatedText}
+                              onShowOriginal={() => {
+                                setTranslatedMessages(prev => {
+                                  const newTranslations = {...prev};
+                                  delete newTranslations[message.id];
+                                  return newTranslations;
+                                });
+                              }}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    </motion.div>
                 </div>
-              </div>
-            </motion.div>
+            </div>
         </div>
       </div>
     );
@@ -1649,7 +1673,11 @@ export default function ChatPage() {
                     return <SystemMessage key={message.id} text={message.text} />;
                 }
 
-                const showDivider = unreadCountOnLoad > 0 && messageIndex === dividerIndex;
+                const firstUnreadMessage = filteredMessages[dividerIndex];
+                const showDivider =
+                  unreadCountOnLoad > 0 &&
+                  messageIndex === dividerIndex &&
+                  firstUnreadMessage?.senderId !== user?.uid;
 
                 return (
                     <React.Fragment key={message.id}>
@@ -1894,6 +1922,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 
