@@ -113,13 +113,43 @@ export default function NewGroupPage() {
   
   const uploadCroppedImage = async (croppedImage: string): Promise<string> => {
     if (!storage || !user) throw new Error("Storage not available");
-    
-    const storageRef = ref(storage, `group-avatars/${Date.now()}.jpeg`);
-    const snapshot = await uploadString(storageRef, croppedImage, 'data_url', {
-        contentType: 'image/jpeg'
+  
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.src = croppedImage;
+      image.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 800;
+        const scaleSize = MAX_WIDTH / image.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = image.height * scaleSize;
+  
+        const ctx = canvas.getContext('2d');
+        if (!ctx) {
+          return reject(new Error('Could not get canvas context'));
+        }
+  
+        ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  
+        canvas.toBlob(async (blob) => {
+          if (!blob) {
+            return reject(new Error('Canvas to Blob conversion failed'));
+          }
+          const storageRef = ref(storage, `group-avatars/${Date.now()}.jpeg`);
+          try {
+            const snapshot = await uploadString(storageRef, croppedImage, 'data_url', {
+                contentType: 'image/jpeg'
+            });
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            resolve(downloadURL);
+          } catch (error) {
+            reject(error);
+          }
+        }, 'image/jpeg', 0.8); // 80% quality
+      };
+      image.onerror = reject;
     });
-    return getDownloadURL(snapshot.ref);
-  }
+  };
 
   return (
     <>
@@ -204,8 +234,15 @@ export default function NewGroupPage() {
         onClose={() => setImageToCrop(null)}
         onSave={async (croppedImage) => {
             setImageToCrop(null);
-            const downloadURL = await uploadCroppedImage(croppedImage);
-            setAvatar(downloadURL);
+            setIsCreating(true); // Show loading indicator while uploading
+            try {
+              const downloadURL = await uploadCroppedImage(croppedImage);
+              setAvatar(downloadURL);
+            } catch (e) {
+              toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the avatar.'});
+            } finally {
+              setIsCreating(false);
+            }
         }}
     />
     </>
