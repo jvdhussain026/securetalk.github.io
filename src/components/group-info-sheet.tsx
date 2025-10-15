@@ -125,7 +125,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
             const participantIds = Object.keys(group.participants);
             const batch = writeBatch(firestore);
             participantIds.forEach(pid => {
-                const contactRef = doc(firestore, `users/${pid}/contacts/${group.id}`);
+                const contactRef = doc(firestore, `users/${pid}/contacts/group_${group.id}`);
                 batch.update(contactRef, { name: editedName, avatar: editedAvatar });
             });
             await batch.commit();
@@ -190,7 +190,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
         const file = event.target.files?.[0];
         if (file) {
             if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                toast({ variant: "destructive", title: "Image too large" });
+                toast({ variant: "destructive", title: "Image too large", description: 'Please select an image smaller than 5MB.' });
                 return;
             }
             const reader = new FileReader();
@@ -259,21 +259,29 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                             />
                             <div className="text-center w-full">
                                 {isEditing ? (
-                                    <Input
-                                        value={editedName}
-                                        onChange={(e) => setEditedName(e.target.value)}
-                                        className="text-3xl font-bold text-center h-12"
-                                    />
+                                    <div className='relative'>
+                                        <Input
+                                            value={editedName}
+                                            onChange={(e) => setEditedName(e.target.value)}
+                                            className="text-3xl font-bold text-center h-12"
+                                            maxLength={50}
+                                        />
+                                        <span className="absolute right-2 bottom-3 text-xs text-muted-foreground">{editedName.length}/50</span>
+                                    </div>
                                 ) : (
                                     <h2 className="text-3xl font-bold">{group.name}</h2>
                                 )}
                                 {isEditing ? (
-                                    <Textarea
-                                        value={editedDescription}
-                                        onChange={(e) => setEditedDescription(e.target.value)}
-                                        placeholder="Group description..."
-                                        className="mt-2 text-center"
-                                    />
+                                     <div className='relative mt-2'>
+                                        <Textarea
+                                            value={editedDescription}
+                                            onChange={(e) => setEditedDescription(e.target.value)}
+                                            placeholder="Group description..."
+                                            className="mt-2 text-center"
+                                            maxLength={250}
+                                        />
+                                        <span className="absolute right-2 bottom-3 text-xs text-muted-foreground">{editedDescription.length}/250</span>
+                                    </div>
                                 ) : (
                                     <p className="text-muted-foreground mt-1">{group.description || 'No description.'}</p>
                                 )}

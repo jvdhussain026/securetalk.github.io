@@ -792,19 +792,18 @@ export default function ChatPage() {
     const isVisible = typeof document !== 'undefined' && !document.hidden;
     
     if (isGroupChat && group) {
-      const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
-      const batch = writeBatch(firestore);
-
-      participantIds.forEach(pid => {
-        if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
-            const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
-            const updateData: any = { lastMessageTimestamp: currentTimestamp };
-            if (pid !== user.uid) { // Don't increment for self
-              updateData.unreadCount = increment(1);
+        const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
+        
+        participantIds.forEach(pid => {
+            if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
+                const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
+                const updateData: any = { lastMessageTimestamp: currentTimestamp };
+                if (pid !== user.uid) { // Don't increment for self
+                  updateData.unreadCount = increment(1);
+                }
+                setDocumentNonBlocking(contactRef, updateData, { merge: true });
             }
-            setDocumentNonBlocking(contactRef, updateData, { merge: true });
-        }
-      });
+        });
 
     } else if (!isGroupChat && contactId) {
         const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
@@ -846,6 +845,14 @@ export default function ChatPage() {
     if (files) {
       const filePromises = Array.from(files).map(file => {
         return new Promise<Attachment>((resolve, reject) => {
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                toast({
+                    variant: 'destructive',
+                    title: 'File too large',
+                    description: `"${file.name}" is larger than 5MB.`,
+                });
+                return reject('File too large');
+            }
           const reader = new FileReader();
           reader.onloadend = () => {
             const url = reader.result as string;
@@ -870,11 +877,13 @@ export default function ChatPage() {
         setAttachmentsToSend(prev => [...prev, ...newAttachments]);
       }).catch(error => {
         console.error("Error reading files:", error);
-        toast({
-          variant: "destructive",
-          title: "Error Reading Files",
-          description: "There was a problem reading the selected files.",
-        });
+        if (error !== 'File too large') {
+            toast({
+              variant: "destructive",
+              title: "Error Reading Files",
+              description: "There was a problem reading the selected files.",
+            });
+        }
       });
     }
   }
@@ -1223,6 +1232,14 @@ export default function ChatPage() {
         if (items[i].type.indexOf('image') !== -1) {
             const file = items[i].getAsFile();
             if (file) {
+                if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                    toast({
+                        variant: 'destructive',
+                        title: 'Image too large',
+                        description: `Pasted image is larger than 5MB.`,
+                    });
+                    continue; // Skip this file
+                }
                 foundImage = true;
                 const reader = new FileReader();
                 reader.onload = (e) => {
@@ -1949,6 +1966,7 @@ export default function ChatPage() {
 
 
     
+
 
 
 

@@ -189,22 +189,30 @@ export default function NewGroupPage() {
           <CardContent>
             <form onSubmit={(e) => e.preventDefault()} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">Group Name</Label>
+                <div className="flex justify-between items-center">
+                  <Label htmlFor="name">Group Name</Label>
+                  <span className="text-xs text-muted-foreground">{name.length} / 50</span>
+                </div>
                 <Input
                   id="name"
                   placeholder="e.g., Project Phoenix Team"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  maxLength={50}
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="description">Description (Optional)</Label>
+                 <div className="flex justify-between items-center">
+                    <Label htmlFor="description">Description (Optional)</Label>
+                    <span className="text-xs text-muted-foreground">{description.length} / 250</span>
+                 </div>
                 <Textarea
                   id="description"
                   placeholder="What's this group about?"
                   rows={3}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
+                  maxLength={250}
                 />
               </div>
             </form>

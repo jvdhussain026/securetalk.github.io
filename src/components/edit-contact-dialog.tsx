@@ -52,17 +52,21 @@ export function EditContactDialog({ open, onOpenChange, contact, onSave }: EditC
           </DialogDescription>
         </DialogHeader>
         <div className="py-4">
-          <Label htmlFor="contact-name">Custom Name</Label>
+          <div className="flex justify-between items-center mb-1">
+            <Label htmlFor="contact-name">Custom Name</Label>
+            <span className="text-xs text-muted-foreground">{name.length} / 50</span>
+          </div>
           <Input
             id="contact-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
             autoFocus
+            maxLength={50}
           />
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isSaving}>
+          <Button onClick={handleSave} disabled={isSaving || name.length < 2}>
             {isSaving && <LoaderCircle className="mr-2 h-4 w-4 animate-spin" />}
             {isSaving ? 'Saving...' : 'Save'}
           </Button>
