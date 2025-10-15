@@ -20,6 +20,7 @@ import ReactCrop, {
 import 'react-image-crop/dist/ReactCrop.css';
 import { useToast } from '@/hooks/use-toast';
 import { CropIcon, Check } from 'lucide-react';
+import { ScrollArea } from './ui/scroll-area';
 
 // This function is from the react-image-crop docs
 function getCroppedImg(
@@ -130,32 +131,34 @@ export function ImageCropperDialog({
 
   return (
     <Dialog open={!!imageSrc} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md p-0">
+      <DialogContent className="max-w-md p-0 flex flex-col h-[90vh]">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Crop your new profile picture</DialogTitle>
         </DialogHeader>
-        <div className="p-6">
-            {imageSrc && (
-            <ReactCrop
-                crop={crop}
-                onChange={(_, percentCrop) => setCrop(percentCrop)}
-                onComplete={(c) => setCompletedCrop(c)}
-                aspect={1}
-                minWidth={100}
-                minHeight={100}
-                circularCrop
-            >
-                <img
-                    ref={imgRef}
-                    alt="Crop me"
-                    src={imageSrc}
-                    onLoad={onImageLoad}
-                    className="max-h-[60vh]"
-                />
-            </ReactCrop>
-            )}
-        </div>
-        <DialogFooter className="p-6 pt-0 flex-row justify-end">
+        <ScrollArea className="flex-1">
+            <div className="p-6">
+                {imageSrc && (
+                <ReactCrop
+                    crop={crop}
+                    onChange={(_, percentCrop) => setCrop(percentCrop)}
+                    onComplete={(c) => setCompletedCrop(c)}
+                    aspect={1}
+                    minWidth={100}
+                    minHeight={100}
+                    circularCrop
+                >
+                    <img
+                        ref={imgRef}
+                        alt="Crop me"
+                        src={imageSrc}
+                        onLoad={onImageLoad}
+                        className="w-full"
+                    />
+                </ReactCrop>
+                )}
+            </div>
+        </ScrollArea>
+        <DialogFooter className="p-6 pt-0 flex-row justify-end shrink-0">
           <DialogClose asChild>
             <Button variant="ghost">Cancel</Button>
           </DialogClose>
