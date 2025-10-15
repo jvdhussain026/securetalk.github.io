@@ -121,11 +121,11 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   }, [currentText]);
 
   const renderAttachmentPreview = (attachment: Attachment, isGrid: boolean) => {
-    const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full max-w-xs");
+    const commonClass = cn("object-cover aspect-square", isGrid ? "rounded-md" : "rounded-xl w-full");
 
     switch(attachment.type) {
       case 'image':
-        return <Image src={attachment.url} alt="Sent media" width={250} height={250} className={commonClass} />;
+        return <Image src={attachment.url} alt="Sent media" width={300} height={300} className={commonClass} />;
       case 'video':
         return (
           <div className="relative">
@@ -144,14 +144,14 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     if (!currentText) return null;
 
     if (!isSearchOpen || searchQuery.length <= 1) {
-      return <LinkifiedText text={currentText} isSender={isSender} />;
+      return <span className="select-text"><LinkifiedText text={currentText} isSender={isSender} /></span>;
     }
 
     const regex = new RegExp(`(${searchQuery})`, 'gi');
     const parts = currentText.split(regex);
 
     return (
-      <>
+      <span className="select-text">
         {parts.map((part, i) => {
           if (i % 2 === 1) { // It's a match
             const isCurrent = searchMatches.some(
@@ -181,7 +181,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
           }
           return part;
         })}
-      </>
+      </span>
     );
   }, [currentText, searchQuery, isSearchOpen, searchMatches, currentMatchIndex, message.id, isSender]);
 
@@ -193,13 +193,13 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
         const hasText = currentText && !currentText.startsWith('[Broadcast]');
         
         return (
-            <div className="relative w-full">
+            <div className="relative w-full max-w-xs">
                 <button onClick={() => onMediaClick(message, 0)} className="w-full">
                     {renderAttachmentPreview(media, false)}
                 </button>
                 {hasText && (
                     <div className={cn(
-                        "absolute bottom-0 left-0 right-0 text-white p-2.5",
+                        "absolute bottom-0 left-0 right-0 text-white p-2.5 rounded-b-xl",
                         "bg-gradient-to-t from-black/70 via-black/50 to-transparent",
                         isSender ? "text-primary-foreground" : "text-white"
                     )}>
@@ -212,7 +212,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
                         </div>
                         {isTextClamped && !showFullText && (
                             <button
-                                onClick={() => setShowFullText(true)}
+                                onClick={(e) => { e.stopPropagation(); setShowFullText(true);}}
                                 className="text-xs font-bold text-blue-300 hover:underline mt-1"
                             >
                                 Show more
@@ -228,7 +228,7 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
     const remainingItems = mediaAttachments.length - 4;
 
     return (
-        <div className="grid grid-cols-2 gap-1 p-1">
+        <div className="grid grid-cols-2 gap-1 p-1 max-w-xs">
             {itemsToShow.map((media, index) => (
                 <button key={index} onClick={() => onMediaClick(message, index)} className="relative">
                     {renderAttachmentPreview(media, true)}
@@ -834,16 +834,17 @@ export default function ChatPage() {
     if (isGroupChat && group) {
         const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
         
-        participantIds.forEach(pid => {
-            if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
+        for (const pid of participantIds) {
+             if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
                 const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
                 const updateData: any = { lastMessageTimestamp: currentTimestamp };
                 if (pid !== user.uid) { // Don't increment for self
                   updateData.unreadCount = increment(1);
                 }
-                setDocumentNonBlocking(contactRef, updateData, { merge: true });
+                // Use set with merge to prevent error if doc doesn't exist
+                await setDocumentNonBlocking(contactRef, updateData, { merge: true });
             }
-        });
+        }
 
     } else if (!isGroupChat && contactId) {
         const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
@@ -1162,16 +1163,12 @@ export default function ChatPage() {
   }
 
   const handleMediaClick = (message: Message, clickedIndex: number) => {
-    const mediaAttachments = message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
-    if (mediaAttachments.length > 0) {
-        const urls = mediaAttachments.map(a => a.url);
-        setImagePreview({ urls, startIndex: clickedIndex });
-    }
+    setImagePreview({ message, contact: remoteUser || contact, startIndex: clickedIndex });
   };
   
   const handleAvatarClick = (avatarUrl?: string) => {
       if (avatarUrl) {
-        setImagePreview({ urls: [avatarUrl], startIndex: 0 });
+        setImagePreview({ message: { id: 'avatar', senderId: '', timestamp: serverTimestamp() }, contact: { id: '', name: '', avatar: avatarUrl, language: '' }, startIndex: 0 });
       }
   };
   
@@ -1961,6 +1958,7 @@ export default function ChatPage() {
       <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
+        onDelete={() => {}}
       />
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}
@@ -2015,3 +2013,4 @@ export default function ChatPage() {
 
 
     
+
