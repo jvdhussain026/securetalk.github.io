@@ -1,17 +1,18 @@
 
+
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
 import { Drawer } from 'vaul';
-import { Users, BadgeCheck, Shield, Edit, Save, X, LoaderCircle, Camera, Search, UserPlus, LogOut, UserX } from 'lucide-react';
+import { Users, BadgeCheck, Shield, Edit, Save, X, LoaderCircle, Camera, Search, UserPlus, LogOut, UserX, Info } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useDoc, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, collection, writeBatch } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, collection, writeBatch, deleteDoc } from 'firebase/firestore';
 import type { Group, Contact } from '@/lib/types';
 import { updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -20,13 +21,16 @@ import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Label } from './ui/label';
+import { cn } from '@/lib/utils';
 
 
-function MemberItem({ member, isOwner }: { member: Contact, isOwner: boolean }) {
+function MemberItem({ member, isOwner, onRemove, canManage }: { member: Contact, isOwner: boolean, onRemove: (member: Contact) => void, canManage: boolean }) {
     return (
-        <div className="flex items-center gap-4 p-2 rounded-lg">
+        <div className="flex items-center gap-4 p-2 rounded-lg hover:bg-accent/50">
             <Avatar className="h-10 w-10">
-                <AvatarImage src={member.avatar} alt={member.name} data-ai-hint="person portrait" />
+                <AvatarImage src={member.avatar || member.profilePictureUrl} alt={member.name} data-ai-hint="person portrait" />
                 <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
             </Avatar>
             <div className="flex-1">
@@ -36,9 +40,29 @@ function MemberItem({ member, isOwner }: { member: Contact, isOwner: boolean }) 
                 </div>
                 {isOwner && <p className="text-xs text-primary">Group Owner</p>}
             </div>
-             <Button variant="ghost" size="icon" disabled>
-                <UserX className="h-5 w-5 text-destructive" />
-            </Button>
+             {canManage && !isOwner && (
+                <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                            <UserX className="h-5 w-5 text-destructive" />
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Remove {member.name}?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                Are you sure you want to remove {member.name} from the group? They will need to be re-invited to join again.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={() => onRemove(member)} variant="destructive">
+                                Remove Member
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
     )
 }
@@ -67,6 +91,11 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
     const fileInputRef = React.useRef<HTMLInputElement>(null);
 
     const isCurrentUserOwner = useMemo(() => group?.ownerId === user?.uid, [group, user]);
+    const canCurrentUserEdit = useMemo(() => {
+        if (isCurrentUserOwner) return true;
+        return group.permissions?.editInfo === 'all_participants';
+    }, [group.permissions, isCurrentUserOwner]);
+
 
     useEffect(() => {
         if (group) {
@@ -84,7 +113,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
 
 
     const handleSave = async () => {
-        if (!isCurrentUserOwner || !firestore) return;
+        if (!canCurrentUserEdit || !firestore) return;
 
         setIsSaving(true);
         const groupDocRef = doc(firestore, 'groups', group.id);
@@ -95,7 +124,6 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                 avatar: editedAvatar
             });
             
-            // Also update the group name in each participant's contact list
             const participantIds = Object.keys(group.participants);
             const batch = writeBatch(firestore);
             participantIds.forEach(pid => {
@@ -119,14 +147,12 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
 
         const groupDocRef = doc(firestore, 'groups', group.id);
         try {
-            // Remove user from group participants
             await updateDocumentNonBlocking(groupDocRef, {
-                [`participants.${user.uid}`]: false // Or delete field
+                [`participants.${user.uid}`]: false
             });
             
-            // Remove group from user's contact list
             const userContactRef = doc(firestore, `users/${user.uid}/contacts/${group.id}`);
-            await deleteDocumentNonBlocking(userContactRef);
+            await deleteDoc(userContactRef);
 
             toast({ title: "You have left the group." });
             onOpenChange(false);
@@ -134,6 +160,25 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
         } catch (error) {
             console.error("Error leaving group:", error);
             toast({ variant: 'destructive', title: "Failed to leave group." });
+        }
+    };
+    
+    const handleRemoveMember = async (memberToRemove: Contact) => {
+        if (!isCurrentUserOwner || !firestore || !group) return;
+
+        const groupDocRef = doc(firestore, 'groups', group.id);
+        try {
+            await updateDocumentNonBlocking(groupDocRef, {
+                [`participants.${memberToRemove.id}`]: false
+            });
+
+            const memberContactRef = doc(firestore, 'users', memberToRemove.id, 'contacts', group.id);
+            await deleteDoc(memberContactRef);
+            
+            toast({ title: `${memberToRemove.name} has been removed from the group.`});
+        } catch (error) {
+            console.error("Error removing member:", error);
+            toast({ variant: 'destructive', title: "Failed to remove member." });
         }
     };
 
@@ -164,6 +209,13 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
         return getDownloadURL(snapshot.ref);
     };
 
+    const handlePermissionChange = async (value: 'all_participants' | 'only_owner') => {
+        if (!isCurrentUserOwner || !firestore) return;
+        const groupDocRef = doc(firestore, 'groups', group.id);
+        await updateDocumentNonBlocking(groupDocRef, { 'permissions.editInfo': value });
+        toast({ title: "Group permissions updated." });
+    };
+
   return (
       <>
     <Drawer.Root open={open} onOpenChange={onOpenChange} snapPoints={[0.95]} modal={true}>
@@ -176,7 +228,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                 <div className="max-w-md mx-auto">
                     <header className="flex items-center justify-between p-4 shrink-0 -m-4 mb-0">
                         <h1 className="text-2xl font-bold font-headline">Group Info</h1>
-                        {isCurrentUserOwner && !isEditing && (
+                        {canCurrentUserEdit && !isEditing && (
                             <Button variant="outline" onClick={() => setIsEditing(true)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit
                             </Button>
@@ -193,107 +245,136 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                     </header>
 
                     <main className="p-4 md:p-6 space-y-6 -mx-4 md:-mx-6">
-                    <div className="flex flex-col items-center space-y-4">
-                        <div className="relative">
-                            <button onClick={handleAvatarChangeClick} disabled={!isEditing}>
-                                <Avatar className="w-32 h-32 text-4xl">
-                                    <AvatarImage src={editedAvatar} alt={editedName} />
-                                    <AvatarFallback><Users/></AvatarFallback>
-                                </Avatar>
-                            </button>
-                             {isEditing && (
-                                <div className="absolute bottom-1 right-1 h-9 w-9 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center border">
-                                    <Camera className="h-5 w-5" />
-                                </div>
-                            )}
-                        </div>
-                        <input
-                            type="file"
-                            ref={fileInputRef}
-                            className="hidden"
-                            accept="image/png, image/jpeg"
-                            onChange={handleFileChange}
-                        />
-                        <div className="text-center">
-                            {isEditing ? (
-                                <Input
-                                    value={editedName}
-                                    onChange={(e) => setEditedName(e.target.value)}
-                                    className="text-3xl font-bold text-center h-12"
-                                />
-                            ) : (
-                                <h2 className="text-3xl font-bold">{group.name}</h2>
-                            )}
-                             {isEditing ? (
-                                <Textarea
-                                    value={editedDescription}
-                                    onChange={(e) => setEditedDescription(e.target.value)}
-                                    placeholder="Group description..."
-                                    className="mt-2 text-center"
-                                />
-                            ) : (
-                                <p className="text-muted-foreground mt-1">{group.description || 'No description.'}</p>
-                            )}
-                        </div>
-                    </div>
-                    
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="flex items-center justify-between">
-                                <span>{members.length} Members</span>
-                                {isCurrentUserOwner && (
-                                <Button variant="outline" size="sm" asChild>
-                                    <Link href={`/groups/${group.id}/invite`}>
-                                        <UserPlus className="mr-2 h-4 w-4" />
-                                        Invite
-                                    </Link>
-                                </Button>
-                                )}
-                            </CardTitle>
-                        </CardHeader>
-                        <CardContent>
+                        <div className="flex flex-col items-center space-y-4">
                             <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                                <Input placeholder="Search members..." className="pl-10" disabled/>
+                                <button onClick={handleAvatarChangeClick} disabled={!isEditing} className="cursor-pointer disabled:cursor-default">
+                                    <Avatar className={cn("w-32 h-32 text-4xl", isEditing && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
+                                        <AvatarImage src={editedAvatar} alt={editedName} />
+                                        <AvatarFallback><Users/></AvatarFallback>
+                                    </Avatar>
+                                </button>
+                                {isEditing && (
+                                    <div className="absolute bottom-1 right-1 h-9 w-9 bg-background/80 backdrop-blur-sm rounded-full flex items-center justify-center border pointer-events-none">
+                                        <Camera className="h-5 w-5" />
+                                    </div>
+                                )}
                             </div>
-                            <div className="mt-4 space-y-2">
-                                {areUsersLoading ? <LoaderCircle className="mx-auto my-4 animate-spin"/> : members.map(member => (
-                                    <MemberItem key={member.id} member={member} isOwner={member.id === group.ownerId} />
-                                ))}
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                className="hidden"
+                                accept="image/png, image/jpeg"
+                                onChange={handleFileChange}
+                            />
+                            <div className="text-center w-full">
+                                {isEditing ? (
+                                    <Input
+                                        value={editedName}
+                                        onChange={(e) => setEditedName(e.target.value)}
+                                        className="text-3xl font-bold text-center h-12"
+                                    />
+                                ) : (
+                                    <h2 className="text-3xl font-bold">{group.name}</h2>
+                                )}
+                                {isEditing ? (
+                                    <Textarea
+                                        value={editedDescription}
+                                        onChange={(e) => setEditedDescription(e.target.value)}
+                                        placeholder="Group description..."
+                                        className="mt-2 text-center"
+                                    />
+                                ) : (
+                                    <p className="text-muted-foreground mt-1">{group.description || 'No description.'}</p>
+                                )}
                             </div>
-                        </CardContent>
-                    </Card>
-                    
-                    <Card>
-                        <CardHeader>
-                             <CardTitle className="text-destructive">Danger Zone</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             <AlertDialog>
-                                <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full">
-                                        <LogOut className="mr-2" />
-                                        Leave Group
+                        </div>
+
+                        {isCurrentUserOwner && (
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="flex items-center gap-2">
+                                        <Shield className="h-5 w-5" />
+                                        Group Permissions
+                                    </CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm font-medium mb-3">Who can edit group info?</p>
+                                    <RadioGroup defaultValue={group.permissions?.editInfo || 'only_owner'} onValueChange={handlePermissionChange}>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="all_participants" id="r-all" />
+                                            <Label htmlFor="r-all">All participants</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="only_owner" id="r-owner" />
+                                            <Label htmlFor="r-owner">Only owner</Label>
+                                        </div>
+                                    </RadioGroup>
+                                </CardContent>
+                            </Card>
+                        )}
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="flex items-center justify-between">
+                                    <span>{members.length} Members</span>
+                                    {isCurrentUserOwner && (
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link href={`/groups/${group.id}/invite`}>
+                                            <UserPlus className="mr-2 h-4 w-4" />
+                                            Invite
+                                        </Link>
                                     </Button>
-                                </AlertDialogTrigger>
-                                <AlertDialogContent>
-                                    <AlertDialogHeader>
-                                        <AlertDialogTitle>Are you sure you want to leave this group?</AlertDialogTitle>
-                                        <AlertDialogDescription>
-                                            You will no longer be a member of "{group.name}" and will not receive any new messages. You will need to be re-invited to join again.
-                                        </AlertDialogDescription>
-                                    </AlertDialogHeader>
-                                    <AlertDialogFooter>
-                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                        <AlertDialogAction onClick={handleLeaveGroup} className="bg-destructive hover:bg-destructive/80">
-                                            Yes, Leave Group
-                                        </AlertDialogAction>
-                                    </AlertDialogFooter>
-                                </AlertDialogContent>
-                             </AlertDialog>
-                        </CardContent>
-                    </Card>
-                </main>
+                                    )}
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="mt-4 space-y-2">
+                                    {areUsersLoading ? <LoaderCircle className="mx-auto my-4 animate-spin"/> : members.map(member => (
+                                        <MemberItem 
+                                            key={member.id} 
+                                            member={member} 
+                                            isOwner={member.id === group.ownerId}
+                                            onRemove={handleRemoveMember}
+                                            canManage={isCurrentUserOwner}
+                                        />
+                                    ))}
+                                </div>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-destructive flex items-center gap-2">
+                                    <Info className="h-5 w-5" />
+                                    Danger Zone
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" className="w-full">
+                                            <LogOut className="mr-2" />
+                                            Leave Group
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Are you sure you want to leave this group?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                You will no longer be a member of "{group.name}" and will not receive any new messages. You will need to be re-invited to join again.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                            <AlertDialogAction onClick={handleLeaveGroup} className="bg-destructive hover:bg-destructive/80">
+                                                Yes, Leave Group
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </CardContent>
+                        </Card>
+                    </main>
                 </div>
             </div>
         </Drawer.Content>

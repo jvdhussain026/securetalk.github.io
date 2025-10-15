@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -12,7 +13,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 import { collection, doc, setDoc, addDoc, Timestamp, writeBatch, serverTimestamp } from 'firebase/firestore';
@@ -57,12 +58,15 @@ export default function NewGroupPage() {
         [user.uid]: true,
       },
       createdAt: serverTimestamp(),
+      permissions: {
+        editInfo: 'only_owner',
+      }
     };
     
     batch.set(newGroupRef, groupData);
 
     // 2. Create the contact entry for the user
-    const userContactRef = doc(firestore, 'users', user.uid, 'contacts', groupId);
+    const userContactRef = doc(firestore, 'users', user.uid, 'contacts', `group_${groupId}`);
     const userContactData = {
       id: groupId,
       name,
@@ -137,9 +141,7 @@ export default function NewGroupPage() {
           }
           const storageRef = ref(storage, `group-avatars/${Date.now()}.jpeg`);
           try {
-            const snapshot = await uploadString(storageRef, croppedImage, 'data_url', {
-                contentType: 'image/jpeg'
-            });
+            const snapshot = await uploadBytes(storageRef, blob);
             const downloadURL = await getDownloadURL(snapshot.ref);
             resolve(downloadURL);
           } catch (error) {

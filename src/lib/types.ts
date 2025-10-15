@@ -1,4 +1,5 @@
 
+
 import type { Timestamp } from 'firebase/firestore';
 
 export type Attachment = {
@@ -36,6 +37,9 @@ export type Group = {
   ownerId: string;
   participants: Record<string, boolean>;
   createdAt: Timestamp;
+  permissions?: {
+    editInfo: 'only_owner' | 'all_participants';
+  };
 }
 
 export type Contact = {
