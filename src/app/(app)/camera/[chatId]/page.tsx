@@ -25,7 +25,7 @@ type FacingMode = 'user' | 'environment';
 type CaptureMode = 'photo' | 'video';
 
 function CameraPageContent() {
-  const { toast } } = useToast();
+  const { toast } = useToast();
   const router = useRouter();
   const params = useParams();
   const chatId = params.chatId as string;
@@ -262,5 +262,3 @@ export default function CameraPage() {
         </Suspense>
     );
 }
-
-    
