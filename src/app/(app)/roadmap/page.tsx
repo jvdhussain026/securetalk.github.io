@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, ListTodo } from 'lucide-react';
+import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -27,7 +27,7 @@ const FeatureItem = ({ icon: Icon, title, description, status }: { icon: React.E
     )
 }
 
-export default function RoadmapPage() {
+export default function DeveloperPreviewPage() {
 
   const featureList = {
       "Core Features": [
@@ -60,14 +60,8 @@ export default function RoadmapPage() {
            {
               icon: Settings,
               title: "Various Privacy Toggles",
-              description: "Several options in Settings > Privacy (e.g., Read Receipts, Typing Indicators, Two-Step Verification) are placeholders and do not currently affect functionality.",
+              description: "Several options in Settings > Privacy (e.g., Read Receipts, Typing Indicators) are placeholders and do not currently affect functionality.",
               status: 'Not Implemented' as const
-          },
-          {
-              icon: HardDrive,
-              title: "Storage Management",
-              description: "The storage breakdown in 'Data & Storage' is simulated. Clearing data from this screen does not affect actual device storage.",
-              status: 'Simulated' as const
           },
       ],
       "Monetization & Support": [
@@ -89,7 +83,7 @@ export default function RoadmapPage() {
             <span className="sr-only">Back to Settings</span>
           </Link>
         </Button>
-        <h1 className="text-2xl font-bold font-headline">Roadmap & Status</h1>
+        <h1 className="text-2xl font-bold font-headline">Developer Preview</h1>
       </header>
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
@@ -100,11 +94,25 @@ export default function RoadmapPage() {
                     <Construction className="w-8 h-8 text-primary" />
                 </div>
             </div>
-            <CardTitle className="text-center font-headline text-3xl">Developer Preview</CardTitle>
+            <CardTitle className="text-center font-headline text-3xl">Welcome, Testers!</CardTitle>
             <CardDescription className="text-center">
-              This app is currently in an early preview state. The list below outlines features that are simulated, incomplete, or planned for the future.
+              This app is in active development. Your feedback is crucial for making it better. Below is a list of what's currently a work-in-progress.
             </CardDescription>
           </CardHeader>
+          <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <Button asChild>
+                <Link href="/feedback">
+                    <MessageSquare className="mr-2" />
+                    Give Feedback
+                </Link>
+            </Button>
+             <Button asChild variant="outline">
+                <Link href="/chats/4YaPPGcDw2NLe31LwT05h3TihTz1">
+                    <Heart className="mr-2" />
+                    Chat with the Dev
+                </Link>
+            </Button>
+          </CardContent>
         </Card>
         
         <Accordion type="single" collapsible defaultValue="item-1" className="w-full">

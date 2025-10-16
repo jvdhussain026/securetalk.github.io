@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle, Construction } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -130,7 +130,7 @@ export default function AboutUsPage() {
                   </div>
               </div>
               <CardTitle className="font-headline text-3xl">Secure Talk</CardTitle>
-              <CardDescription>Version 1.0.0 (Under Development)</CardDescription>
+              <CardDescription>Version 1.0.0 (Developer Preview)</CardDescription>
             </CardHeader>
             <CardContent>
               <p className="text-center text-muted-foreground">
@@ -171,6 +171,20 @@ export default function AboutUsPage() {
                     <Link href="/support">
                         <Heart className="mr-2" />
                         Support Us
+                    </Link>
+                </Button>
+            </CardContent>
+          </Card>
+          
+          <Card>
+            <CardHeader>
+              <CardTitle>App Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+                <Button variant="outline" className="w-full justify-between" asChild>
+                    <Link href="/roadmap">
+                        <span>Developer Preview Details</span>
+                        <Construction className="h-5 w-5" />
                     </Link>
                 </Button>
             </CardContent>
