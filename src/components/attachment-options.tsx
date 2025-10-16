@@ -4,18 +4,19 @@
 import { motion } from 'framer-motion';
 import { Camera, Image as ImageIcon, Video, FileText, Mic } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
 type AttachmentOptionsProps = {
   isOpen: boolean;
   onClose: () => void;
   onSelect: (option: 'image' | 'document' | 'audio') => void;
-  chatId: string;
 };
 
-export function AttachmentOptions({ isOpen, onClose, onSelect, chatId }: AttachmentOptionsProps) {
+export function AttachmentOptions({ isOpen, onClose, onSelect }: AttachmentOptionsProps) {
   const { toast } = useToast();
   const router = useRouter();
+  const params = useParams();
+  const chatId = params.id as string;
 
   const options = [
     { icon: Camera, label: 'Camera', key: 'camera' as const },
@@ -26,7 +27,7 @@ export function AttachmentOptions({ isOpen, onClose, onSelect, chatId }: Attachm
 
   const handleSelect = (key: 'camera' | 'image' | 'document' | 'audio') => {
     if (key === 'camera') {
-        router.push(`/camera?chatId=${chatId}`);
+        router.push(`/camera/${chatId}`);
         onClose();
     } else {
        onSelect(key);
@@ -69,3 +70,5 @@ export function AttachmentOptions({ isOpen, onClose, onSelect, chatId }: Attachm
     </>
   );
 }
+
+    

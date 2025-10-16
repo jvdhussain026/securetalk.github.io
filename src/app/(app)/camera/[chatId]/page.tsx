@@ -3,7 +3,7 @@
 
 import { Suspense, useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useSearchParams, useRouter, useParams } from 'next/navigation';
 import { ArrowLeft, Camera, RefreshCw, Check, X, Video, Image as ImageIcon, LoaderCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
@@ -25,10 +25,11 @@ type FacingMode = 'user' | 'environment';
 type CaptureMode = 'photo' | 'video';
 
 function CameraPageContent() {
-  const { toast } = useToast();
+  const { toast } } = useToast();
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const chatId = searchParams.get('chatId');
+  const params = useParams();
+  const chatId = params.chatId as string;
+
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [hasPermission, setHasPermission] = useState<boolean | null>(null);
@@ -261,3 +262,5 @@ export default function CameraPage() {
         </Suspense>
     );
 }
+
+    
