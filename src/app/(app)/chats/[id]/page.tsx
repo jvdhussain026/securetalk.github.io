@@ -1179,6 +1179,15 @@ export default function ChatPage() {
             }, 2500);
            }
         }, 300);
+      },
+      onReply: (messageToReply) => {
+        setReplyingTo(messageToReply);
+        contentEditableRef.current?.focus();
+      },
+      onStar: handleToggleStar,
+      onDelete: (messageToDelete) => {
+          setSelectedMessage(messageToDelete);
+          setIsDeleteAlertOpen(true);
       }
     });
   };
@@ -1186,7 +1195,6 @@ export default function ChatPage() {
   const handleAvatarClick = (avatarUrl?: string) => {
       if (avatarUrl) {
         setImagePreview({ 
-          message: { id: 'avatar', senderId: 'system', timestamp: serverTimestamp() }, 
           contact: { id: '', name: displayName, avatar: avatarUrl, language: '' }, 
           startIndex: 0 
         });
@@ -2033,5 +2041,6 @@ export default function ChatPage() {
 
 
     
+
 
 

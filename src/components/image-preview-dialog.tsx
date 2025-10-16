@@ -16,15 +16,14 @@ import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Reply, Forward, MoreVertical, Star, Share2, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
-import type { Message, Contact } from "@/lib/types";
+import { ArrowLeft, Reply, Forward, MoreVertical, Star, Share2, Eye, Trash2, ChevronLeft, ChevronRight, Download } from "lucide-react";
+import type { Message, Contact, Attachment } from "@/lib/types";
 import { format, isToday, isYesterday } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
 import useEmblaCarousel from 'embla-carousel-react'
 
 
@@ -33,7 +32,10 @@ export type ImagePreviewState = {
   contact?: Contact;
   startIndex: number;
   onViewInChat?: (messageId: string) => void;
-  urls?: string[]; // Make urls optional if they always come from message
+  onReply?: (message: Message) => void;
+  onStar?: (message: Message) => void;
+  onDelete?: (message: Message) => void;
+  urls?: string[];
 } | null;
 
 type ImagePreviewDialogProps = {
@@ -50,20 +52,97 @@ function formatTimestamp(timestamp: any) {
   return format(date, 'MMMM d, yyyy');
 }
 
-function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { message?: Message; contact?: Contact; onClose: () => void; onViewInChat?: (messageId: string) => void; }) {
+function MediaPreviewHeader({
+  message,
+  contact,
+  onClose,
+  onViewInChat,
+  onReply,
+  onStar,
+  onDelete,
+  currentMedia,
+}: {
+  message?: Message;
+  contact?: Contact;
+  onClose: () => void;
+  onViewInChat?: (messageId: string) => void;
+  onReply?: (message: Message) => void;
+  onStar?: (message: Message) => void;
+  onDelete?: (message: Message) => void;
+  currentMedia?: Attachment;
+}) {
     const { toast } = useToast();
-    const router = useRouter();
 
     const handleAction = (action: string) => {
-        if (action === 'View in Chat' && onViewInChat && message) {
-          onViewInChat(message.id);
-        } else {
-           toast({ title: `Action "${action}" is not yet implemented.` });
+        if (!message) return;
+        
+        switch(action) {
+            case 'Reply':
+                onReply?.(message);
+                onClose();
+                break;
+            case 'Star':
+                onStar?.(message);
+                toast({ title: message.isStarred ? 'Message Unstarred' : 'Message Starred'});
+                // No close, so user can see the star change if we add it
+                break;
+            case 'View in Chat':
+                onViewInChat?.(message.id);
+                break;
+            case 'Delete':
+                onDelete?.(message);
+                onClose();
+                break;
+            case 'Forward':
+                 toast({ title: `Action "Forward" is not yet implemented.` });
+                 break;
+            default:
+                toast({ title: `Action "${action}" is not yet implemented.` });
+        }
+    }
+    
+    const handleShare = async () => {
+        if (!currentMedia) return;
+        try {
+            if (navigator.share) {
+                 await navigator.share({
+                    title: 'Shared from Secure Talk',
+                    text: message?.text,
+                    // To share files, you need to fetch them as blobs first.
+                    // This is a simplified version.
+                 });
+            } else {
+                 navigator.clipboard.writeText(currentMedia.url);
+                 toast({ title: 'Link copied to clipboard.' });
+            }
+        } catch(error) {
+            console.error("Share failed", error);
+            toast({ variant: 'destructive', title: 'Could not share media.' });
+        }
+    }
+
+    const handleSave = async () => {
+        if (!currentMedia) return;
+        try {
+            const response = await fetch(currentMedia.url);
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.style.display = 'none';
+            a.href = url;
+            a.download = currentMedia.name || `secure-talk-media-${Date.now()}`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            toast({ title: 'Saved to device!' });
+        } catch (error) {
+            console.error("Save failed:", error);
+            toast({ variant: 'destructive', title: 'Could not save media.' });
         }
     }
     
     return (
-         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/50 to-transparent p-2 flex items-center justify-between text-white">
+         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/70 via-black/50 to-transparent p-2 flex items-center justify-between text-white">
             <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={onClose}>
                     <ArrowLeft className="h-6 w-6" />
@@ -77,9 +156,9 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
             </div>
             {message && message.id !== 'avatar' && (
                 <div className="flex items-center gap-1">
-                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Reply')}>
+                    {onReply && <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Reply')}>
                         <Reply className="h-5 w-5" />
-                    </Button>
+                    </Button>}
                     <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Forward')}>
                         <Forward className="h-5 w-5" />
                     </Button>
@@ -90,10 +169,13 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={() => handleAction('Star')}>
-                                <Star className="mr-2"/> Star
+                            {onStar && <DropdownMenuItem onSelect={() => handleAction('Star')}>
+                                <Star className="mr-2"/> {message.isStarred ? 'Unstar' : 'Star'}
+                            </DropdownMenuItem>}
+                            <DropdownMenuItem onSelect={handleSave}>
+                                <Download className="mr-2"/> Save to Device
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => handleAction('Share')}>
+                            <DropdownMenuItem onSelect={handleShare}>
                                 <Share2 className="mr-2"/> Share
                             </DropdownMenuItem>
                             {onViewInChat && (
@@ -101,9 +183,10 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
                                     <Eye className="mr-2"/> View in Chat
                                 </DropdownMenuItem>
                             )}
-                            <DropdownMenuItem onSelect={() => handleAction('Delete')} className="text-destructive focus:text-destructive">
+                            {onDelete && <DropdownMenuSeparator />}
+                            {onDelete && <DropdownMenuItem onSelect={() => handleAction('Delete')} className="text-destructive focus:text-destructive">
                                 <Trash2 className="mr-2"/> Delete
-                            </DropdownMenuItem>
+                            </DropdownMenuItem>}
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
@@ -113,13 +196,22 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
 }
 
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
-  const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
+  const { message, contact, startIndex, onViewInChat, onReply, onStar, onDelete, urls } = imagePreview || {};
   const [isUiVisible, setIsUiVisible] = React.useState(true);
-  const { toast } = useToast();
   const panzoomRef = React.useRef<any>(null);
   const [zoom, setZoom] = React.useState(1);
   const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false });
+  const [currentIndex, setCurrentIndex] = React.useState(startIndex || 0);
   
+  React.useEffect(() => {
+    if (!emblaApi) return;
+    const onSelect = () => {
+        setCurrentIndex(emblaApi.selectedScrollSnap());
+    };
+    emblaApi.on("select", onSelect);
+    return () => { emblaApi.off("select", onSelect) };
+  }, [emblaApi]);
+
   const scrollPrev = React.useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
   }, [emblaApi]);
@@ -130,7 +222,8 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   
   const mediaItems = React.useMemo(() => {
     if (!message && !urls) return [];
-    return message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image', url }));
+    const items = message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image' as const, url }));
+    return items;
   }, [message, urls]);
 
 
@@ -150,7 +243,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
     handleClose();
     return null;
   }
-  
+
   const handleDoubleClick = () => {
     if (panzoomRef.current) {
       if (zoom > 1) {
@@ -164,11 +257,13 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   const handleStateChange = (data: any) => {
     setZoom(data.scale);
   };
+  
+  const currentMediaItem = mediaItems[currentIndex];
 
 
   return (
     <Dialog open={!!imagePreview} onOpenChange={handleClose}>
-       <DialogContent className="p-0 bg-black border-none max-w-none w-full h-screen flex items-center justify-center" hideCloseButton>
+       <DialogContent className="p-0 bg-black border-none w-full h-screen flex items-center justify-center" hideCloseButton>
         <DialogHeader className="sr-only">
           <DialogTitle>Media Preview</DialogTitle>
           <DialogDescription>A full-screen view of the selected media.</DialogDescription>
@@ -182,7 +277,16 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                     exit={{ y: -100 }}
                     transition={{ type: 'tween', duration: 0.2, ease: 'easeInOut' }}
                  >
-                    <MediaPreviewHeader message={message} contact={contact} onClose={handleClose} onViewInChat={onViewInChat} />
+                    <MediaPreviewHeader 
+                        message={message} 
+                        contact={contact} 
+                        onClose={handleClose} 
+                        onViewInChat={onViewInChat}
+                        onReply={onReply}
+                        onStar={onStar}
+                        onDelete={onDelete}
+                        currentMedia={currentMediaItem}
+                     />
                  </motion.div>
             )}
         </AnimatePresence>
@@ -197,7 +301,6 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                         ) : (
                            <div
                                 className="w-full h-full flex items-center justify-center"
-                                style={{ touchAction: 'none' }}
                                 onDoubleClick={handleDoubleClick}
                             >
                                 <Panzoom
@@ -207,6 +310,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                                     disableDoubleClickZoom
                                     preventPan={() => zoom === 1}
                                     onStateChange={handleStateChange}
+                                    style={{ touchAction: 'none' }}
                                 >
                                     <Image
                                         src={media.url}
