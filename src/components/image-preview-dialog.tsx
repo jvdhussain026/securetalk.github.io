@@ -113,7 +113,6 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
 
   const { message, contact, startIndex, onViewInChat } = imagePreview;
   
-  // This logic is simplified as we're reverting the carousel
   const mediaItems = message.id === 'avatar' && contact?.avatar 
     ? [{ type: 'image', url: contact.avatar }] 
     : message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
@@ -150,19 +149,19 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
         </AnimatePresence>
         
         {url && (
-            <div className="relative h-full w-full flex items-center justify-center" onClick={() => setIsUiVisible(!isUiVisible)}>
+            <div className="h-full w-full" onClick={() => setIsUiVisible(!isUiVisible)}>
                 {isVideo(url) ? (
-                    <video src={url} controls autoPlay className="max-w-full max-h-full" onClick={(e) => e.stopPropagation()} />
+                    <video src={url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
                 ) : (
                     <Panzoom
-                        className="w-full h-full"
+                        className="w-full h-full relative" // Parent must be relative for layout="fill"
                         boundaryRatioVertical={0.8}
                         boundaryRatioHorizontal={0.8}
                         enableBoundingBox
                         minZoom={1}
                         maxZoom={4}
-                        onPanStart={(e) => e.stopPropagation()} // Prevents toggling UI on drag
-                        onDoubleClick={(e) => e.preventDefault()} // Disables default panzoom double-click zoom
+                        onPanStart={(e) => e.stopPropagation()}
+                        onDoubleClick={(e) => e.preventDefault()}
                     >
                          <Image
                             src={url}
