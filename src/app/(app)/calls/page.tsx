@@ -62,7 +62,7 @@ function CallItem({ contact }: { contact: Contact }) {
       <div className="flex items-center p-4 hover:bg-accent/50 transition-colors cursor-pointer" onClick={() => setIsSheetOpen(true)}>
         <Avatar className="h-12 w-12 mr-4">
           <AvatarImage src={contact.avatar} alt={contact.name} />
-          <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+          <AvatarFallback>{contact.name?.charAt(0) || '?'}</AvatarFallback>
         </Avatar>
         <div className="flex-1 overflow-hidden">
           <h3 className="font-bold truncate">{contact.name}</h3>
