@@ -118,7 +118,6 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   const panzoomRef = React.useRef<any>(null);
   const [zoom, setZoom] = React.useState(1);
 
-  // All hooks must be called at the top level
   const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
   const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false });
 
@@ -136,7 +135,6 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   }, [message, urls]);
 
 
-  // Conditional return must be after all hooks
   if (!imagePreview) {
     return null;
   }
@@ -171,7 +169,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
 
   return (
     <Dialog open={!!imagePreview} onOpenChange={handleClose}>
-       <DialogContent className="p-0 bg-black border-none max-w-none w-screen h-screen flex items-center justify-center" hideCloseButton>
+       <DialogContent className="p-0 bg-black border-none max-w-none w-full h-screen flex items-center justify-center" hideCloseButton>
         <DialogHeader className="sr-only">
           <DialogTitle>Media Preview</DialogTitle>
           <DialogDescription>A full-screen view of the selected media.</DialogDescription>
@@ -217,7 +215,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                                         width={0}
                                         height={0}
                                         sizes="100vw"
-                                        className="w-screen h-auto pointer-events-none"
+                                        className="w-screen h-auto"
                                     />
                                 </Panzoom>
                             </div>
