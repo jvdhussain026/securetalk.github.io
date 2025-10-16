@@ -2,7 +2,8 @@
 'use client'
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
-import { User, Search, Wifi, MessageSquare, Phone, Users, LoaderCircle, UserPlus, ChevronRight } from 'lucide-react'
+import Link from 'next/link'
+import { User, Search, Wifi, MessageSquare, Phone, Users, LoaderCircle, UserPlus, ChevronRight, Construction } from 'lucide-react'
 import type { Contact, NearbyUser } from '@/lib/types'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
@@ -16,7 +17,7 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
 import { PlaceHolderImages } from '@/lib/placeholder-images'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Card, CardContent } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
 import { cn } from '@/lib/utils'
 
@@ -246,6 +247,20 @@ export default function NearbyPage() {
           </div>
         </header>
         <main className="flex-1 overflow-y-auto">
+            <Card className="m-4 rounded-lg bg-amber-500/10 border-amber-500/20">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                        <Construction className="h-5 w-5" />
+                        Developer Preview
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-amber-700 dark:text-amber-500 space-y-2">
+                    <p>The "Nearby" feature is a **simulation** to demonstrate how offline, peer-to-peer discovery will work. The users shown are not real people nearby.</p>
+                     <Button variant="outline" size="sm" className="mt-2" asChild>
+                        <Link href="/feedback">Give Feedback</Link>
+                    </Button>
+                </CardContent>
+            </Card>
           <AnimatePresence mode="wait">
             {renderContent()}
           </AnimatePresence>
@@ -271,5 +286,3 @@ export default function NearbyPage() {
     </>
   )
 }
-
-    

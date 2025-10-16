@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart } from 'lucide-react';
+import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -31,6 +31,12 @@ export default function DeveloperPreviewPage() {
 
   const featureList = {
       "Core Features": [
+          {
+              icon: ShieldOff,
+              title: "End-to-End Encryption",
+              description: "To help us debug and improve the app during this preview, full end-to-end encryption is not yet enabled on all messages. It will be strictly enforced in the production release.",
+              status: 'Partially Implemented' as const
+          },
           {
               icon: WifiOff,
               title: "Nearby (Offline P2P)",

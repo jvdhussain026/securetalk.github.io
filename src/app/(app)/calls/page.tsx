@@ -2,7 +2,8 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
-import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare } from 'lucide-react'
+import Link from 'next/link';
+import { MoreVertical, User, Search, Phone, Video, PhoneOutgoing, PhoneMissed, PhoneIncoming, Users, MessageSquare, Construction } from 'lucide-react'
 import { format, isToday, isYesterday } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -21,6 +22,7 @@ import type { Contact } from '@/lib/types';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
 import { LoaderCircle } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 
 function CallItem({ contact }: { contact: Contact }) {
@@ -185,12 +187,28 @@ export default function CallsPage() {
         </header>
 
         <main className="flex-1 flex flex-col overflow-y-auto">
-          <Tabs defaultValue="all" className="flex flex-col flex-1">
+            <Card className="m-4 rounded-lg bg-amber-500/10 border-amber-500/20">
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                        <Construction className="h-5 w-5" />
+                        Developer Preview
+                    </CardTitle>
+                </CardHeader>
+                <CardContent className="text-sm text-amber-700 dark:text-amber-500 space-y-2">
+                    <p>The call feature is currently a **simulation**. No real audio or video is transmitted. This call log is also simulated for demonstration purposes.</p>
+                    <p>This will be fully functional in the production release.</p>
+                    <Button variant="outline" size="sm" className="mt-2" asChild>
+                        <Link href="/feedback">Give Feedback</Link>
+                    </Button>
+                </CardContent>
+            </Card>
+
+          <Tabs defaultValue="all" className="flex flex-col flex-1 px-4">
             <TabsList className="shrink-0">
               <TabsTrigger value="all">All</TabsTrigger>
               <TabsTrigger value="missed">Missed</TabsTrigger>
             </TabsList>
-            <div className="flex-1 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto mt-2">
                 <TabsContent value="all">{renderCallList()}</TabsContent>
                 <TabsContent value="missed">{renderCallList('missed')}</TabsContent>
             </div>
