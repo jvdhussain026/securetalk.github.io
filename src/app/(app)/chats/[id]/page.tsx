@@ -1163,12 +1163,33 @@ export default function ChatPage() {
   }
 
   const handleMediaClick = (message: Message, clickedIndex: number) => {
-    setImagePreview({ message, contact: remoteUser || contact, startIndex: clickedIndex });
+    setImagePreview({ 
+      message, 
+      contact: remoteUser || contact, 
+      startIndex: clickedIndex,
+      onViewInChat: (messageId) => {
+        setImagePreview(null);
+        setTimeout(() => {
+           const messageElement = messageRefs.current[messageId];
+           if (messageElement) {
+            messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            messageElement.classList.add('animate-pulse', 'bg-primary/20', 'rounded-xl');
+            setTimeout(() => {
+                messageElement.classList.remove('animate-pulse', 'bg-primary/20', 'rounded-xl');
+            }, 2500);
+           }
+        }, 300);
+      }
+    });
   };
   
   const handleAvatarClick = (avatarUrl?: string) => {
       if (avatarUrl) {
-        setImagePreview({ message: { id: 'avatar', senderId: '', timestamp: serverTimestamp() }, contact: { id: '', name: '', avatar: avatarUrl, language: '' }, startIndex: 0 });
+        setImagePreview({ 
+          message: { id: 'avatar', senderId: 'system', timestamp: serverTimestamp() }, 
+          contact: { id: '', name: displayName, avatar: avatarUrl, language: '' }, 
+          startIndex: 0 
+        });
       }
   };
   
@@ -1958,7 +1979,6 @@ export default function ChatPage() {
       <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
-        onDelete={() => {}}
       />
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}
@@ -2013,4 +2033,5 @@ export default function ChatPage() {
 
 
     
+
 
