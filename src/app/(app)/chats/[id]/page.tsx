@@ -899,7 +899,16 @@ export default function ChatPage() {
     const files = event.target.files
     if (files) {
       const filePromises = Array.from(files).map(file => {
-        return new Promise<Attachment>((resolve, reject) => {
+        return new Promise<Attachment | null>((resolve, reject) => {
+            if (file.type.startsWith('video/')) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Video Upload Not Supported',
+                    description: "This app currently doesn't accept video. We are working hard to bring this feature. This is because this app is currently in developer and tester preview, it will be fixed in production.",
+                    duration: 5000,
+                });
+                return resolve(null);
+            }
             if (file.size > 5 * 1024 * 1024) { // 5MB limit
                 toast({
                     variant: 'destructive',
@@ -913,7 +922,6 @@ export default function ChatPage() {
             const url = reader.result as string;
             let type: Attachment['type'] = 'document';
             if (file.type.startsWith('image/')) type = 'image';
-            if (file.type.startsWith('video/')) type = 'video';
             if (file.type.startsWith('audio/')) type = 'audio';
             
             resolve({
@@ -928,7 +936,8 @@ export default function ChatPage() {
         });
       });
 
-      Promise.all(filePromises).then(newAttachments => {
+      Promise.all(filePromises).then(results => {
+        const newAttachments = results.filter((attachment): attachment is Attachment => attachment !== null);
         setAttachmentsToSend(prev => [...prev, ...newAttachments]);
       }).catch(error => {
         console.error("Error reading files:", error);
@@ -1195,11 +1204,13 @@ export default function ChatPage() {
         }, 300);
       },
       onReply: (messageToReply) => {
+        setImagePreview(null);
         setReplyingTo(messageToReply);
         contentEditableRef.current?.focus();
       },
-      onStar: handleToggleStar,
+      onStar: (messageToStar) => handleToggleStar([messageToStar]),
       onDelete: (messageToDelete) => {
+          setImagePreview(null);
           setSelectedMessage(messageToDelete);
           setIsDeleteAlertOpen(true);
       }
