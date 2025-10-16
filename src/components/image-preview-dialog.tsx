@@ -11,6 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogClose,
 } from "@/components/ui/dialog";
 import {
     DropdownMenu,
@@ -108,15 +109,13 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
 }
 
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
-  const open = !!imagePreview;
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   
-  // --- HOOKS MOVED TO TOP ---
   const [emblaRef, emblaApi] = useEmblaCarousel({ 
     startIndex: imagePreview?.startIndex || 0, 
     loop: false 
   });
-
+  
   const scrollPrev = React.useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
   }, [emblaApi]);
@@ -127,11 +126,10 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   
   React.useEffect(() => {
     if (emblaApi && imagePreview) {
-        emblaApi.scrollTo(imagePreview.startIndex, true); // Jump without animation
+        emblaApi.scrollTo(imagePreview.startIndex, true);
     }
   }, [imagePreview, emblaApi]);
 
-  // --- CONDITIONAL RETURN NOW AFTER HOOKS ---
   if (!imagePreview) {
     return null;
   }
@@ -145,8 +143,8 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="p-0 bg-black border-none max-w-none w-screen h-screen flex items-center justify-center">
+    <Dialog open={!!imagePreview} onOpenChange={handleClose}>
+       <DialogContent className="p-0 bg-black border-none max-w-none w-screen h-screen flex items-center justify-center" hideCloseButton>
         <DialogHeader className="sr-only">
           <DialogTitle>Media Preview</DialogTitle>
           <DialogDescription>A full-screen view of the selected media.</DialogDescription>
@@ -172,30 +170,26 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                       key={index} 
                       className="flex-grow-0 flex-shrink-0 basis-full h-full flex items-center justify-center"
                       onClick={() => setIsUiVisible(!isUiVisible)}
-                      onDoubleClick={(e) => e.preventDefault()} // Disable double-tap zoom on the container
                     >
                          {media.type === 'video' ? (
                             <video src={media.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
                         ) : (
-                            <Panzoom
-                                className="w-full h-full flex items-center justify-center"
-                                boundaryRatioVertical={0.8}
-                                boundaryRatioHorizontal={0.8}
-                                enableBoundingBox
-                                minZoom={1}
-                                maxZoom={4}
-                                onPanStart={(e) => e.stopPropagation()}
-                                onDoubleClick={(e) => e.preventDefault()}
-                            >
-                                <Image
-                                    src={media.url}
-                                    alt="Media Preview"
-                                    width={0}
-                                    height={0}
-                                    sizes="100vw"
-                                    className="w-auto h-auto max-w-full max-h-full object-contain pointer-events-none"
-                                />
-                            </Panzoom>
+                            <div className="w-full h-full flex items-center justify-center" style={{ touchAction: 'none' }}>
+                               <Panzoom
+                                    className="w-full h-full"
+                                    minZoom={1}
+                                    maxZoom={4}
+                                >
+                                    <Image
+                                        src={media.url}
+                                        alt="Media Preview"
+                                        width={0}
+                                        height={0}
+                                        sizes="100vw"
+                                        className="block max-w-full max-h-full w-auto h-auto object-contain pointer-events-none"
+                                    />
+                                </Panzoom>
+                            </div>
                         )}
                     </div>
                 ))}
@@ -203,7 +197,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
         </div>
         
          <AnimatePresence>
-            {isUiVisible && (
+            {isUiVisible && mediaItems.length > 1 && (
                  <>
                     <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 hover:text-white" onClick={scrollPrev}>
                         <ChevronLeft/>
