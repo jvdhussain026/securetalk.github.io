@@ -11,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogClose,
 } from "@/components/ui/dialog";
 import {
     DropdownMenu,
@@ -26,6 +25,7 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import useEmblaCarousel from 'embla-carousel-react'
 
 
 export type ImagePreviewState = {
@@ -33,7 +33,7 @@ export type ImagePreviewState = {
   contact?: Contact;
   startIndex: number;
   onViewInChat?: (messageId: string) => void;
-  urls: string[];
+  urls?: string[]; // Make urls optional if they always come from message
 } | null;
 
 type ImagePreviewDialogProps = {
@@ -63,7 +63,7 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
     }
     
     return (
-         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/70 to-transparent p-2 flex items-center justify-between text-white">
+         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/50 to-transparent p-2 flex items-center justify-between text-white">
             <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={onClose}>
                     <ArrowLeft className="h-6 w-6" />
@@ -114,24 +114,36 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
 
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
   const [isUiVisible, setIsUiVisible] = React.useState(true);
-  
-  // Hooks must be called unconditionally at the top of the component.
   const { toast } = useToast();
   
+  const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
+  
+  const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false })
+
+  const scrollPrev = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev()
+  }, [emblaApi])
+
+  const scrollNext = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext()
+  }, [emblaApi])
+
+
   if (!imagePreview) {
     return null;
   }
 
-  const { message, contact, startIndex, onViewInChat, urls } = imagePreview;
-  const mediaItems = message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || urls.map(url => ({ type: 'image', url }));
+  const mediaItems = message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image', url }));
 
   const handleClose = () => {
     onOpenChange(false);
     setTimeout(() => setIsUiVisible(true), 150);
   };
   
-  // This logic is now safely below the conditional return
-  const currentMedia = mediaItems[startIndex];
+  if (mediaItems.length === 0) {
+    handleClose();
+    return null;
+  }
 
   return (
     <Dialog open={!!imagePreview} onOpenChange={handleClose}>
@@ -155,31 +167,52 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
         </AnimatePresence>
         
         <div className="overflow-hidden w-full h-full" onClick={() => setIsUiVisible(!isUiVisible)}>
-            {currentMedia.type === 'video' ? (
-                <video src={currentMedia.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
-            ) : (
-                <div
-                    className="w-full h-full flex items-center justify-center"
-                    style={{ touchAction: 'none' }}
-                >
-                    <Panzoom
-                        minZoom={1}
-                        maxZoom={4}
-                    >
-                        <Image
-                            src={currentMedia.url}
-                            alt="Media Preview"
-                            width={0}
-                            height={0}
-                            sizes="100vw"
-                            className="block max-w-full max-h-full w-auto h-auto object-contain pointer-events-none"
-                        />
-                    </Panzoom>
-                </div>
-            )}
+           <div className="embla w-full h-full" ref={emblaRef}>
+              <div className="embla__container h-full">
+                {mediaItems.map((media, index) => (
+                    <div className="embla__slide flex items-center justify-center h-full" key={index}>
+                         {media.type === 'video' ? (
+                            <video src={media.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
+                        ) : (
+                           <div
+                                className="w-full h-full flex items-center justify-center"
+                                style={{ touchAction: 'none' }}
+                            >
+                                <Panzoom
+                                    minZoom={1}
+                                    maxZoom={4}
+                                    disableDoubleClickZoom
+                                >
+                                    <Image
+                                        src={media.url}
+                                        alt="Media Preview"
+                                        width={0}
+                                        height={0}
+                                        sizes="100vw"
+                                        className="w-screen h-auto pointer-events-none"
+                                    />
+                                </Panzoom>
+                            </div>
+                        )}
+                    </div>
+                ))}
+              </div>
+            </div>
         </div>
+
+        <AnimatePresence>
+            {isUiVisible && mediaItems.length > 1 && (
+                <>
+                    <Button className="absolute left-4 top-1/2 -translate-y-1/2 z-10" size="icon" variant="secondary" onClick={scrollPrev}>
+                        <ChevronLeft />
+                    </Button>
+                    <Button className="absolute right-4 top-1/2 -translate-y-1/2 z-10" size="icon" variant="secondary" onClick={scrollNext}>
+                        <ChevronRight />
+                    </Button>
+                </>
+            )}
+        </AnimatePresence>
       </DialogContent>
     </Dialog>
   );
 }
-
