@@ -111,28 +111,38 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   const open = !!imagePreview;
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   
-  if (!imagePreview) return null;
+  // --- HOOKS MOVED TO TOP ---
+  const [emblaRef, emblaApi] = useEmblaCarousel({ 
+    startIndex: imagePreview?.startIndex || 0, 
+    loop: false 
+  });
+
+  const scrollPrev = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev();
+  }, [emblaApi]);
+
+  const scrollNext = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext();
+  }, [emblaApi]);
+  
+  React.useEffect(() => {
+    if (emblaApi && imagePreview) {
+        emblaApi.scrollTo(imagePreview.startIndex, true); // Jump without animation
+    }
+  }, [imagePreview, emblaApi]);
+
+  // --- CONDITIONAL RETURN NOW AFTER HOOKS ---
+  if (!imagePreview) {
+    return null;
+  }
 
   const { message, contact, startIndex, onViewInChat } = imagePreview;
-  
   const mediaItems = message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
 
   const handleClose = () => {
     onOpenChange(false);
-    // Reset UI visibility on close
     setTimeout(() => setIsUiVisible(true), 150);
-  }
-  
-  const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false })
-
-  const scrollPrev = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev()
-  }, [emblaApi])
-
-  const scrollNext = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext()
-  }, [emblaApi])
-
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -168,7 +178,7 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                             <video src={media.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
                         ) : (
                             <Panzoom
-                                className="w-full h-full"
+                                className="w-full h-full flex items-center justify-center"
                                 boundaryRatioVertical={0.8}
                                 boundaryRatioHorizontal={0.8}
                                 enableBoundingBox
@@ -177,16 +187,14 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                                 onPanStart={(e) => e.stopPropagation()}
                                 onDoubleClick={(e) => e.preventDefault()}
                             >
-                                <div className="w-full h-full flex items-center justify-center">
-                                    <Image
-                                        src={media.url}
-                                        alt="Media Preview"
-                                        width={0}
-                                        height={0}
-                                        sizes="100vw"
-                                        className="w-auto h-auto max-w-full max-h-full object-contain pointer-events-none"
-                                    />
-                                </div>
+                                <Image
+                                    src={media.url}
+                                    alt="Media Preview"
+                                    width={0}
+                                    height={0}
+                                    sizes="100vw"
+                                    className="w-auto h-auto max-w-full max-h-full object-contain pointer-events-none"
+                                />
                             </Panzoom>
                         )}
                     </div>
