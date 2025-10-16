@@ -20,7 +20,6 @@ import ReactCrop, {
 import 'react-image-crop/dist/ReactCrop.css';
 import { useToast } from '@/hooks/use-toast';
 import { CropIcon, Check } from 'lucide-react';
-import { ScrollArea } from './ui/scroll-area';
 
 // This function is from the react-image-crop docs
 function getCroppedImg(
@@ -135,29 +134,27 @@ export function ImageCropperDialog({
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Crop your new profile picture</DialogTitle>
         </DialogHeader>
-        <ScrollArea className="flex-1">
-            <div className="p-6">
-                {imageSrc && (
-                <ReactCrop
-                    crop={crop}
-                    onChange={(_, percentCrop) => setCrop(percentCrop)}
-                    onComplete={(c) => setCompletedCrop(c)}
-                    aspect={1}
-                    minWidth={100}
-                    minHeight={100}
-                    circularCrop
-                >
-                    <img
-                        ref={imgRef}
-                        alt="Crop me"
-                        src={imageSrc}
-                        onLoad={onImageLoad}
-                        className="w-full"
-                    />
-                </ReactCrop>
-                )}
-            </div>
-        </ScrollArea>
+        <div className="flex-1 overflow-auto p-6">
+            {imageSrc && (
+            <ReactCrop
+                crop={crop}
+                onChange={(_, percentCrop) => setCrop(percentCrop)}
+                onComplete={(c) => setCompletedCrop(c)}
+                aspect={1}
+                minWidth={100}
+                minHeight={100}
+                circularCrop
+            >
+                <img
+                    ref={imgRef}
+                    alt="Crop me"
+                    src={imageSrc}
+                    onLoad={onImageLoad}
+                    className="w-full"
+                />
+            </ReactCrop>
+            )}
+        </div>
         <DialogFooter className="p-6 pt-0 flex-row justify-end shrink-0">
           <DialogClose asChild>
             <Button variant="ghost">Cancel</Button>
