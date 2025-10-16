@@ -26,14 +26,14 @@ import { format, isToday, isYesterday } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import useEmblaCarousel from 'embla-carousel-react'
 
 
 export type ImagePreviewState = {
-  message: Message;
+  message?: Message;
   contact?: Contact;
   startIndex: number;
   onViewInChat?: (messageId: string) => void;
+  urls: string[];
 } | null;
 
 type ImagePreviewDialogProps = {
@@ -50,12 +50,12 @@ function formatTimestamp(timestamp: any) {
   return format(date, 'MMMM d, yyyy');
 }
 
-function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { message: Message; contact?: Contact; onClose: () => void; onViewInChat?: (messageId: string) => void; }) {
+function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { message?: Message; contact?: Contact; onClose: () => void; onViewInChat?: (messageId: string) => void; }) {
     const { toast } = useToast();
     const router = useRouter();
 
     const handleAction = (action: string) => {
-        if (action === 'View in Chat' && onViewInChat) {
+        if (action === 'View in Chat' && onViewInChat && message) {
           onViewInChat(message.id);
         } else {
            toast({ title: `Action "${action}" is not yet implemented.` });
@@ -68,42 +68,46 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={onClose}>
                     <ArrowLeft className="h-6 w-6" />
                 </Button>
-                <div>
-                    <p className="font-bold">{message.senderId === 'system' ? 'System' : (contact?.name || 'User')}</p>
-                    <p className="text-xs text-white/80">{formatTimestamp(message.timestamp)}</p>
-                </div>
+                 {message && (
+                    <div>
+                        <p className="font-bold">{message.senderId === 'system' ? 'System' : (contact?.name || 'User')}</p>
+                        <p className="text-xs text-white/80">{formatTimestamp(message.timestamp)}</p>
+                    </div>
+                 )}
             </div>
-            <div className={cn("flex items-center gap-1", message.id === 'avatar' && "hidden")}>
-                <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Reply')}>
-                    <Reply className="h-5 w-5" />
-                </Button>
-                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Forward')}>
-                    <Forward className="h-5 w-5" />
-                </Button>
-                <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full">
-                            <MoreVertical className="h-5 w-5" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                        <DropdownMenuItem onSelect={() => handleAction('Star')}>
-                            <Star className="mr-2"/> Star
-                        </DropdownMenuItem>
-                        <DropdownMenuItem onSelect={() => handleAction('Share')}>
-                             <Share2 className="mr-2"/> Share
-                        </DropdownMenuItem>
-                         {onViewInChat && (
-                            <DropdownMenuItem onSelect={() => handleAction('View in Chat')}>
-                                <Eye className="mr-2"/> View in Chat
+            {message && message.id !== 'avatar' && (
+                <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Reply')}>
+                        <Reply className="h-5 w-5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={() => handleAction('Forward')}>
+                        <Forward className="h-5 w-5" />
+                    </Button>
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full">
+                                <MoreVertical className="h-5 w-5" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                            <DropdownMenuItem onSelect={() => handleAction('Star')}>
+                                <Star className="mr-2"/> Star
                             </DropdownMenuItem>
-                        )}
-                         <DropdownMenuItem onSelect={() => handleAction('Delete')} className="text-destructive focus:text-destructive">
-                             <Trash2 className="mr-2"/> Delete
-                        </DropdownMenuItem>
-                    </DropdownMenuContent>
-                </DropdownMenu>
-            </div>
+                            <DropdownMenuItem onSelect={() => handleAction('Share')}>
+                                <Share2 className="mr-2"/> Share
+                            </DropdownMenuItem>
+                            {onViewInChat && (
+                                <DropdownMenuItem onSelect={() => handleAction('View in Chat')}>
+                                    <Eye className="mr-2"/> View in Chat
+                                </DropdownMenuItem>
+                            )}
+                            <DropdownMenuItem onSelect={() => handleAction('Delete')} className="text-destructive focus:text-destructive">
+                                <Trash2 className="mr-2"/> Delete
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+            )}
         </div>
     );
 }
@@ -111,36 +115,23 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   
-  const [emblaRef, emblaApi] = useEmblaCarousel({ 
-    startIndex: imagePreview?.startIndex || 0, 
-    loop: false 
-  });
+  // Hooks must be called unconditionally at the top of the component.
+  const { toast } = useToast();
   
-  const scrollPrev = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev();
-  }, [emblaApi]);
-
-  const scrollNext = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext();
-  }, [emblaApi]);
-  
-  React.useEffect(() => {
-    if (emblaApi && imagePreview) {
-        emblaApi.scrollTo(imagePreview.startIndex, true);
-    }
-  }, [imagePreview, emblaApi]);
-
   if (!imagePreview) {
     return null;
   }
 
-  const { message, contact, startIndex, onViewInChat } = imagePreview;
-  const mediaItems = message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
+  const { message, contact, startIndex, onViewInChat, urls } = imagePreview;
+  const mediaItems = message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || urls.map(url => ({ type: 'image', url }));
 
   const handleClose = () => {
     onOpenChange(false);
     setTimeout(() => setIsUiVisible(true), 150);
   };
+  
+  // This logic is now safely below the conditional return
+  const currentMedia = mediaItems[startIndex];
 
   return (
     <Dialog open={!!imagePreview} onOpenChange={handleClose}>
@@ -163,53 +154,32 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
             )}
         </AnimatePresence>
         
-        <div className="overflow-hidden w-full h-full" ref={emblaRef}>
-            <div className="flex h-full">
-                {mediaItems.map((media, index) => (
-                    <div 
-                      key={index} 
-                      className="flex-grow-0 flex-shrink-0 basis-full h-full flex items-center justify-center"
-                      onClick={() => setIsUiVisible(!isUiVisible)}
+        <div className="overflow-hidden w-full h-full" onClick={() => setIsUiVisible(!isUiVisible)}>
+            {currentMedia.type === 'video' ? (
+                <video src={currentMedia.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
+            ) : (
+                <div
+                    className="w-full h-full flex items-center justify-center"
+                    style={{ touchAction: 'none' }}
+                >
+                    <Panzoom
+                        minZoom={1}
+                        maxZoom={4}
                     >
-                         {media.type === 'video' ? (
-                            <video src={media.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
-                        ) : (
-                            <div className="w-full h-full flex items-center justify-center" style={{ touchAction: 'none' }}>
-                               <Panzoom
-                                    className="w-full h-full"
-                                    minZoom={1}
-                                    maxZoom={4}
-                                >
-                                    <Image
-                                        src={media.url}
-                                        alt="Media Preview"
-                                        width={0}
-                                        height={0}
-                                        sizes="100vw"
-                                        className="block max-w-full max-h-full w-auto h-auto object-contain pointer-events-none"
-                                    />
-                                </Panzoom>
-                            </div>
-                        )}
-                    </div>
-                ))}
-            </div>
-        </div>
-        
-         <AnimatePresence>
-            {isUiVisible && mediaItems.length > 1 && (
-                 <>
-                    <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 hover:text-white" onClick={scrollPrev}>
-                        <ChevronLeft/>
-                    </Button>
-                     <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 hover:text-white" onClick={scrollNext}>
-                        <ChevronRight/>
-                    </Button>
-                </>
+                        <Image
+                            src={currentMedia.url}
+                            alt="Media Preview"
+                            width={0}
+                            height={0}
+                            sizes="100vw"
+                            className="block max-w-full max-h-full w-auto h-auto object-contain pointer-events-none"
+                        />
+                    </Panzoom>
+                </div>
             )}
-        </AnimatePresence>
-
+        </div>
       </DialogContent>
     </Dialog>
   );
 }
+
