@@ -350,20 +350,34 @@ function MessageContent({ message, isSender, isSearchOpen, searchQuery, searchMa
   );
 }
 
-function ReplyPreview({ message, isSender, contactName }: { message?: Message, isSender: boolean, contactName?: string }) {
+function ReplyPreview({ message, isSender, contactName, onClick }: { message?: Message; isSender: boolean; contactName?: string; onClick: () => void }) {
     if (!message) return null;
+
+    const mediaAttachment = message.attachments?.find(a => a.type === 'image' || a.type === 'video');
+
     return (
-        <div className={cn(
-            "p-2 rounded-t-lg text-xs border-b",
-            isSender ? "bg-black/10 border-white/20" : "bg-muted border-border"
-        )}>
-            <p className={cn("font-bold", isSender ? "text-primary-foreground/80" : "text-primary")}>
-                {message.senderId === useFirebase().user?.uid ? "You" : contactName}
-            </p>
-            <p className={cn("truncate", isSender ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                {message.text || "Media"}
-            </p>
-        </div>
+        <button
+            onClick={onClick}
+            className={cn(
+                "p-2 rounded-t-lg text-xs border-b w-full text-left flex items-start gap-2",
+                isSender ? "bg-black/10 border-white/20" : "bg-muted border-border"
+            )}
+        >
+            {mediaAttachment && (
+                <div className="relative w-10 h-10 rounded overflow-hidden flex-shrink-0 bg-black/20">
+                    <Image src={mediaAttachment.url} alt="Reply preview" layout="fill" objectFit="cover" />
+                    {mediaAttachment.type === 'video' && <VideoIcon className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-4 text-white" />}
+                </div>
+            )}
+            <div className="overflow-hidden">
+                <p className={cn("font-bold", isSender ? "text-primary-foreground/80" : "text-primary")}>
+                    {message.senderId === useFirebase().user?.uid ? "You" : contactName}
+                </p>
+                <p className={cn("truncate", isSender ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                    {message.text || "Media"}
+                </p>
+            </div>
+        </button>
     )
 }
 
@@ -1455,6 +1469,17 @@ export default function ChatPage() {
       return '';
   }
 
+  const handleScrollToMessage = (messageId: string) => {
+    const messageElement = messageRefs.current[messageId];
+    if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        messageElement.classList.add('animate-pulse', 'bg-primary/20', 'rounded-xl');
+        setTimeout(() => {
+            messageElement.classList.remove('animate-pulse', 'bg-primary/20', 'rounded-xl');
+        }, 2500);
+    }
+  };
+
 
   if (isLoading && !messages) {
     return (
@@ -1565,7 +1590,14 @@ export default function ChatPage() {
                               showSenderInfo && "rounded-tl-none"
                           )}
                       >
-                        <ReplyPreview message={repliedToMessage} isSender={isSender} contactName={displayName} />
+                        {repliedToMessage && (
+                           <ReplyPreview
+                                message={repliedToMessage}
+                                isSender={isSender}
+                                contactName={isGroupChat ? groupMembers.get(repliedToMessage.senderId)?.name : displayName}
+                                onClick={() => handleScrollToMessage(repliedToMessage.id)}
+                            />
+                        )}
                         
                         <div className={cn("flex flex-col", (repliedToMessage) ? "pt-1" : "")}>
                           {isTranslating.has(message.id) ? (
@@ -1843,12 +1875,17 @@ export default function ChatPage() {
                 </motion.div>
                 )}
                 {replyingTo && (
-                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="px-3 pb-2 flex justify-between items-center bg-muted mx-2 rounded-t-lg pt-2">
-                    <div className="overflow-hidden">
+                  <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="bg-muted mx-2 rounded-t-lg">
+                    <div className="px-3 pt-2 flex justify-between items-start">
                         <p className="font-bold text-sm text-primary">Replying to {replyingTo.senderId === user?.uid ? "yourself" : displayName}</p>
-                        <p className="text-xs truncate text-muted-foreground">{replyingTo.text || "Media"}</p>
+                        <Button variant="ghost" size="icon" className="h-5 w-5 -mt-1 -mr-1" onClick={cancelReply}><X className="h-4 w-4"/></Button>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-6 w-6" onClick={cancelReply}><X className="h-4 w-4"/></Button>
+                    <ReplyPreview
+                        message={replyingToMessage}
+                        isSender={false}
+                        contactName={isGroupChat ? groupMembers.get(replyingToMessage?.senderId ?? '')?.name : displayName}
+                        onClick={() => handleScrollToMessage(replyingTo.id)}
+                    />
                 </motion.div>
                 )}
             </AnimatePresence>
@@ -2029,18 +2066,6 @@ export default function ChatPage() {
     </>
   )
 }
-
-
     
 
-
-
-
-
-
-
-
     
-
-
-
