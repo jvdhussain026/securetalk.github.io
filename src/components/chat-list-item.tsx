@@ -40,7 +40,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   
   const chatId = useMemo(() => {
     if (!user?.uid || !contact.id) return null;
-    if (contact.isGroup) return contact.id;
+    if (contact.isGroup) return contact.id.replace('group_', '');
     return [user.uid, contact.id].sort().join('_');
   }, [user?.uid, contact.id, contact.isGroup]);
 
@@ -87,6 +87,12 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
     const prefix = lastMessage.senderId === user?.uid ? 'You: ' : '';
     
     if (lastMessage.text) {
+        if (lastMessage.text.startsWith('[SYSTEM]')) {
+            return 'System Message';
+        }
+        if (lastMessage.text.startsWith('[GROUP_INVITE]')) {
+            return `${prefix}Group Invitation`;
+        }
         if (lastMessage.text.startsWith('[Broadcast]')) {
             const body = lastMessage.text.replace(/^\[Broadcast\]\s*/, '');
             const match = body.match(/^\*\*(.*?)\*\*/);
@@ -115,7 +121,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   };
   
   const displayName = contact.displayName || contact.name;
-  const chatLink = contact.isGroup ? `/chats/group_${contact.id}` : `/chats/${contact.id}`;
+  const chatLink = contact.isGroup ? `/chats/group_${contact.id.replace('group_','')}` : `/chats/${contact.id}`;
   
 
   return (

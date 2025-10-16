@@ -52,11 +52,11 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
   };
   
   const handleCopy = () => {
-    if (message.text) {
+    if (message.text && !message.text.startsWith('[SYSTEM]') && !message.text.startsWith('[GROUP_INVITE]')) {
         navigator.clipboard.writeText(message.text);
         toast({ title: 'Message copied!' });
     } else {
-        toast({ variant: 'destructive', title: 'Cannot copy media' });
+        toast({ variant: 'destructive', title: 'Cannot copy this message type' });
     }
     handleClose();
   };
@@ -90,23 +90,32 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
   };
 
   const isMyMessage = message.senderId === user?.uid;
-  const canEdit = isMyMessage && !!message.text && differenceInHours(new Date(), message.timestamp.toDate()) < 3;
+  const isSystemMessage = message.text?.startsWith('[SYSTEM]');
   const isGroupInvite = message.text?.startsWith('[GROUP_INVITE]');
+  const isSpecialMessage = isSystemMessage || isGroupInvite;
+
+  const canEdit = isMyMessage && !!message.text && !isSpecialMessage && differenceInHours(new Date(), message.timestamp.toDate()) < 3;
 
 
   const primaryItems = [
-    { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: !isGroupInvite },
-    { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: !isGroupInvite },
+    { label: 'Reply', icon: Reply, action: handleActionWithClose(onReply), show: !isSpecialMessage },
+    { label: 'Forward', icon: Forward, action: () => handleAction('Forward'), show: !isSpecialMessage },
     { label: 'Delete', icon: Trash2, action: handleDeleteClick, show: true, isDestructive: true },
   ];
 
   const secondaryItems = [
-    { label: 'Share', icon: Share2, action: handleShare, show: !isGroupInvite },
-    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit && !isGroupInvite },
+    { label: 'Share', icon: Share2, action: handleShare, show: !isSpecialMessage },
+    { label: 'Edit', icon: Pencil, action: handleActionWithClose(onEdit), show: canEdit },
     { label: message.isStarred ? 'Unstar' : 'Star', icon: Star, action: handleActionWithClose(onStar), show: true },
-    { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text && !isGroupInvite },
-    { label: isTranslated ? 'Original' : 'Translate', icon: Languages, action: handleActionWithClose(onTranslate), show: !!message.text && !isGroupInvite },
+    { label: 'Copy', icon: Copy, action: handleCopy, show: !!message.text && !isSpecialMessage },
+    { label: isTranslated ? 'Original' : 'Translate', icon: Languages, action: handleActionWithClose(onTranslate), show: !!message.text && !isSpecialMessage },
   ];
+
+  const getPreviewText = () => {
+      if(isSystemMessage) return message.text.replace('[SYSTEM]','').trim();
+      if(isGroupInvite) return 'Group Invitation';
+      return message.text || 'Media message';
+  }
 
   const renderItem = (item: typeof primaryItems[0] | typeof secondaryItems[0]) => (
     item.show ? (
@@ -147,7 +156,7 @@ export function MessageOptions({ isOpen, setIsOpen, message, onDelete, onEdit, o
             onClick={() => onTapMessage(message)}
         >
           <p className="line-clamp-2 text-sm text-muted-foreground">
-            {isGroupInvite ? 'Group Invitation' : message.text || 'Media message'}
+            {getPreviewText()}
           </p>
         </div>
         <div className="relative h-[84px] overflow-hidden">

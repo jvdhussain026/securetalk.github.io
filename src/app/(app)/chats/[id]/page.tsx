@@ -1073,7 +1073,8 @@ export default function ChatPage() {
   };
 
   const handleMessageClick = (message: Message) => {
-    if (isMultiSelectMode) {
+    const isSpecialMessage = message.text?.startsWith('[SYSTEM]') || message.text?.startsWith('[GROUP_INVITE]');
+    if (isMultiSelectMode && !isSpecialMessage) {
       toggleMessageSelection(message.id);
     }
   }
@@ -1539,9 +1540,11 @@ export default function ChatPage() {
     const controls = useAnimation();
     const isSender = message.senderId === user?.uid;
     const isSelected = selectedMessageIds.includes(message.id);
+    const isSpecialMessage = message.text?.startsWith('[SYSTEM]') || message.text?.startsWith('[GROUP_INVITE]');
+
 
     const onDragEnd = (event: any, info: any) => {
-        if (isMultiSelectMode) return;
+        if (isMultiSelectMode || isSpecialMessage) return;
         const dragThreshold = isSender ? -50 : 50;
         if ((isSender && info.offset.x < dragThreshold) || (!isSender && info.offset.x > dragThreshold)) {
             handleReply(message);
@@ -1557,8 +1560,8 @@ export default function ChatPage() {
       <div 
         ref={el => { if (el) messageRefs.current[message.id] = el }}
         className="flex flex-col group w-full"
-        onContextMenu={(e) => { e.preventDefault(); handleMessageLongPress(message); }}
-        onTouchStart={() => handleTouchStart(message)}
+        onContextMenu={(e) => { e.preventDefault(); if(!isSpecialMessage) { handleMessageLongPress(message) } }}
+        onTouchStart={() => { if(!isSpecialMessage) { handleTouchStart(message) } }}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
         onTouchMove={handleTouchEnd}
@@ -1580,7 +1583,7 @@ export default function ChatPage() {
                     </motion.div>
                     
                     <motion.div
-                        drag={isMultiSelectMode ? false : "x"}
+                        drag={(isMultiSelectMode || isSpecialMessage) ? false : "x"}
                         dragConstraints={isSender ? { left: -100, right: 0 } : { left: 0, right: 100 }}
                         dragElastic={0.2}
                         onDragEnd={onDragEnd}
