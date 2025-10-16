@@ -116,32 +116,38 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   const { toast } = useToast();
   const panzoomRef = React.useRef<any>(null);
-  
+  const [zoom, setZoom] = React.useState(1);
+
+  // All hooks must be called at the top level
   const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
-  
   const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false });
 
   const scrollPrev = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollPrev()
+    if (emblaApi) emblaApi.scrollPrev();
   }, [emblaApi]);
 
   const scrollNext = React.useCallback(() => {
-    if (emblaApi) emblaApi.scrollNext()
+    if (emblaApi) emblaApi.scrollNext();
   }, [emblaApi]);
-
-  const handleClose = () => {
-    onOpenChange(false);
-    setTimeout(() => setIsUiVisible(true), 150);
-  };
   
   const mediaItems = React.useMemo(() => {
+    if (!message && !urls) return [];
     return message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image', url }));
   }, [message, urls]);
 
 
+  // Conditional return must be after all hooks
   if (!imagePreview) {
     return null;
   }
+  
+  const handleClose = () => {
+    onOpenChange(false);
+    setTimeout(() => {
+        setIsUiVisible(true);
+        setZoom(1);
+    }, 150);
+  };
   
   if (mediaItems.length === 0) {
     handleClose();
@@ -150,13 +156,18 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   
   const handleDoubleClick = () => {
     if (panzoomRef.current) {
-      if (panzoomRef.current.getZoom() > 1) {
+      if (zoom > 1) {
         panzoomRef.current.reset();
       } else {
         panzoomRef.current.zoomIn(2.5);
       }
     }
   };
+  
+  const handleStateChange = (data: any) => {
+    setZoom(data.scale);
+  };
+
 
   return (
     <Dialog open={!!imagePreview} onOpenChange={handleClose}>
@@ -197,7 +208,8 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                                     minZoom={1}
                                     maxZoom={4}
                                     disableDoubleClickZoom
-                                    preventPan={(e, x, y) => panzoomRef.current?.getZoom() === 1}
+                                    preventPan={() => zoom === 1}
+                                    onStateChange={handleStateChange}
                                 >
                                     <Image
                                         src={media.url}
