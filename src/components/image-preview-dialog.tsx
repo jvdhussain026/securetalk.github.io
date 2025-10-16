@@ -60,7 +60,7 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
     }
     
     return (
-         <div className="absolute top-0 left-0 right-0 z-10 bg-black/30 backdrop-blur-sm p-2 flex items-center justify-between text-white">
+         <div className="absolute top-0 left-0 right-0 z-10 bg-gradient-to-b from-black/70 to-transparent p-2 flex items-center justify-between text-white">
             <div className="flex items-center gap-1">
                 <Button variant="ghost" size="icon" className="h-11 w-11 rounded-full" onClick={onClose}>
                     <ArrowLeft className="h-6 w-6" />
@@ -149,12 +149,12 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
         </AnimatePresence>
         
         {url && (
-            <div className="h-full w-full" onClick={() => setIsUiVisible(!isUiVisible)}>
+            <div className="h-full w-full flex items-center justify-center" onClick={() => setIsUiVisible(!isUiVisible)}>
                 {isVideo(url) ? (
                     <video src={url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
                 ) : (
                     <Panzoom
-                        className="w-full h-full relative" // Parent must be relative for layout="fill"
+                        className="w-full h-full flex items-center justify-center" // Center the image within the panzoom container
                         boundaryRatioVertical={0.8}
                         boundaryRatioHorizontal={0.8}
                         enableBoundingBox
@@ -163,13 +163,14 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                         onPanStart={(e) => e.stopPropagation()}
                         onDoubleClick={(e) => e.preventDefault()}
                     >
-                         <Image
+                        <Image
                             src={url}
                             alt="Media Preview"
-                            layout="fill"
-                            objectFit="contain"
-                            className="pointer-events-none"
-                         />
+                            width={0}
+                            height={0}
+                            sizes="100vw"
+                            className="w-full h-auto pointer-events-none" // Use standard responsive classes
+                        />
                     </Panzoom>
                 )}
             </div>
