@@ -19,12 +19,14 @@ import {
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Reply, Forward, MoreVertical, Star, Share2, Eye, Trash2 } from "lucide-react";
+import { ArrowLeft, Reply, Forward, MoreVertical, Star, Share2, Eye, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import type { Message, Contact } from "@/lib/types";
 import { format, isToday, isYesterday } from 'date-fns';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
+import useEmblaCarousel from 'embla-carousel-react'
+
 
 export type ImagePreviewState = {
   message: Message;
@@ -113,19 +115,24 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
 
   const { message, contact, startIndex, onViewInChat } = imagePreview;
   
-  const mediaItems = message.id === 'avatar' && contact?.avatar 
-    ? [{ type: 'image', url: contact.avatar }] 
-    : message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
+  const mediaItems = message.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
 
-  const url = mediaItems[startIndex]?.url || null;
-
-  const isVideo = (url: string | null) => url?.startsWith('data:video');
-  
   const handleClose = () => {
     onOpenChange(false);
     // Reset UI visibility on close
     setTimeout(() => setIsUiVisible(true), 150);
   }
+  
+  const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false })
+
+  const scrollPrev = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollPrev()
+  }, [emblaApi])
+
+  const scrollNext = React.useCallback(() => {
+    if (emblaApi) emblaApi.scrollNext()
+  }, [emblaApi])
+
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -148,33 +155,58 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
             )}
         </AnimatePresence>
         
-        {url && (
-            <div className="h-full w-full flex items-center justify-center" onClick={() => setIsUiVisible(!isUiVisible)}>
-                {isVideo(url) ? (
-                    <video src={url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
-                ) : (
-                    <Panzoom
-                        className="w-full h-full flex items-center justify-center" // Center the image within the panzoom container
-                        boundaryRatioVertical={0.8}
-                        boundaryRatioHorizontal={0.8}
-                        enableBoundingBox
-                        minZoom={1}
-                        maxZoom={4}
-                        onPanStart={(e) => e.stopPropagation()}
-                        onDoubleClick={(e) => e.preventDefault()}
+        <div className="overflow-hidden w-full h-full" ref={emblaRef}>
+            <div className="flex h-full">
+                {mediaItems.map((media, index) => (
+                    <div 
+                      key={index} 
+                      className="flex-grow-0 flex-shrink-0 basis-full h-full flex items-center justify-center"
+                      onClick={() => setIsUiVisible(!isUiVisible)}
+                      onDoubleClick={(e) => e.preventDefault()} // Disable double-tap zoom on the container
                     >
-                        <Image
-                            src={url}
-                            alt="Media Preview"
-                            width={0}
-                            height={0}
-                            sizes="100vw"
-                            className="w-full h-auto pointer-events-none" // Use standard responsive classes
-                        />
-                    </Panzoom>
-                )}
+                         {media.type === 'video' ? (
+                            <video src={media.url} controls autoPlay className="max-w-full max-h-full m-auto" onClick={(e) => e.stopPropagation()} />
+                        ) : (
+                            <Panzoom
+                                className="w-full h-full"
+                                boundaryRatioVertical={0.8}
+                                boundaryRatioHorizontal={0.8}
+                                enableBoundingBox
+                                minZoom={1}
+                                maxZoom={4}
+                                onPanStart={(e) => e.stopPropagation()}
+                                onDoubleClick={(e) => e.preventDefault()}
+                            >
+                                <div className="w-full h-full flex items-center justify-center">
+                                    <Image
+                                        src={media.url}
+                                        alt="Media Preview"
+                                        width={0}
+                                        height={0}
+                                        sizes="100vw"
+                                        className="w-auto h-auto max-w-full max-h-full object-contain pointer-events-none"
+                                    />
+                                </div>
+                            </Panzoom>
+                        )}
+                    </div>
+                ))}
             </div>
-        )}
+        </div>
+        
+         <AnimatePresence>
+            {isUiVisible && (
+                 <>
+                    <Button variant="ghost" size="icon" className="absolute left-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 hover:text-white" onClick={scrollPrev}>
+                        <ChevronLeft/>
+                    </Button>
+                     <Button variant="ghost" size="icon" className="absolute right-2 top-1/2 -translate-y-1/2 h-12 w-12 rounded-full bg-black/20 text-white hover:bg-black/40 hover:text-white" onClick={scrollNext}>
+                        <ChevronRight/>
+                    </Button>
+                </>
+            )}
+        </AnimatePresence>
+
       </DialogContent>
     </Dialog>
   );
