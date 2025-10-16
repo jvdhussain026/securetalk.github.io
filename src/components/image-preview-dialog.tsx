@@ -113,14 +113,13 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
 }
 
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
+  const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   const { toast } = useToast();
   const panzoomRef = React.useRef<any>(null);
   const [zoom, setZoom] = React.useState(1);
-
-  const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
   const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false });
-
+  
   const scrollPrev = React.useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev();
   }, [emblaApi]);
