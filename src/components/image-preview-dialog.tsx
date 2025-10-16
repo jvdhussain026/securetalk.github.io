@@ -115,35 +115,48 @@ function MediaPreviewHeader({ message, contact, onClose, onViewInChat }: { messa
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   const { toast } = useToast();
+  const panzoomRef = React.useRef<any>(null);
   
   const { message, contact, startIndex, onViewInChat, urls } = imagePreview || {};
   
-  const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false })
+  const [emblaRef, emblaApi] = useEmblaCarousel({ startIndex, loop: false });
 
   const scrollPrev = React.useCallback(() => {
     if (emblaApi) emblaApi.scrollPrev()
-  }, [emblaApi])
+  }, [emblaApi]);
 
   const scrollNext = React.useCallback(() => {
     if (emblaApi) emblaApi.scrollNext()
-  }, [emblaApi])
-
-
-  if (!imagePreview) {
-    return null;
-  }
-
-  const mediaItems = message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image', url }));
+  }, [emblaApi]);
 
   const handleClose = () => {
     onOpenChange(false);
     setTimeout(() => setIsUiVisible(true), 150);
   };
   
+  const mediaItems = React.useMemo(() => {
+    return message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image', url }));
+  }, [message, urls]);
+
+
+  if (!imagePreview) {
+    return null;
+  }
+  
   if (mediaItems.length === 0) {
     handleClose();
     return null;
   }
+  
+  const handleDoubleClick = () => {
+    if (panzoomRef.current) {
+      if (panzoomRef.current.getZoom() > 1) {
+        panzoomRef.current.reset();
+      } else {
+        panzoomRef.current.zoomIn(2.5);
+      }
+    }
+  };
 
   return (
     <Dialog open={!!imagePreview} onOpenChange={handleClose}>
@@ -177,11 +190,14 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
                            <div
                                 className="w-full h-full flex items-center justify-center"
                                 style={{ touchAction: 'none' }}
+                                onDoubleClick={handleDoubleClick}
                             >
                                 <Panzoom
+                                    ref={panzoomRef}
                                     minZoom={1}
                                     maxZoom={4}
                                     disableDoubleClickZoom
+                                    preventPan={(e, x, y) => panzoomRef.current?.getZoom() === 1}
                                 >
                                     <Image
                                         src={media.url}
