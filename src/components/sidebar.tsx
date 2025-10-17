@@ -32,6 +32,7 @@ import { Button } from './ui/button';
 import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
+import { ScrollArea } from './ui/scroll-area';
 
 type SidebarProps = {
   open: boolean
@@ -95,20 +96,22 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
                   </Badge>
               )}
         </div>
-        <div className="flex-1 space-y-2 p-4">
-          {menuItems.map((item, index) => (
-            item.show && (
-                <div key={index}>
-                <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => {
-                    onOpenChange(false);
-                }}>
-                    <item.icon className="h-6 w-6 mr-4 text-primary" />
-                    <span className="flex-1 font-medium">{item.label}</span>
-                </Link>
-                </div>
-            )
-          ))}
-        </div>
+        <ScrollArea className="flex-1">
+            <div className="space-y-2 p-4">
+            {menuItems.map((item, index) => (
+                item.show && (
+                    <div key={index}>
+                    <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => {
+                        onOpenChange(false);
+                    }}>
+                        <item.icon className="h-6 w-6 mr-4 text-primary" />
+                        <span className="flex-1 font-medium">{item.label}</span>
+                    </Link>
+                    </div>
+                )
+            ))}
+            </div>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
