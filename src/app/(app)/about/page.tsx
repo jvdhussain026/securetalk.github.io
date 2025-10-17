@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle, Construction } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle, Construction, BadgeCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -205,7 +205,10 @@ export default function AboutUsPage() {
                       <AvatarFallback>{developer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                     </Avatar>
                     <div>
-                      <h3 className="font-semibold">{developer.name}</h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{developer.name}</h3>
+                        {developer.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
+                      </div>
                       <p className="text-sm text-muted-foreground">Lead Developer</p>
                     </div>
                   </button>
