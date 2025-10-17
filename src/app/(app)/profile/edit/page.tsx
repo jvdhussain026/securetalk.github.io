@@ -11,7 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase'
-import { doc, getDocs, collection } from 'firebase/firestore'
+import { doc, getDocs, collection, writeBatch } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { ImageCropperDialog } from '@/components/image-cropper-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
@@ -66,38 +66,42 @@ export default function EditProfilePage() {
         profilePictureUrl: avatar,
     };
     
+    const batch = writeBatch(firestore);
+
     // 1. Update the user's own profile document
-    setDocumentNonBlocking(userDocRef, profileData, { merge: true });
+    batch.set(userDocRef, profileData, { merge: true });
 
     // 2. Propagate changes to all contacts who have this user in their list
     try {
-        // This is a simplified approach. In a real-world app, this would be a complex and potentially slow operation.
-        // A better approach is using cloud functions to fan-out writes.
-        // For this demo, we'll try to update contacts of contacts.
         const myContactsQuery = collection(firestore, 'users', user.uid, 'contacts');
         const querySnapshot = await getDocs(myContactsQuery);
         querySnapshot.forEach((contactDoc) => {
-            const contactId = contactDoc.id;
-            // This is the reference to this user's profile inside a contact's subcollection
-            const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
-            
-            setDocumentNonBlocking(otherUserContactRef, {
-                name: name,
-                avatar: avatar,
-                bio: bio,
-            }, { merge: true });
+            if (!contactDoc.data().isGroup) {
+                const contactId = contactDoc.id;
+                // This is the reference to this user's profile inside a contact's subcollection
+                const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
+                batch.update(otherUserContactRef, {
+                    name: name,
+                    avatar: avatar,
+                    bio: bio,
+                });
+            }
         });
+
+        await batch.commit();
+
+        toast({
+          title: 'Profile Updated',
+          description: 'Your changes have been saved successfully.',
+        });
+        setIsSaving(false);
+        setHasChanges(false);
+
     } catch (error) {
         console.error("Error propagating profile changes:", error);
-        // This part might fail if security rules don't allow it, but we won't block the UI
+        toast({ variant: 'destructive', title: 'Update Failed', description: 'Could not update all contact entries.'});
+        setIsSaving(false);
     }
-
-    toast({
-      title: 'Profile Updated',
-      description: 'Your changes have been saved successfully.',
-    });
-    setIsSaving(false);
-    setHasChanges(false);
   }
   
   const handleAvatarChange = () => {

@@ -12,26 +12,24 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 import React, { useState, useCallback } from 'react';
 import type { Contact } from '@/lib/types';
 import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
-import { useFirebase } from '@/firebase';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, serverTimestamp } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 
-// Hardcoded developer info to prevent Firestore read errors
-const developer: Contact = {
-    id: '4YaPPGcDw2NLe31LwT05h3TihTz1',
-    name: 'Javed Hussain',
-    avatar: 'https://images.unsplash.com/photo-1590086782792-42dd2350140d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxwZXJzb24lMjBwb3J0cmFpdHxlbnwwfHx8fDE3NTkxMDU0Nzh8MA&ixlib=rb-4.1.0&q=80&w=1080',
-    bio: 'Lead Developer of Secure Talk. Focused on building private, secure, and user-friendly communication tools.',
-    verified: true,
-    language: 'en',
-};
-
+const DEVELOPER_ID = '4YaPPGcDw2NLe31LwT05h3TihTz1';
 
 export default function AboutUsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { firestore, user: currentUser, userProfile } = useFirebase();
+
+  const developerDocRef = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return doc(firestore, 'users', DEVELOPER_ID);
+  }, [firestore]);
+
+  const { data: developer, isLoading: isDeveloperLoading } = useDoc<Contact>(developerDocRef);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDeveloper, setSelectedDeveloper] = useState<Contact | null>(null);
@@ -76,7 +74,6 @@ export default function AboutUsPage() {
         bio: devToConnect.bio,
         language: devToConnect.language || 'en',
         verified: devToConnect.verified,
-        liveTranslationEnabled: false,
         lastMessageTimestamp: currentTimestamp,
     }, { merge: true });
 
@@ -89,7 +86,6 @@ export default function AboutUsPage() {
         bio: userProfile.bio,
         language: userProfile.language || 'en',
         verified: userProfile.verified || false,
-        liveTranslationEnabled: false,
         lastMessageTimestamp: currentTimestamp,
     }, { merge: true });
     
@@ -195,19 +191,27 @@ export default function AboutUsPage() {
               <CardTitle>Meet The Team</CardTitle>
             </CardHeader>
             <CardContent>
-              <button 
-                className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
-                onClick={() => setSelectedDeveloper(developer)}
-              >
-                <Avatar className="w-12 h-12">
-                  <AvatarImage src={developer.profilePictureUrl || developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
-                  <AvatarFallback>{developer.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
-                <div>
-                  <h3 className="font-semibold">{developer.name}</h3>
-                  <p className="text-sm text-muted-foreground">Lead Developer</p>
-                </div>
-              </button>
+              {isDeveloperLoading ? (
+                  <div className="flex items-center justify-center p-4">
+                      <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+              ) : developer ? (
+                 <button 
+                    className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
+                    onClick={() => setSelectedDeveloper(developer)}
+                  >
+                    <Avatar className="w-12 h-12">
+                      <AvatarImage src={developer.profilePictureUrl || developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
+                      <AvatarFallback>{developer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <h3 className="font-semibold">{developer.name}</h3>
+                      <p className="text-sm text-muted-foreground">Lead Developer</p>
+                    </div>
+                  </button>
+              ) : (
+                  <p className="text-sm text-muted-foreground text-center">Could not load developer profile.</p>
+              )}
             </CardContent>
           </Card>
           
