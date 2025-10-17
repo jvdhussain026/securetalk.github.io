@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle, Construction, BadgeCheck } from 'lucide-react';
+import { ArrowLeft, CheckCircle, Shield, Zap, Heart, User, Sparkles, XCircle, DollarSign, Server, LoaderCircle, Construction, BadgeCheck, Users as UsersIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -12,24 +12,23 @@ import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 import React, { useState, useCallback } from 'react';
 import type { Contact } from '@/lib/types';
 import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
-import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { doc, serverTimestamp, collection } from 'firebase/firestore';
 import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { useRouter } from 'next/navigation';
 
-const DEVELOPER_ID = '4YaPPGcDw2NLe31LwT05h3TihTz1';
 
 export default function AboutUsPage() {
   const { toast } = useToast();
   const router = useRouter();
   const { firestore, user: currentUser, userProfile } = useFirebase();
 
-  const developerDocRef = useMemoFirebase(() => {
+  const teamQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return doc(firestore, 'users', DEVELOPER_ID);
+    return collection(firestore, 'team');
   }, [firestore]);
 
-  const { data: developer, isLoading: isDeveloperLoading } = useDoc<Contact>(developerDocRef);
+  const { data: team, isLoading: isTeamLoading } = useCollection<Contact>(teamQuery);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedDeveloper, setSelectedDeveloper] = useState<Contact | null>(null);
@@ -191,29 +190,37 @@ export default function AboutUsPage() {
               <CardTitle>Meet The Team</CardTitle>
             </CardHeader>
             <CardContent>
-              {isDeveloperLoading ? (
+              {isTeamLoading ? (
                   <div className="flex items-center justify-center p-4">
                       <LoaderCircle className="h-8 w-8 animate-spin text-primary" />
                   </div>
-              ) : developer ? (
-                 <button 
-                    className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
-                    onClick={() => setSelectedDeveloper(developer)}
-                  >
-                    <Avatar className="w-12 h-12">
-                      <AvatarImage src={developer.profilePictureUrl || developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{developer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{developer.name}</h3>
-                        {developer.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
-                      </div>
-                      <p className="text-sm text-muted-foreground">Lead Developer</p>
-                    </div>
-                  </button>
+              ) : team && team.length > 0 ? (
+                 <div className="space-y-2">
+                     {team.map((member) => (
+                         <button 
+                            key={member.id}
+                            className="flex items-center gap-4 w-full text-left p-2 rounded-lg hover:bg-accent"
+                            onClick={() => setSelectedDeveloper(member)}
+                          >
+                            <Avatar className="w-12 h-12">
+                              <AvatarImage src={member.avatar} alt={member.name} data-ai-hint="person portrait" />
+                              <AvatarFallback>{member.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold">{member.name}</h3>
+                                {member.verified && <BadgeCheck className="h-5 w-5 text-primary" />}
+                              </div>
+                              <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
+                            </div>
+                          </button>
+                     ))}
+                 </div>
               ) : (
-                  <p className="text-sm text-muted-foreground text-center">Could not load developer profile.</p>
+                  <div className="text-center py-4 text-muted-foreground">
+                    <UsersIcon className="mx-auto h-8 w-8 mb-2" />
+                    <p>The team is working behind the scenes!</p>
+                  </div>
               )}
             </CardContent>
           </Card>

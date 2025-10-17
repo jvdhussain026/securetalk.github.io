@@ -56,6 +56,21 @@
         "email"
       ]
     },
+    "TeamMember": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Team Member",
+      "type": "object",
+      "description": "Represents a member of the app's development team.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "avatar": { "type": "string", "format": "uri" },
+        "bio": { "type": "string" },
+        "role": { "type": "string" },
+        "verified": { "type": "boolean" }
+      },
+      "required": ["id", "name", "role"]
+    },
     "Chat": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Chat",
@@ -195,6 +210,14 @@
           "entityName": "User",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "Stores user profile information."
+        }
+      },
+      {
+        "path": "team/{userId}",
+        "definition": {
+          "entityName": "TeamMember",
+          "schema": { "$ref": "#/backend/entities/TeamMember" },
+          "description": "Stores profiles of team members to be shown on the About Us page."
         }
       },
       {

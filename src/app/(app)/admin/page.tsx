@@ -4,18 +4,21 @@
 import { useMemo, useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck, Copy, Check } from 'lucide-react';
+import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck, Copy, Check, UserPlus, X, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { AdminUserDetailSheet } from '@/components/admin-user-detail-sheet';
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { serverTimestamp } from 'firebase/firestore';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 
 function UserCard({ user, onUserSelect }: { user: Contact, onUserSelect: (user: Contact) => void }) {
     const [copied, setCopied] = useState(false);
@@ -56,6 +59,132 @@ function UserCard({ user, onUserSelect }: { user: Contact, onUserSelect: (user: 
     );
 }
 
+function TeamManagement({ allUsers }: { allUsers: Contact[] }) {
+    const { firestore } = useFirebase();
+    const { toast } = useToast();
+    const [isAdding, setIsAdding] = useState(false);
+    const [role, setRole] = useState('');
+    const [userToAdd, setUserToAdd] = useState<Contact | null>(null);
+
+    const teamQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'team');
+    }, [firestore]);
+    const { data: team, isLoading: isTeamLoading } = useCollection<Contact>(teamQuery);
+
+    const handleAddTeamMember = async () => {
+        if (!userToAdd || !role || !firestore) return;
+        setIsAdding(true);
+        const teamMemberRef = doc(firestore, 'team', userToAdd.id);
+        const teamMemberData = {
+            id: userToAdd.id,
+            name: userToAdd.name,
+            avatar: userToAdd.avatar || userToAdd.profilePictureUrl,
+            bio: userToAdd.bio,
+            role: role,
+            verified: userToAdd.verified,
+        };
+        try {
+            await setDocumentNonBlocking(teamMemberRef, teamMemberData, { merge: true });
+            toast({ title: `${userToAdd.name} added to the team!` });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Failed to add team member.' });
+        } finally {
+            setIsAdding(false);
+            setUserToAdd(null);
+            setRole('');
+        }
+    };
+
+    const handleRemoveTeamMember = async (memberId: string) => {
+        if (!firestore) return;
+        const teamMemberRef = doc(firestore, 'team', memberId);
+        try {
+            await deleteDocumentNonBlocking(teamMemberRef);
+            toast({ title: 'Team member removed.' });
+        } catch (error) {
+            toast({ variant: 'destructive', title: 'Failed to remove team member.' });
+        }
+    };
+    
+    const usersNotInTeam = useMemo(() => {
+        if (!allUsers || !team) return [];
+        const teamIds = new Set(team.map(m => m.id));
+        return allUsers.filter(u => !teamIds.has(u.id));
+    }, [allUsers, team]);
+
+
+    return (
+        <Card>
+            <CardHeader>
+                <CardTitle>Team Management</CardTitle>
+                <CardDescription>Manage users displayed on the 'About Us' page.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <h4 className="font-semibold mb-2">Current Team</h4>
+                {isTeamLoading ? <LoaderCircle className="animate-spin" /> : (
+                    <div className="space-y-2 mb-6">
+                        {team && team.length > 0 ? team.map(member => (
+                            <div key={member.id} className="flex items-center justify-between p-2 bg-muted rounded-lg">
+                                <div className="flex items-center gap-3">
+                                    <Avatar className="h-10 w-10">
+                                        <AvatarImage src={member.avatar} />
+                                        <AvatarFallback>{member.name.charAt(0)}</AvatarFallback>
+                                    </Avatar>
+                                    <div>
+                                        <p className="font-bold">{member.name}</p>
+                                        <p className="text-sm text-muted-foreground capitalize">{member.role}</p>
+                                    </div>
+                                </div>
+                                <Button variant="ghost" size="icon" onClick={() => handleRemoveTeamMember(member.id)}>
+                                    <X className="h-4 w-4 text-destructive" />
+                                </Button>
+                            </div>
+                        )) : <p className="text-sm text-muted-foreground">No team members assigned.</p>}
+                    </div>
+                )}
+                
+                 <h4 className="font-semibold mb-2">Add New Team Member</h4>
+                 <ScrollArea className="h-64 border rounded-md p-2">
+                     <div className="space-y-2">
+                        {usersNotInTeam.map(user => (
+                            <button key={user.id} onClick={() => setUserToAdd(user)} className="w-full flex items-center gap-3 p-2 rounded-md hover:bg-accent text-left">
+                                <Avatar className="h-10 w-10">
+                                    <AvatarImage src={user.avatar || user.profilePictureUrl} />
+                                    <AvatarFallback>{user.name.charAt(0)}</AvatarFallback>
+                                </Avatar>
+                                <p className="font-medium">{user.name}</p>
+                            </button>
+                        ))}
+                     </div>
+                 </ScrollArea>
+
+                <Dialog open={!!userToAdd} onOpenChange={(open) => !open && setUserToAdd(null)}>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Assign Role to {userToAdd?.name}</DialogTitle>
+                            <DialogDescription>Enter the role for this team member (e.g., Lead Developer).</DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label htmlFor="role">Role</Label>
+                            <Input id="role" value={role} onChange={(e) => setRole(e.target.value)} placeholder="e.g. Lead Developer" />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="ghost" onClick={() => setUserToAdd(null)}>Cancel</Button>
+                            <Button onClick={handleAddTeamMember} disabled={!role || isAdding}>
+                                {isAdding && <LoaderCircle className="animate-spin mr-2" />}
+                                Add to Team
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+            </CardContent>
+        </Card>
+    );
+}
+
+
 export default function AdminPage() {
   const { firestore, user: adminUser, userProfile: adminProfile } = useFirebase();
   const { toast } = useToast();
@@ -65,7 +194,6 @@ export default function AdminPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    // Fetch all users without server-side ordering
     return query(collection(firestore, 'users'));
   }, [firestore]);
 
@@ -76,20 +204,12 @@ export default function AdminPage() {
     return [...users].sort((a, b) => {
       const aDate = a.createdAt?.toDate();
       const bDate = b.createdAt?.toDate();
-
-      if (aDate && bDate) {
-        return bDate.getTime() - aDate.getTime(); // Newest first
-      }
-      if (aDate && !bDate) {
-        return -1; // a comes first
-      }
-      if (!aDate && bDate) {
-        return 1; // b comes first
-      }
-      return 0; // Both have no date
+      if (aDate && bDate) return bDate.getTime() - aDate.getTime();
+      if (aDate && !bDate) return -1;
+      if (!aDate && bDate) return 1;
+      return 0;
     });
   }, [users]);
-
 
   const totalUsers = useMemo(() => users?.length || 0, [users]);
 
@@ -170,6 +290,8 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
+        {adminProfile?.verified && users && <TeamManagement allUsers={users} />}
+        
         <Card>
           <CardHeader>
             <CardTitle>User List</CardTitle>
@@ -194,6 +316,7 @@ export default function AdminPage() {
             )}
           </CardContent>
         </Card>
+
       </main>
     </div>
     {selectedUser && (
