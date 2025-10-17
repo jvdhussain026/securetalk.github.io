@@ -36,7 +36,7 @@ export default function FeedbackPage() {
     formData.append('message', message);
 
     try {
-      const response = await fetch('https://formspree.io/f/myznnpjr', {
+      const response = await fetch('https://formspree.io/f/mwpryory', {
         method: 'POST',
         body: formData,
         headers: {
