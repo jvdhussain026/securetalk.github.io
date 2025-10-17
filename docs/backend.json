@@ -259,6 +259,15 @@
           "schema": { "$ref": "#/backend/entities/Message" },
           "description": "Stores messages within a group chat session."
         }
+      },
+      {
+        "path": "/admin/team",
+        "definition": {
+          "schema": {
+            "$ref": "#/backend/entities/TeamMember"
+          },
+          "description": "Page for managing team members."
+        }
       }
     ]
   }
