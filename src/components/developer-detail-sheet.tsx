@@ -39,8 +39,8 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
               
               <div className="flex flex-col items-center text-center p-4 pt-0">
                   <Avatar className="w-24 h-24 mb-4 border-4 border-primary/50">
-                      <AvatarImage src={developer.avatar} alt={developer.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{developer.name.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={developer.avatar || developer.profilePictureUrl} alt={developer.name} data-ai-hint="person portrait" />
+                      <AvatarFallback>{developer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-bold">{developer.name}</h2>
