@@ -2,16 +2,29 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff } from 'lucide-react';
+import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff, CheckCircle, Smartphone, UserCog, Languages as LanguagesIcon, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
-const FeatureItem = ({ icon: Icon, title, description, status }: { icon: React.ElementType, title: string, description: string, status: 'Simulated' | 'Not Implemented' | 'Partially Implemented' }) => {
-    const statusColors = {
-        'Simulated': 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
-        'Not Implemented': 'bg-red-500/20 text-red-600 dark:text-red-400',
-        'Partially Implemented': 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
+const FeatureItem = ({ icon: Icon, title, description, status }: { icon: React.ElementType, title: string, description: string, status: 'Simulated' | 'Not Implemented' | 'Partially Implemented' | 'Implemented' }) => {
+    const statusInfo = {
+        'Simulated': {
+            className: 'bg-yellow-500/20 text-yellow-600 dark:text-yellow-400',
+            label: 'Simulated'
+        },
+        'Not Implemented': {
+            className: 'bg-red-500/20 text-red-600 dark:text-red-400',
+            label: 'Not Implemented'
+        },
+        'Partially Implemented': {
+            className: 'bg-blue-500/20 text-blue-600 dark:text-blue-400',
+            label: 'Partially Implemented'
+        },
+        'Implemented': {
+            className: 'bg-green-500/20 text-green-600 dark:text-green-400',
+            label: 'Implemented'
+        },
     }
     return (
         <div className="flex items-start gap-4 p-3 border-b last:border-b-0">
@@ -19,8 +32,8 @@ const FeatureItem = ({ icon: Icon, title, description, status }: { icon: React.E
             <div className='flex-1'>
                 <h3 className="font-semibold">{title}</h3>
                 <p className="text-sm text-muted-foreground">{description}</p>
-                 <div className={`mt-2 inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${statusColors[status]}`}>
-                    {status}
+                 <div className={`mt-2 inline-block px-2 py-0.5 text-xs font-semibold rounded-full ${statusInfo[status].className}`}>
+                    {statusInfo[status].label}
                 </div>
             </div>
         </div>
@@ -30,7 +43,33 @@ const FeatureItem = ({ icon: Icon, title, description, status }: { icon: React.E
 export default function DeveloperPreviewPage() {
 
   const featureList = {
-      "Core Features": [
+      "Implemented Features": [
+          {
+              icon: MessageSquare,
+              title: "Real-time Messaging",
+              description: "Core 1-on-1 and group chat functionalities are live. You can send and receive text messages, and reply to messages.",
+              status: 'Implemented' as const
+          },
+          {
+              icon: UserCog,
+              title: "Profile & Connection Management",
+              description: "Users can create a profile, edit their name/bio/avatar, and connect with others via QR codes or links.",
+              status: 'Implemented' as const
+          },
+          {
+              icon: LanguagesIcon,
+              title: "Message Translation",
+              description: "On-demand translation of messages and live translation for specific contacts is functional.",
+              status: 'Implemented' as const
+          },
+          {
+              icon: Bell,
+              title: "Push Notifications",
+              description: "System-level push notifications for new messages are working for web.",
+              status: 'Implemented' as const
+          },
+      ],
+      "Partially Implemented & Simulated Features": [
           {
               icon: ShieldOff,
               title: "End-to-End Encryption",
@@ -49,7 +88,9 @@ export default function DeveloperPreviewPage() {
               description: "The 'Calls' tab displays a simulated call history based on your contacts. It is not a log of actual calls made in the app.",
               status: 'Simulated' as const
           },
-          {
+      ],
+      "Not Implemented": [
+           {
               icon: Video,
               title: "Video Uploads",
               description: "The app currently blocks the selection and upload of video files in chats.",
@@ -61,16 +102,12 @@ export default function DeveloperPreviewPage() {
               description: "The main search bars on the Chats and Calls pages are disabled and do not perform any search function.",
               status: 'Not Implemented' as const
           },
-      ],
-      "Settings & Privacy": [
            {
               icon: Settings,
               title: "Various Privacy Toggles",
               description: "Several options in Settings > Privacy (e.g., Read Receipts, Typing Indicators) are placeholders and do not currently affect functionality.",
               status: 'Not Implemented' as const
           },
-      ],
-      "Monetization & Support": [
            {
               icon: DollarSign,
               title: "Donation/Support Options",
@@ -121,28 +158,43 @@ export default function DeveloperPreviewPage() {
           </CardContent>
         </Card>
         
-        <Accordion type="single" collapsible defaultValue="item-1" className="w-full">
+        <Accordion type="multiple" defaultValue={["item-1", "item-2"]} className="w-full">
           <AccordionItem value="item-1">
-            <AccordionTrigger className="font-bold text-lg">Core Features</AccordionTrigger>
+            <AccordionTrigger className="font-bold text-lg text-green-600 dark:text-green-400">
+                <div className="flex items-center gap-2">
+                    <CheckCircle />
+                    Implemented Features
+                </div>
+            </AccordionTrigger>
             <AccordionContent className="p-0">
                <div className="divide-y">
-                {featureList["Core Features"].map(item => <FeatureItem key={item.title} {...item} />)}
+                {featureList["Implemented Features"].map(item => <FeatureItem key={item.title} {...item} />)}
               </div>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-2">
-            <AccordionTrigger className="font-bold text-lg">Settings & Privacy</AccordionTrigger>
+            <AccordionTrigger className="font-bold text-lg text-yellow-600 dark:text-yellow-400">
+                <div className="flex items-center gap-2">
+                    <Construction />
+                    Work in Progress
+                </div>
+            </AccordionTrigger>
             <AccordionContent className="p-0">
                <div className="divide-y">
-                {featureList["Settings & Privacy"].map(item => <FeatureItem key={item.title} {...item} />)}
+                {featureList["Partially Implemented & Simulated Features"].map(item => <FeatureItem key={item.title} {...item} />)}
                </div>
             </AccordionContent>
           </AccordionItem>
           <AccordionItem value="item-3">
-            <AccordionTrigger className="font-bold text-lg">Monetization & Support</AccordionTrigger>
+            <AccordionTrigger className="font-bold text-lg text-red-600 dark:text-red-400">
+                 <div className="flex items-center gap-2">
+                    <Smartphone />
+                    Not Implemented
+                </div>
+            </AccordionTrigger>
             <AccordionContent className="p-0">
                <div className="divide-y">
-                {featureList["Monetization & Support"].map(item => <FeatureItem key={item.title} {...item} />)}
+                {featureList["Not Implemented"].map(item => <FeatureItem key={item.title} {...item} />)}
                </div>
             </AccordionContent>
           </AccordionItem>
