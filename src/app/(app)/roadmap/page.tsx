@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff, CheckCircle, Smartphone, UserCog, Languages as LanguagesIcon, Bell } from 'lucide-react';
+import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff, CheckCircle, Smartphone, UserCog, Languages as LanguagesIcon, Bell, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -144,9 +144,9 @@ export default function DeveloperPreviewPage() {
           </CardHeader>
           <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <Button asChild>
-                <Link href="/feedback">
-                    <MessageSquare className="mr-2" />
-                    Give Feedback
+                <Link href="/feedback/suggest">
+                    <Lightbulb className="mr-2" />
+                    Suggest a Feature
                 </Link>
             </Button>
              <Button asChild variant="outline">

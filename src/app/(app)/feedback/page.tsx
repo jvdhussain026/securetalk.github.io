@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Send, MessageSquareWarning, Github, Mail, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Send, MessageSquareWarning, Github, Mail, MessageSquare, Lightbulb } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -85,15 +85,32 @@ export default function FeedbackPage() {
 
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <Card>
+            <CardHeader>
+                <CardTitle>Got a great idea?</CardTitle>
+                <CardDescription>
+                    We would love to hear it! Submit your feature suggestions via our dedicated form.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                <Button asChild className="w-full">
+                    <Link href="/feedback/suggest">
+                        <Lightbulb className="mr-2"/>
+                        Suggest a Feature
+                    </Link>
+                </Button>
+            </CardContent>
+        </Card>
+
+        <Card>
           <CardHeader>
             <div className="flex justify-center mb-4">
               <div className="p-3 bg-primary/10 rounded-full">
                 <MessageSquareWarning className="w-8 h-8 text-primary" />
               </div>
             </div>
-            <CardTitle className="text-center font-headline text-3xl">We value your feedback</CardTitle>
+            <CardTitle className="text-center font-headline text-3xl">Report an Issue</CardTitle>
             <CardDescription className="text-center">
-              Found a bug or have an idea for a new feature? Let us know!
+              Found a bug or something isn't working right? Let us know!
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -113,7 +130,7 @@ export default function FeedbackPage() {
                 <Textarea
                   id="message"
                   name="message"
-                  placeholder="Please describe the issue or your suggestion in detail."
+                  placeholder="Please describe the issue in detail."
                   rows={6}
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
@@ -121,7 +138,7 @@ export default function FeedbackPage() {
               </div>
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 <Send className="mr-2" />
-                {isSubmitting ? 'Sending...' : 'Send Feedback'}
+                {isSubmitting ? 'Sending...' : 'Send Bug Report'}
               </Button>
             </form>
           </CardContent>
@@ -138,7 +155,7 @@ export default function FeedbackPage() {
             <Button asChild className="w-full">
                 <Link href="/chats/4YaPPGcDw2NLe31LwT05h3TihTz1">
                     <MessageSquare className="mr-2" />
-                    Start a Chat with Us
+                    Chat with the Dev Team
                 </Link>
             </Button>
           </CardContent>
