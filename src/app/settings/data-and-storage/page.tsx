@@ -30,6 +30,8 @@ export default function DataAndStoragePage() {
   const router = useRouter();
   const [manageStorageOpen, setManageStorageOpen] = useState(false);
   const [clearCategory, setClearCategory] = useState<string | null>(null);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [isDevInfoOpen, setIsDevInfoOpen] = useState(false);
 
   // Placeholder data
   const storageData = {
@@ -61,8 +63,9 @@ export default function DataAndStoragePage() {
       }
   };
   
-  const handleResetData = () => {
-      toast({ title: 'This feature is not yet implemented.' });
+  const handleResetDataConfirm = () => {
+    setIsResetConfirmOpen(false);
+    setIsDevInfoOpen(true);
   }
 
   return (
@@ -204,7 +207,7 @@ export default function DataAndStoragePage() {
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
-                <AlertDialog>
+                <AlertDialog open={isResetConfirmOpen} onOpenChange={setIsResetConfirmOpen}>
                     <AlertDialogTrigger asChild>
                          <Button variant="destructive" className="w-full justify-between">
                             <span>Reset All App Data</span>
@@ -220,7 +223,7 @@ export default function DataAndStoragePage() {
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleResetData} className="bg-destructive hover:bg-destructive/90">Yes, delete everything</AlertDialogAction>
+                            <AlertDialogAction onClick={handleResetDataConfirm} className="bg-destructive hover:bg-destructive/90">Yes, delete everything</AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
@@ -245,6 +248,35 @@ export default function DataAndStoragePage() {
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
+      </AlertDialog>
+      
+      <AlertDialog open={isDevInfoOpen} onOpenChange={setIsDevInfoOpen}>
+          <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Feature Disabled for Your Safety</AlertDialogTitle>
+                <AlertDialogDescription className="space-y-4 pt-4 text-foreground">
+                    <p>The automated "Reset All App Data" feature is temporarily disabled. We are integrating Google Sign-In and manual backup options to allow for data recovery. Until then, this button is turned off to prevent accidental permanent data loss.</p>
+                    
+                    <div>
+                        <h4 className="font-bold">For Developers: Manual Data Deletion</h4>
+                        <p className="text-xs text-muted-foreground">If you are testing the app and need to clear data, you can do so manually:</p>
+                        <ul className="list-disc list-inside text-sm space-y-2 mt-2 pl-2">
+                           <li><span className="font-semibold">Android/PWA:</span> Long-press the app icon on your home screen, go to "App Info", then "Storage", and tap "Clear Data".</li>
+                           <li><span className="font-semibold">Browser:</span> Go to <code className="bg-muted px-1 rounded">securetalkbeta.vercel.app</code>, click on the site information icon (usually a lock) in the address bar, go to "Cookies and site data", and clear the data from there.</li>
+                        </ul>
+                    </div>
+
+                    <div className="p-3 bg-destructive/10 text-destructive rounded-lg border border-destructive/20 text-sm">
+                        <p className="font-bold">Warning:</p>
+                        <p>This action is irreversible and will delete your account, contacts, chats, and settings. There is no in-app way to recover this data. If you lost important data, please contact the developer via the chat already in your contact list.</p>
+                    </div>
+
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                  <AlertDialogAction onClick={() => setIsDevInfoOpen(false)}>I Understand</AlertDialogAction>
+              </AlertDialogFooter>
+          </AlertDialogContent>
       </AlertDialog>
     </>
   );
