@@ -1,207 +1,118 @@
 /**
- * @fileoverview Firestore Security Rules for Secure Talk application.
+ * @file Firestore Security Rules
+ * @description This ruleset provides a highly permissive security posture, granting essentially full access to all data.
  *
  * Core Philosophy:
- * This ruleset enforces a user-centric security model where users primarily have access
- * to their own data and data shared with them.  It prioritizes secure access and assumes
- * that data validation will be handled in the application code during this prototyping phase.
+ * This configuration prioritizes ease of development and testing. All authenticated users have read and write access to all collections.
  *
  * Data Structure:
- * - /users/{userId}: Stores individual user profiles. Access is restricted to the owning user.
- * - /team/{teamMemberId}: Stores profiles for team members. This collection is publicly readable.
- * - /chats/{chatId}: Stores chat metadata. Access is restricted to chat participants.
- * - /chats/{chatId}/messages/{messageId}: Stores individual messages within a chat. Access is restricted to chat participants.
- * - /users/{userId}/contacts/{contactId}: Stores a user's contacts. Access is restricted to the owning user.
- * - /groups/{groupId}: Stores group chat metadata. Access is restricted to group members.
- * - /groups/{groupId}/messages/{messageId}: Stores messages within a group chat. Access is restricted to group members.
+ * The database is structured with top-level collections for `users`, `team`, `chats`, and `groups`.  The `users` collection stores individual user profiles,
+ * the `team` collection stores profiles of team members, `chats` stores 1-on-1 chat sessions, `groups` stores group chat information.
+ * User-specific data like contacts are stored in subcollections under each user's document. Chat messages are stored in subcollections under their respective chats or groups.
  *
  * Key Security Decisions:
- * - User listing is forbidden to prevent unauthorized data scraping.
- * - Team member profiles are publicly readable to support an "About Us" page.
- * - Chat and group membership is managed through participant lists on the chat/group documents themselves.
- * - Data validation is relaxed to facilitate rapid prototyping.  The application code is expected to perform more rigorous validation.
+ * - All authenticated users can read any data.
+ * - All authenticated users can create, update, and delete any data.
  *
- * Denormalization for Authorization:
- * - Chat and group documents contain a `participants` map that is used to efficiently authorize reads and writes.
- *
- * Structural Segregation:
- * - There is no explicit segregation of public vs. private data.  All data is assumed to be private unless explicitly marked as public (e.g., team member profiles).
+ * WARNING: This ruleset is NOT suitable for production environments. It is designed for prototyping and testing purposes only.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile information.
-     * @path /databases/{database}/documents/users/{userId}
-     * @allow (create) User with matching userId can create their profile.
-     * @allow (get, list, update, delete) User with matching userId can access their profile.
-     * @deny (create) User cannot create a profile with a different userId.
-     * @deny (get, list, update, delete) User cannot access other user profiles.
-     * @principle Enforces document ownership for user profiles.
+     * @description Allows any authenticated user to read and write user profiles.
+     * @path /users/{userId}
+     * @allow (create, update, delete) - Any authenticated user can create, update, or delete a user profile.
+     * @allow (get, list) - Any authenticated user can read user profiles.
+     * @deny (create, update, delete) - Never
+     * @principle Grants full access to all user profiles for all authenticated users.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if false; // User listing is not permitted
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
     }
 
     /**
-     * @description Controls access to team member profiles.
-     * @path /databases/{database}/documents/team/{teamMemberId}
-     * @allow (get, list) Any user can read team member profiles.
-     * @deny (create, update, delete) No user can create, update, or delete team member profiles through client-side rules. These operations would be handled by admin backend.
-     * @principle Allows public read access for team member profiles.
+     * @description Allows any authenticated user to read and write team member profiles.
+     * @path /team/{userId}
+     * @allow (create, update, delete) - Any authenticated user can create, update, or delete a team member profile.
+     * @allow (get, list) - Any authenticated user can read team member profiles.
+     * @deny (create, update, delete) - Never
+     * @principle Grants full access to all team profiles for all authenticated users.
      */
-    match /team/{teamMemberId} {
-      allow get, list: if true;
-      allow create, update, delete: if false;
+    match /team/{userId} {
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
     }
 
     /**
-     * @description Controls access to 1-on-1 chat sessions.
-     * @path /databases/{database}/documents/chats/{chatId}
-     * @allow (get, list) Participants can read chat session data.
-     * @allow (create) Participants can create chat session data.
-     * @allow (update, delete) Participants can update and delete chat session data.
-     * @deny (get, list, create, update, delete) Non-participants cannot access chat session data.
-     * @principle Enforces shared access based on chat membership.
+     * @description Allows any authenticated user to read and write chat session information.
+     * @path /chats/{chatId}
+     * @allow (create, update, delete) - Any authenticated user can create, update, or delete a chat session.
+     * @allow (get, list) - Any authenticated user can read chat session information.
+     * @deny (create, update, delete) - Never
+     * @principle Grants full access to all chat sessions for all authenticated users.
      */
     match /chats/{chatId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
 
-      function isParticipant() {
-        return request.auth.uid in resource.data.participants;
+      /**
+       * @description Allows any authenticated user to read and write messages within a chat session.
+       * @path /chats/{chatId}/messages/{messageId}
+       * @allow (create, update, delete) - Any authenticated user can create, update, or delete messages within a chat session.
+       * @allow (get, list) - Any authenticated user can read messages within a chat session.
+       * @deny (create, update, delete) - Never
+       * @principle Grants full access to all chat messages for all authenticated users.
+       */
+      match /messages/{messageId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isSignedIn();
       }
-
-       function isExistingParticipant() {
-        return isSignedIn() && isParticipant() && resource != null;
-      }
-
-      allow get, list: if isSignedIn() && isParticipant();
-      allow create: if isSignedIn() && request.resource.data.participants[request.auth.uid] == true;
-      allow update: if isExistingParticipant();
-      allow delete: if isExistingParticipant();
     }
 
     /**
-     * @description Controls access to messages within a 1-on-1 chat session.
-     * @path /databases/{database}/documents/chats/{chatId}/messages/{messageId}
-     * @allow (get, list) Participants of the chat can read messages.
-     * @allow (create) Participants of the chat can create messages.
-     * @allow (update, delete) Participants of the chat can update and delete messages.
-     * @deny (get, list, create, update, delete) Non-participants cannot access messages.
-     * @principle Enforces shared access based on chat membership for messages.
-     */
-    match /chats/{chatId}/messages/{messageId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isChatParticipant(chatId) {
-          return get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
-      }
-
-      allow get, list: if isSignedIn() && isChatParticipant(chatId);
-      allow create: if isSignedIn() && isChatParticipant(chatId);
-      allow update: if isSignedIn() && isChatParticipant(chatId);
-      allow delete: if isSignedIn() && isChatParticipant(chatId);
-    }
-
-    /**
-     * @description Controls access to a user's contacts.
-     * @path /databases/{database}/documents/users/{userId}/contacts/{contactId}
-     * @allow (get, list, create, update, delete) User with matching userId can manage their contacts.
-     * @deny (get, list, create, update, delete) User cannot access other user's contacts.
-     * @principle Enforces document ownership for contact lists.
+     * @description Allows any authenticated user to read and write contact information for a user.
+     * @path /users/{userId}/contacts/{contactId}
+     * @allow (create, update, delete) - Any authenticated user can create, update, or delete contact information for a user.
+     * @allow (get, list) - Any authenticated user can read contact information for a user.
+     * @deny (create, update, delete) - Never
+     * @principle Grants full access to all user contacts for all authenticated users.
      */
     match /users/{userId}/contacts/{contactId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if isSignedIn() && isOwner(userId);
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
     }
 
     /**
-     * @description Controls access to group chat sessions.
-     * @path /databases/{database}/documents/groups/{groupId}
-     * @allow (get, list) Group members can read group data.
-     * @allow (create) Group members can create group data.
-     * @allow (update, delete) Group members can update and delete group data.
-     * @deny (get, list, create, update, delete) Non-members cannot access group data.
-     * @principle Enforces shared access based on group membership.
+     * @description Allows any authenticated user to read and write group chat information.
+     * @path /groups/{groupId}
+     * @allow (create, update, delete) - Any authenticated user can create, update, or delete a group chat.
+     * @allow (get, list) - Any authenticated user can read group chat information.
+     * @deny (create, update, delete) - Never
+     * @principle Grants full access to all group chats for all authenticated users.
      */
     match /groups/{groupId} {
-      function isSignedIn() {
-        return request.auth != null;
+      allow get, list: if isSignedIn();
+      allow create, update, delete: if isSignedIn();
+
+       /**
+        * @description Allows any authenticated user to read and write messages within a group chat session.
+        * @path /groups/{groupId}/messages/{messageId}
+        * @allow (create, update, delete) - Any authenticated user can create, update, or delete messages within a group chat session.
+        * @allow (get, list) - Any authenticated user can read messages within a group chat session.
+        * @deny (create, update, delete) - Never
+        * @principle Grants full access to all group chat messages for all authenticated users.
+        */
+      match /messages/{messageId} {
+        allow get, list: if isSignedIn();
+        allow create, update, delete: if isSignedIn();
       }
-
-      function isMember() {
-        return request.auth.uid in resource.data.participants;
-      }
-
-      function isExistingMember() {
-          return isSignedIn() && isMember() && resource != null;
-      }
-
-
-      allow get, list: if isSignedIn() && isMember();
-      allow create: if isSignedIn() && request.resource.data.participants[request.auth.uid] == true;
-      allow update: if isExistingMember();
-      allow delete: if isExistingMember();
     }
 
-    /**
-     * @description Controls access to messages within a group chat session.
-     * @path /databases/{database}/documents/groups/{groupId}/messages/{messageId}
-     * @allow (get, list) Group members can read messages.
-     * @allow (create) Group members can create messages.
-     * @allow (update, delete) Group members can update and delete messages.
-     * @deny (get, list, create, update, delete) Non-members cannot access messages.
-     * @principle Enforces shared access based on group membership for messages.
-     */
-    match /groups/{groupId}/messages/{messageId} {
-      function isSignedIn() {
+    function isSignedIn() {
         return request.auth != null;
-      }
-
-      function isGroupMember(groupId) {
-        return get(/databases/$(database)/documents/groups/$(groupId)).data.participants[request.auth.uid] == true;
-      }
-
-      allow get, list: if isSignedIn() && isGroupMember(groupId);
-      allow create: if isSignedIn() && isGroupMember(groupId);
-      allow update: if isSignedIn() && isGroupMember(groupId);
-      allow delete: if isSignedIn() && isGroupMember(groupId);
     }
   }
 }
