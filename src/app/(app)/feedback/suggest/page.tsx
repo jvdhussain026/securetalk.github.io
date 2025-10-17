@@ -36,7 +36,7 @@ export default function SuggestFeaturePage() {
 
     try {
       // NOTE: Using a different Formspree endpoint for suggestions
-      const response = await fetch('https://formspree.io/f/mvojoyyl', {
+      const response = await fetch('https://formspree.io/f/mkgqyrqp', {
         method: 'POST',
         body: formData,
         headers: {
