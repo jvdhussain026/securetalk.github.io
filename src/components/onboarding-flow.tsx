@@ -8,12 +8,12 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send } from 'lucide-react';
+import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send, Eye, EyeOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, collection, getDocs, writeBatch, serverTimestamp, query, where, updateDoc } from 'firebase/firestore';
+import { doc, setDoc, collection, getDocs, writeBatch, serverTimestamp, query, where, updateDoc, getDoc } from 'firebase/firestore';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import { Card } from './ui/card';
 
@@ -80,6 +80,19 @@ const WelcomeStep = ({ onNavigate, isSigningIn }: { onNavigate: (target: 'create
     );
 };
 
+function PasswordRequirement({ meets, text }: { meets: boolean; text: string }) {
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      {meets ? (
+        <Check className="h-4 w-4 text-green-500" />
+      ) : (
+        <X className="h-4 w-4 text-destructive" />
+      )}
+      <span className={meets ? 'text-green-500' : 'text-destructive'}>{text}</span>
+    </div>
+  );
+}
+
 const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: string, fullName: string, password: string) => void; onBack: () => void; isSaving: boolean; }) => {
     const { firestore } = useFirebase();
     const { toast } = useToast();
@@ -91,7 +104,18 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     const [isChecking, setIsChecking] = useState(false);
     const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
-    const [passwordError, setPasswordError] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    
+    const [passLength, setPassLength] = useState(false);
+    const [passChars, setPassChars] = useState(false);
+    const [passMatch, setPassMatch] = useState(false);
+
+    useEffect(() => {
+        setPassLength(password.length >= 8);
+        setPassChars(/\d/.test(password) && /[a-zA-Z]/.test(password));
+        setPassMatch(password !== '' && password === confirmPassword);
+    }, [password, confirmPassword]);
 
     const checkUsernameAvailability = async () => {
         if (username.length < 3) {
@@ -101,35 +125,18 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
         setIsChecking(true);
         setIsAvailable(null);
         const usernameRef = doc(firestore, 'usernames', username.toLowerCase());
-        const usernameDoc = await getDocumentNonBlocking(usernameRef);
-        setIsAvailable(!usernameDoc?.exists());
+        const usernameDoc = await getDoc(usernameRef);
+        setIsAvailable(!usernameDoc.exists());
         setIsChecking(false);
     };
     
-    const validatePassword = () => {
-        if (password.length < 8) {
-            setPasswordError('Password must be at least 8 characters.');
-            return false;
-        }
-        if (!/\d/.test(password) || !/[a-zA-Z]/.test(password)) {
-            setPasswordError('Password must contain letters and numbers.');
-            return false;
-        }
-        if (password !== confirmPassword) {
-            setPasswordError('Passwords do not match.');
-            return false;
-        }
-        setPasswordError('');
-        return true;
-    }
+    const isFormValid = isAvailable === true && fullName.length >= 2 && passLength && passChars && passMatch;
     
     const handleNextClick = () => {
-        if(validatePassword() && isAvailable) {
+        if(isFormValid) {
             onNext(username, fullName, password);
-        } else if (!isAvailable) {
-            toast({ variant: 'destructive', title: 'Username is taken.'});
         } else {
-             toast({ variant: 'destructive', title: 'Please fix the errors.'});
+             toast({ variant: 'destructive', title: 'Please complete all fields correctly.'});
         }
     }
 
@@ -155,14 +162,29 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="password">Password</Label>
-                    <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <div className="relative">
+                        <Input id="password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)}>
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                    <div className="relative">
+                        <Input id="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+                         <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowConfirmPassword(!showConfirmPassword)}>
+                            {showConfirmPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                 </div>
-                {passwordError && <p className="text-sm text-destructive">{passwordError}</p>}
-                <Button size="lg" className="w-full" onClick={handleNextClick} disabled={!isAvailable || fullName.length < 2 || isSaving}>
+                <div className="space-y-1 pt-2">
+                    <PasswordRequirement meets={isAvailable === true} text="Username is available" />
+                    <PasswordRequirement meets={passLength} text="At least 8 characters" />
+                    <PasswordRequirement meets={passChars} text="Contains letters and numbers" />
+                    <PasswordRequirement meets={passMatch} text="Passwords match" />
+                </div>
+                <Button size="lg" className="w-full" onClick={handleNextClick} disabled={!isFormValid || isSaving}>
                     {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : <ArrowRight className="mr-2" />}
                     {isSaving ? 'Creating Account...' : 'Continue'}
                 </Button>
@@ -175,6 +197,7 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
 const RecoverAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: string, password: string) => void; onBack: () => void; isSaving: boolean; }) => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     
     return (
         <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
@@ -187,7 +210,12 @@ const RecoverAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: s
                 </div>
                  <div className="space-y-2">
                     <Label htmlFor="recover-password">Password</Label>
-                    <Input id="recover-password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                    <div className="relative">
+                        <Input id="recover-password" type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} />
+                        <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)}>
+                            {showPassword ? <EyeOff /> : <Eye />}
+                        </Button>
+                    </div>
                 </div>
                 <Button size="lg" className="w-full" onClick={() => onNext(username, password)} disabled={username.length < 3 || password.length < 8 || isSaving}>
                     {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : <LogIn className="mr-2" />}
@@ -276,7 +304,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
 
             const batch = writeBatch(firestore);
             
-            // Create user document
             const userRef = doc(firestore, 'users', newUser.uid);
             const profileData = {
                 id: newUser.uid,
@@ -291,11 +318,9 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             };
             batch.set(userRef, profileData);
 
-            // Create username document for uniqueness check
             const usernameRef = doc(firestore, 'usernames', username.toLowerCase());
             batch.set(usernameRef, { uid: newUser.uid });
 
-            // Add dev contact
             const devId = '4YaPPGcDw2NLe31LwT05h3TihTz1';
             const devDocRef = doc(firestore, 'users', devId);
             const devDoc = await getDocumentNonBlocking(devDocRef);
