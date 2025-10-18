@@ -6,7 +6,7 @@ import * as React from "react";
 import Panzoom from "react-easy-panzoom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 
 export type ProfileAvatarPreviewState = {
   avatarUrl: string;
@@ -31,7 +31,6 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // This is the critical change: stop the event from bubbling up to other overlays.
     e.stopPropagation();
     handleClose();
   };
@@ -66,7 +65,7 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.8 }}
                 className="w-[90vw] h-[90vw] max-w-md max-h-md rounded-full overflow-hidden"
-                 onClick={(e) => e.stopPropagation()} // Stop click on image from closing modal
+                 onClick={(e) => e.stopPropagation()}
             >
                 <div
                     className="w-full h-full flex items-center justify-center bg-black"
@@ -97,10 +96,10 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
             <Button 
                 variant="ghost" 
                 size="icon" 
-                className="absolute top-4 right-4 text-white h-12 w-12 rounded-full bg-white/10 hover:bg-white/20"
+                className="absolute top-4 left-4 text-white h-12 w-12 rounded-full bg-white/10 hover:bg-white/20"
                 onClick={handleClose}
             >
-                <X className="h-7 w-7" />
+                <ArrowLeft className="h-7 w-7" />
             </Button>
         </motion.div>
       )}
