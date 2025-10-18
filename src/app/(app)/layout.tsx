@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useContext } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp as firestoreServerTimestamp, setDoc } from 'firebase/firestore'
@@ -156,13 +156,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setAvatarPreview(preview);
   }
 
+  const childrenWithProps = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      // @ts-ignore
+      return React.cloneElement(child, { openSidebar });
+    }
+    return child;
+  });
+
   return (
     <AppContext.Provider value={{ setAvatarPreview: handleSetAvatarPreview, isAvatarPreviewOpen }}>
         <div className={cn("h-full md:max-w-md md:mx-auto md:border-x")}>
-             {React.cloneElement(children as React.ReactElement, { openSidebar })}
+             {childrenWithProps}
         </div>
         <Sidebar 
-          open={isSidebarOpen && !isAvatarPreviewOpen} 
+          open={isSidebarOpen} 
           onOpenChange={setIsSidebarOpen}
         />
         <ProfileAvatarPreview
