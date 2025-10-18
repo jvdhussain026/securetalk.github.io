@@ -29,6 +29,12 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
   const handleClose = () => {
     onOpenChange(false);
   };
+
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    // This is the critical change: stop the event from bubbling up to other overlays.
+    e.stopPropagation();
+    handleClose();
+  };
   
   const handleDoubleClick = () => {
     if (panzoomRef.current) {
@@ -44,11 +50,6 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
     setZoom(data.scale);
   };
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    // This event is for the main container, so clicking it closes the preview.
-    handleClose();
-  };
-
 
   return (
     <AnimatePresence>
@@ -57,7 +58,7 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center"
+          className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center"
           onClick={handleOverlayClick}
         >
             <motion.div 
@@ -65,7 +66,7 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.8 }}
                 className="w-[90vw] h-[90vw] max-w-md max-h-md rounded-full overflow-hidden"
-                 onClick={(e) => e.stopPropagation()} // Stop click from bubbling to overlay and closing
+                 onClick={(e) => e.stopPropagation()} // Stop click on image from closing modal
             >
                 <div
                     className="w-full h-full flex items-center justify-center bg-black"

@@ -1,5 +1,4 @@
 
-
 "use client"
 
 import * as React from "react"
@@ -60,7 +59,8 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
   const displayName = contact.displayName || contact.name;
   const realName = contact.name;
 
-  const handleAvatarClick = (url: string) => {
+  const handleAvatarClick = (e: React.MouseEvent, url: string) => {
+    e.stopPropagation();
     setAvatarPreview({ avatarUrl: url, name: displayName });
   };
   
@@ -149,7 +149,7 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
               <Drawer.Description className="sr-only">Detailed information and shared media for {displayName}.</Drawer.Description>
               <ScrollArea className="h-[calc(100vh_-_150px)] md:h-[calc(100vh_-_174px)]">
                 <div className="flex flex-col items-center text-center p-4">
-                  <button onClick={() => handleAvatarClick(avatarUrl)}>
+                  <button onClick={(e) => handleAvatarClick(e, avatarUrl)}>
                     <Avatar className="w-24 h-24 mb-4">
                         <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
                         <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
@@ -270,7 +270,9 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
     </Drawer.Root>
      <ProfileAvatarPreview
         preview={avatarPreview}
-        onOpenChange={(open) => !open && setAvatarPreview(null)}
+        onOpenChange={(isOpen) => {
+            if (!isOpen) setAvatarPreview(null);
+        }}
       />
     </>
   )

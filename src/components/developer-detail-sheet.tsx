@@ -1,6 +1,7 @@
 
 "use client"
 
+import * as React from "react"
 import { Drawer } from "vaul"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -18,6 +19,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from "./profile-avatar-preview"
+
 
 type DeveloperDetailSheetProps = {
   open: boolean;
@@ -27,7 +30,17 @@ type DeveloperDetailSheetProps = {
 };
 
 export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect }: DeveloperDetailSheetProps) {
+  const [avatarPreview, setAvatarPreview] = React.useState<ProfileAvatarPreviewState>(null);
+  
+  const handleAvatarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (developer.avatar || developer.profilePictureUrl) {
+      setAvatarPreview({ avatarUrl: developer.avatar || developer.profilePictureUrl || '', name: developer.name });
+    }
+  };
+
   return (
+      <>
     <Drawer.Root open={open} onOpenChange={onOpenChange} snapPoints={[0.6, 1]} modal={true}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
@@ -38,10 +51,12 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
               <Drawer.Title className="sr-only">Developer Details: {developer.name}</Drawer.Title>
               
               <div className="flex flex-col items-center text-center p-4 pt-0">
-                  <Avatar className="w-24 h-24 mb-4 border-4 border-primary/50">
-                      <AvatarImage src={developer.avatar || developer.profilePictureUrl} alt={developer.name} data-ai-hint="person portrait" />
-                      <AvatarFallback>{developer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                  </Avatar>
+                  <button onClick={handleAvatarClick}>
+                    <Avatar className="w-24 h-24 mb-4 border-4 border-primary/50">
+                        <AvatarImage src={developer.avatar || developer.profilePictureUrl} alt={developer.name} data-ai-hint="person portrait" />
+                        <AvatarFallback>{developer.name?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    </Avatar>
+                  </button>
                   <div className="flex items-center gap-2">
                     <h2 className="text-2xl font-bold">{developer.name}</h2>
                     {developer.verified && <BadgeCheck className="h-6 w-6 text-primary" />}
@@ -87,5 +102,12 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
+     <ProfileAvatarPreview
+        preview={avatarPreview}
+        onOpenChange={(isOpen) => {
+            if (!isOpen) setAvatarPreview(null);
+        }}
+      />
+    </>
   )
 }

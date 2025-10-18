@@ -63,7 +63,8 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Shield, label: 'Admin', href: '/admin', show: userProfile?.verified },
   ]
   
-  const handleAvatarClick = () => {
+  const handleAvatarClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (userProfile?.profilePictureUrl) {
       setAvatarPreview({ avatarUrl: userProfile.profilePictureUrl, name: userProfile.name });
     }
@@ -117,7 +118,9 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
     <ProfileAvatarPreview
         preview={avatarPreview}
-        onOpenChange={(open) => !open && setAvatarPreview(null)}
+        onOpenChange={(isOpen) => {
+            if (!isOpen) setAvatarPreview(null);
+        }}
       />
     </>
   )
