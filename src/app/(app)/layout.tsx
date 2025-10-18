@@ -10,7 +10,6 @@ import { useToast } from '@/hooks/use-toast'
 import type { Contact, Message } from '@/lib/types'
 import { playTone, tones } from '@/lib/audio'
 import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
-import { Sidebar } from '@/components/sidebar'
 
 // Create a context to share the avatar preview state
 export const AppContext = React.createContext<{
@@ -30,7 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const isAvatarPreviewOpen = !!avatarPreview;
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -143,36 +142,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
     });
   }, [contacts, pathname, toast, user, firestore]);
-
-  const openSidebar = () => {
-    if (isAvatarPreviewOpen) return;
-    setIsSidebarOpen(true);
-  }
   
   const handleSetAvatarPreview = (preview: ProfileAvatarPreviewState) => {
-      if (preview) {
-        setIsSidebarOpen(false); // Close sidebar when opening avatar preview
-      }
       setAvatarPreview(preview);
   }
 
-  const childrenWithProps = React.Children.map(children, child => {
-    if (React.isValidElement(child)) {
-      // @ts-ignore - Injecting props into child component
-      return React.cloneElement(child, { openSidebar });
-    }
-    return child;
-  });
 
   return (
     <AppContext.Provider value={{ setAvatarPreview: handleSetAvatarPreview, isAvatarPreviewOpen }}>
         <div className={cn("h-full md:max-w-md md:mx-auto md:border-x")}>
-             {childrenWithProps}
+             {children}
         </div>
-        <Sidebar 
-          open={isSidebarOpen} 
-          onOpenChange={setIsSidebarOpen}
-        />
         <ProfileAvatarPreview
             preview={avatarPreview}
             onOpenChange={(isOpen) => {

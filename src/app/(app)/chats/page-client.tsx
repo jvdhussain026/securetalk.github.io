@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -13,14 +12,11 @@ import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Sidebar } from '@/components/sidebar'
 import { ClientOnly } from '@/components/client-only'
 import { useToast } from '@/hooks/use-toast'
 import { NavLink } from '@/components/nav-link'
 import { cn } from '@/lib/utils'
 import { ComingSoonDialog } from '@/components/coming-soon-dialog'
-import { ImagePreviewDialog } from '@/components/image-preview-dialog'
-import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { OnboardingFlow } from '@/components/onboarding-flow'
 import { ContactOptions } from '@/components/contact-options'
 import { DeleteChatDialog } from '@/components/delete-chat-dialog'
@@ -38,8 +34,7 @@ import { EditContactDialog } from '@/components/edit-contact-dialog'
 import { ChatListItem } from '@/components/chat-list-item'
 
 
-export default function ChatsPage() {
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+export default function ChatsPageClient({ openSidebar }: { openSidebar: () => void }) {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [isOnboardingComplete, setIsOnboardingComplete] = useState(true);
@@ -133,9 +128,11 @@ export default function ChatsPage() {
     if (!contacts) return [];
 
     return [...contacts]
-      .filter(contact =>
-        (contact.displayName || contact.name).toLowerCase().includes(searchQuery.toLowerCase()) && !contact.isArchived
-      )
+      .filter(contact => {
+          const nameToSearch = contact.displayName || contact.name;
+          if (!nameToSearch) return false; // Defensive check
+          return nameToSearch.toLowerCase().includes(searchQuery.toLowerCase()) && !contact.isArchived
+      })
       .sort((a, b) => {
         // Pinned contacts come first
         if (a.isPinned && !b.isPinned) return -1;
@@ -279,10 +276,9 @@ export default function ChatsPage() {
 
   return (
     <>
-      <Sidebar open={isSidebarOpen} onOpenChange={setIsSidebarOpen} />
       <div className="flex flex-col h-full">
         <header id="header" className="flex items-center gap-2 p-4 border-b shrink-0">
-          <Button id="sidebar-button" variant="ghost" size="icon" className="h-11 w-11" onClick={() => setIsSidebarOpen(true)}>
+          <Button id="sidebar-button" variant="ghost" size="icon" className="h-11 w-11" onClick={openSidebar}>
             <User className="h-7 w-7" />
             <span className="sr-only">Open sidebar</span>
           </Button>
@@ -396,5 +392,3 @@ export default function ChatsPage() {
     </>
   )
 }
-
-    
