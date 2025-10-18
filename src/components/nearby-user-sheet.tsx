@@ -31,6 +31,7 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
   
   const handleAvatarClick = () => {
     setAvatarPreview({ avatarUrl: user.avatar, name: user.name });
+    onOpenChange(false);
   };
 
   const getButtonContent = () => {

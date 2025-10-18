@@ -136,14 +136,14 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
             onTouchMove={handleTouchEnd}
         >
             <div className="relative">
-                <div onClick={handleAvatarClick} className="cursor-pointer">
+                <button onClick={handleAvatarClick} className="cursor-pointer">
                     <Avatar className={cn("h-12 w-12", contact.isGroup && "rounded-lg")}>
                         <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
                         <AvatarFallback className={cn(contact.isGroup ? "bg-muted text-muted-foreground" : "bg-muted")}>
                             {contact.isGroup ? <Users className="h-6 w-6"/> : displayName.charAt(0)}
                         </AvatarFallback>
                     </Avatar>
-                </div>
+                </button>
             </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">

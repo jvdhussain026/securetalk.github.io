@@ -12,13 +12,13 @@ import Image from "next/image"
 import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe, Shield, Edit, Save, X, LoaderCircle } from "lucide-react"
 
 import type { Contact, Message } from "@/lib/types"
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { Badge } from "./ui/badge"
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase"
 import { updateDocumentNonBlocking } from "@/firebase"
 import { doc } from 'firebase/firestore'
 import { Input } from "./ui/input"
 import { useToast } from "@/hooks/use-toast"
+import { AppContext } from "@/app/(app)/layout"
 
 
 type UserDetailsSheetProps = {
@@ -38,7 +38,7 @@ const EmptyState = ({ icon: Icon, text }: { icon: React.ElementType, text: strin
 export function UserDetailsSheet({ open, onOpenChange, contact, messages }: UserDetailsSheetProps) {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
-  const [avatarPreview, setAvatarPreview] = React.useState<ProfileAvatarPreviewState>(null);
+  const { setAvatarPreview } = React.useContext(AppContext);
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [editedName, setEditedName] = React.useState(contact.displayName || contact.name);
@@ -59,9 +59,12 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
   const displayName = contact.displayName || contact.name;
   const realName = contact.name;
 
-  const handleAvatarClick = (e: React.MouseEvent, url: string) => {
+  const handleAvatarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    setAvatarPreview({ avatarUrl: url, name: displayName });
+    if(avatarUrl) {
+        setAvatarPreview({ avatarUrl, name: displayName });
+        onOpenChange(false); // Close the sheet
+    }
   };
   
   const handleSaveName = () => {
@@ -149,7 +152,7 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
               <Drawer.Description className="sr-only">Detailed information and shared media for {displayName}.</Drawer.Description>
               <ScrollArea className="h-[calc(100vh_-_150px)] md:h-[calc(100vh_-_174px)]">
                 <div className="flex flex-col items-center text-center p-4">
-                  <button onClick={(e) => handleAvatarClick(e, avatarUrl)}>
+                  <button onClick={handleAvatarClick}>
                     <Avatar className="w-24 h-24 mb-4">
                         <AvatarImage src={avatarUrl} alt={displayName} data-ai-hint="person portrait" />
                         <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
@@ -268,12 +271,6 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-     <ProfileAvatarPreview
-        preview={avatarPreview}
-        onOpenChange={(isOpen) => {
-            if (!isOpen) setAvatarPreview(null);
-        }}
-      />
     </>
   )
 }

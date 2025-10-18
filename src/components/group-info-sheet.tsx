@@ -22,6 +22,7 @@ import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import { AppContext } from '@/app/(app)/layout';
 
 
 function MemberItem({ member, isOwner, onRemove, canManage }: { member: Contact, isOwner: boolean, onRemove: (member: Contact) => void, canManage: boolean }) {
@@ -75,6 +76,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
     const router = useRouter();
     const { firestore, user, storage } = useFirebase();
     const { toast } = useToast();
+    const { setAvatarPreview } = React.useContext(AppContext);
     
     // Fetch all users to get member details
     const allUsersQuery = useMemoFirebase(() => firestore ? collection(firestore, 'users') : null, [firestore]);
@@ -180,9 +182,14 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
         }
     };
 
-    const handleAvatarChangeClick = () => {
-        if (isEditing) {
+    const handleAvatarChangeClick = (e: React.MouseEvent) => {
+        if(isEditing) {
             fileInputRef.current?.click();
+        } else {
+             if (group.avatar) {
+                setAvatarPreview({ avatarUrl: group.avatar, name: group.name });
+                onOpenChange(false); // Close the sheet
+             }
         }
     };
     
@@ -238,7 +245,7 @@ export function GroupInfoSheet({ open, onOpenChange, group }: GroupInfoSheetProp
                     <main className="p-4 md:p-6 space-y-6 -mx-4 md:-mx-6">
                         <div className="flex flex-col items-center space-y-4">
                             <div className="relative">
-                                <button onClick={handleAvatarChangeClick} disabled={!isEditing} className="cursor-pointer disabled:cursor-default">
+                                <button onClick={handleAvatarChangeClick} disabled={!isEditing && !group.avatar} className="cursor-pointer disabled:cursor-default">
                                     <Avatar className={cn("w-32 h-32 text-4xl", isEditing && "ring-2 ring-primary ring-offset-2 ring-offset-background")}>
                                         <AvatarImage src={editedAvatar} alt={editedName} />
                                         <AvatarFallback><Users/></AvatarFallback>

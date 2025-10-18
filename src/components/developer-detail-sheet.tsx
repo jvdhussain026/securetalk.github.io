@@ -36,6 +36,7 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
     e.stopPropagation();
     if (developer.avatar || developer.profilePictureUrl) {
       setAvatarPreview({ avatarUrl: developer.avatar || developer.profilePictureUrl || '', name: developer.name });
+      onOpenChange(false); // Close the sheet
     }
   };
 

@@ -1,3 +1,4 @@
+
 'use client'
 
 import React, { useState } from 'react'
@@ -158,7 +159,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <AppContext.Provider value={{ setAvatarPreview: handleSetAvatarPreview, isAvatarPreviewOpen }}>
         <div className={cn("h-full md:max-w-md md:mx-auto md:border-x")}>
-             {/* Pass openSidebar to children via a new context or prop drilling if needed */}
              {React.cloneElement(children as React.ReactElement, { openSidebar })}
         </div>
         <Sidebar 
