@@ -71,24 +71,26 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                     className="w-full h-full flex items-center justify-center bg-black"
                     onDoubleClick={handleDoubleClick}
                 >
-                    <Panzoom
-                        ref={panzoomRef}
-                        minZoom={1}
-                        maxZoom={4}
-                        disableDoubleClickZoom
-                        preventPan={() => zoom === 1}
-                        onStateChange={handleStateChange}
-                        style={{ touchAction: 'none' }}
-                        className="w-full h-full"
-                    >
-                        <Image
-                            src={preview.avatarUrl}
-                            alt={`${preview.name}'s profile picture`}
-                            width={512}
-                            height={512}
-                            className="object-cover w-full h-full shadow-2xl"
-                        />
-                    </Panzoom>
+                    {preview.avatarUrl && (
+                        <Panzoom
+                            ref={panzoomRef}
+                            minZoom={1}
+                            maxZoom={4}
+                            disableDoubleClickZoom
+                            preventPan={() => zoom === 1}
+                            onStateChange={handleStateChange}
+                            style={{ touchAction: 'none' }}
+                            className="w-full h-full"
+                        >
+                            <Image
+                                src={preview.avatarUrl}
+                                alt={`${preview.name}'s profile picture`}
+                                width={512}
+                                height={512}
+                                className="object-cover w-full h-full shadow-2xl"
+                            />
+                        </Panzoom>
+                    )}
                 </div>
             </motion.div>
             <Button 
