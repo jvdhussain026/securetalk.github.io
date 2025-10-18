@@ -70,6 +70,19 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       setAvatarPreview({ avatarUrl: userProfile.profilePictureUrl, name: userProfile.name });
     }
   };
+  
+  const handleLogout = async () => {
+    if (!auth) return;
+    try {
+        await signOut(auth);
+        toast({ title: "Signed Out", description: "You have been successfully signed out." });
+        router.push('/chats'); // Redirect to a public page after sign-out
+        onOpenChange(false);
+    } catch (error) {
+        console.error("Sign out error:", error);
+        toast({ variant: 'destructive', title: 'Sign Out Failed' });
+    }
+  };
 
   return (
     <>
@@ -116,6 +129,12 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
             ))}
             </div>
         </ScrollArea>
+         <div className="p-4 border-t">
+            <Button variant="outline" className="w-full" onClick={handleLogout}>
+                <LogOut className="mr-2"/>
+                Sign Out
+            </Button>
+        </div>
       </SheetContent>
     </Sheet>
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
