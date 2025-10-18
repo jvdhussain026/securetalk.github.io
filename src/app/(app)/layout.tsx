@@ -158,7 +158,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const childrenWithProps = React.Children.map(children, child => {
     if (React.isValidElement(child)) {
-      // @ts-ignore
+      // @ts-ignore - Injecting props into child component
       return React.cloneElement(child, { openSidebar });
     }
     return child;
