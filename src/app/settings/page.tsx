@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, User, Bell, Palette, Languages, HardDrive, Lock, Shield, Info, Heart, MessageSquareWarning, FileText, BadgeCheck, LoaderCircle, Construction } from 'lucide-react';
+import { ArrowLeft, ChevronRight, User, Bell, Palette, Languages, HardDrive, Lock, Shield, Info, Heart, MessageSquareWarning, FileText, BadgeCheck, LoaderCircle, Map } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,7 +33,7 @@ export default function SettingsPage() {
     const aboutAndSupport = [
         { href: '/about', icon: Info, title: 'About Us' },
         { href: '/support', icon: Heart, title: 'Support Us' },
-        { href: '/roadmap', icon: Construction, title: 'Developer Preview' },
+        { href: '/roadmap', icon: Map, title: 'Roadmap & Status' },
         { href: '/feedback', icon: MessageSquareWarning, title: 'Report / Feedback' },
         { href: '/readme', icon: FileText, title: 'Developer README' },
     ];
