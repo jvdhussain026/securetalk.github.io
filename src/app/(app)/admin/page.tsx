@@ -8,7 +8,7 @@ import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck, Copy, Check, Briefc
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, doc, serverTimestamp, orderBy } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -64,7 +64,7 @@ export default function AdminPage() {
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore) return null;
-    return query(collection(firestore, 'users'));
+    return query(collection(firestore, 'users'), orderBy('createdAt', 'desc'));
   }, [firestore]);
 
   const { data: users, isLoading, error } = useCollection<Contact>(usersQuery);

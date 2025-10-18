@@ -7,7 +7,7 @@ import { ArrowLeft, LoaderCircle, Users, Briefcase, X, UserPlus, Search } from '
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc } from 'firebase/firestore';
+import { collection, query, doc, orderBy } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -32,7 +32,7 @@ export default function TeamManagementPage() {
 
     const usersQuery = useMemoFirebase(() => {
         if (!firestore) return null;
-        return query(collection(firestore, 'users'));
+        return query(collection(firestore, 'users'), orderBy('name', 'asc'));
     }, [firestore]);
     const { data: allUsers, isLoading: areUsersLoading } = useCollection<Contact>(usersQuery);
 
