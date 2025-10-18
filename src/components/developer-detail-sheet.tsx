@@ -1,7 +1,7 @@
 
 "use client"
 
-import * as React from "react"
+import React, { useContext } from "react"
 import { Drawer } from "vaul"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -30,7 +30,7 @@ type DeveloperDetailSheetProps = {
 };
 
 export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect }: DeveloperDetailSheetProps) {
-  const { setAvatarPreview } = React.useContext(AppContext);
+  const { setAvatarPreview } = useContext(AppContext);
   
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -101,6 +101,5 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-    </>
-  )
+    )
 }
