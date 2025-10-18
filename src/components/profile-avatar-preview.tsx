@@ -44,6 +44,12 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
     setZoom(data.scale);
   };
 
+  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    handleClose();
+  };
+
+
   return (
     <AnimatePresence>
       {preview && (
@@ -52,7 +58,7 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex items-center justify-center"
-          onClick={handleClose}
+          onClick={handleOverlayClick}
         >
             <motion.div 
                 initial={{ scale: 0.8 }}
