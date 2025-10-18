@@ -1,4 +1,3 @@
-
 'use client'
 
 import React, { useState } from 'react'
@@ -10,6 +9,7 @@ import { useToast } from '@/hooks/use-toast'
 import type { Contact, Message } from '@/lib/types'
 import { playTone, tones } from '@/lib/audio'
 import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
+import { Sidebar } from '@/components/sidebar'
 
 // Create a context to share the avatar preview state
 export const AppContext = React.createContext<{
@@ -27,9 +27,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { toast } = useToast();
   const lastTimestampsRef = React.useRef<Map<string, Timestamp>>(new Map());
 
-  // State for the avatar preview is now managed here at the layout level
   const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const isAvatarPreviewOpen = !!avatarPreview;
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -43,49 +43,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const { data: contacts } = useCollection<Contact>(contactsQuery);
 
-  // Global context menu handler to disable right-click on non-text elements
   React.useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
         const target = event.target as HTMLElement;
-
         const isEditable = target.tagName === 'INPUT' ||
                            target.tagName === 'TEXTAREA' ||
                            target.isContentEditable;
-
         const isMessageText = target.closest('.select-text');
-
         if (!isEditable && !isMessageText) {
             event.preventDefault();
         }
     };
-
     document.addEventListener('contextmenu', handleContextMenu);
-
     return () => {
         document.removeEventListener('contextmenu', handleContextMenu);
     };
   }, []);
 
-  // Presence management
   React.useEffect(() => {
     if (!user || !firestore) return;
-
     const userStatusFirestoreRef = doc(firestore, `users/${user.uid}`);
-
     setDoc(userStatusFirestoreRef, {
         status: 'online',
         lastSeen: firestoreServerTimestamp()
     }, { merge: true });
-
     const handleBeforeUnload = () => {
         setDoc(userStatusFirestoreRef, {
             status: 'offline',
             lastSeen: firestoreServerTimestamp()
         }, { merge: true });
     };
-    
     window.addEventListener('beforeunload', handleBeforeUnload);
-
     return () => {
         window.removeEventListener('beforeunload', handleBeforeUnload);
          setDoc(userStatusFirestoreRef, {
@@ -95,7 +83,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [user, firestore]);
 
-  // Listener for new connections and incoming calls on the user document
   React.useEffect(() => {
     if (userDocRef) {
       const unsubscribe = onSnapshot(userDocRef, (snapshot) => {
@@ -114,12 +101,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }, [userDocRef, router, pathname]);
   
-  // Listener for new messages to show in-app notifications
   React.useEffect(() => {
     if (!contacts || !firestore || !user) return;
-
     const initialLoad = lastTimestampsRef.current.size === 0;
-
     if (initialLoad) {
       contacts.forEach(contact => {
         if (contact.lastMessageTimestamp) {
@@ -128,14 +112,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       });
       return;
     }
-    
     contacts.forEach(contact => {
       const lastKnownTimestamp = lastTimestampsRef.current.get(contact.id);
-      
       if (contact.lastMessageTimestamp && (!lastKnownTimestamp || contact.lastMessageTimestamp > lastKnownTimestamp)) {
-        
         const isOnChatPage = pathname === `/chats/${contact.id}`;
-        
         if (!isOnChatPage) {
           const chatId = [user.uid, contact.id].sort().join('_');
           const messagesQuery = query(
@@ -143,7 +123,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             orderBy("timestamp", "desc"),
             limit(1)
           );
-
           getDocs(messagesQuery).then((snapshot) => {
              if(!snapshot.empty) {
                const lastMessage = snapshot.docs[0].data() as Message;
@@ -152,7 +131,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                    title: `New message from ${contact.name}`,
                    description: lastMessage.text || 'Sent an attachment',
                  });
-                 
                  const messageToneName = localStorage.getItem('messageTone');
                  const toneToPlay = tones.find(t => t.name === messageToneName) || tones[0];
                  playTone(toneToPlay.sequence);
@@ -160,19 +138,33 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
              }
           });
         }
-        
         lastTimestampsRef.current.set(contact.id, contact.lastMessageTimestamp);
       }
     });
-
   }, [contacts, pathname, toast, user, firestore]);
 
+  const openSidebar = () => {
+    if (isAvatarPreviewOpen) return;
+    setIsSidebarOpen(true);
+  }
+  
+  const handleSetAvatarPreview = (preview: ProfileAvatarPreviewState) => {
+      if (preview) {
+        setIsSidebarOpen(false); // Close sidebar when opening avatar preview
+      }
+      setAvatarPreview(preview);
+  }
+
   return (
-    <AppContext.Provider value={{ setAvatarPreview, isAvatarPreviewOpen }}>
+    <AppContext.Provider value={{ setAvatarPreview: handleSetAvatarPreview, isAvatarPreviewOpen }}>
         <div className={cn("h-full md:max-w-md md:mx-auto md:border-x")}>
-            {children}
+             {/* Pass openSidebar to children via a new context or prop drilling if needed */}
+             {React.cloneElement(children as React.ReactElement, { openSidebar })}
         </div>
-        {/* The preview is now rendered here, at the top level */}
+        <Sidebar 
+          open={isSidebarOpen && !isAvatarPreviewOpen} 
+          onOpenChange={setIsSidebarOpen}
+        />
         <ProfileAvatarPreview
             preview={avatarPreview}
             onOpenChange={(isOpen) => {

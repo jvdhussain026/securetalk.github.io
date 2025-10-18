@@ -76,7 +76,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="left" 
-        className={cn("p-0 flex flex-col bg-card", isAvatarPreviewOpen && "pointer-events-none")}
+        className="p-0 flex flex-col bg-card"
       >
         <SheetHeader>
           <SheetTitle className="sr-only">User Menu</SheetTitle>
