@@ -57,13 +57,15 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.2 }}
           className="fixed inset-0 z-[100] bg-black/80 backdrop-blur-sm flex items-center justify-center"
           onClick={handleOverlayClick}
         >
             <motion.div 
-                initial={{ scale: 0.8 }}
-                animate={{ scale: 1 }}
-                exit={{ scale: 0.8 }}
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.8, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 260, damping: 20, delay: 0.1 }}
                 className="w-[90vw] h-[90vw] max-w-md max-h-md rounded-full overflow-hidden"
                  onClick={(e) => e.stopPropagation()}
             >
@@ -82,13 +84,15 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                             style={{ touchAction: 'none' }}
                             className="w-full h-full"
                         >
-                            <Image
-                                src={preview.avatarUrl}
-                                alt={`${preview.name}'s profile picture`}
-                                width={512}
-                                height={512}
-                                className="object-cover w-full h-full shadow-2xl"
-                            />
+                            <div className="w-full h-full flex items-center justify-center">
+                                <Image
+                                    src={preview.avatarUrl}
+                                    alt={`${preview.name}'s profile picture`}
+                                    width={512}
+                                    height={512}
+                                    className="object-contain max-w-full max-h-full shadow-2xl"
+                                />
+                            </div>
                         </Panzoom>
                     )}
                 </div>
