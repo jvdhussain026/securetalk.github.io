@@ -2,7 +2,7 @@
 
 'use client'
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useMemo, useCallback, useContext } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Send, Plus, Mic, MoreVertical, Phone, Video, ChevronDown, BadgeCheck, X, FileText, Download, PlayCircle, VideoIcon, Music, File, Star, Search, BellOff, ChevronUp, Trash2, Pencil, Reply, Languages, LoaderCircle, Palette, ImageIcon, User, UserPlus, FileUp, ChevronLeft, ChevronRight, Radio, Shield, Info as InfoIcon, UserX, Users } from 'lucide-react'
 import { useParams, useRouter } from 'next/navigation'
@@ -31,7 +31,6 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { AttachmentOptions } from '@/components/attachment-options'
 import { AudioPlayer } from '@/components/audio-player'
 import { DeleteMessageDialog } from '@/components/delete-message-dialog'
@@ -57,6 +56,7 @@ import { Separator } from '@/components/ui/separator'
 import { MultiSelectHeader } from '@/components/multi-select-header'
 import { MultiSelectFooter } from '@/components/multi-select-footer'
 import { GroupInfoSheet } from '@/components/group-info-sheet'
+import { AppContext } from '@/app/(app)/layout';
 
 
 const LinkifiedText = ({ text, isSender }: { text: string; isSender: boolean; }) => {
@@ -414,6 +414,7 @@ export default function ChatPage() {
   const params = useParams();
   const router = useRouter();
   const { firestore, user, userProfile } = useFirebase();
+  const { setAvatarPreview } = useContext(AppContext);
 
   const isGroupChat = params.id.toString().startsWith('group_');
   const chatIdFromParams = params.id.toString();
@@ -515,7 +516,6 @@ export default function ChatPage() {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
-  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -2038,10 +2038,6 @@ export default function ChatPage() {
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
       />
-       <ProfileAvatarPreview
-        preview={avatarPreview}
-        onOpenChange={(open) => !open && setAvatarPreview(null)}
-      />
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}
         onClose={() => setIsAttachmentSheetOpen(false)}
@@ -2083,6 +2079,3 @@ export default function ChatPage() {
     </>
   )
 }
-    
-
-    

@@ -2,7 +2,7 @@
 
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useContext } from 'react'
 import Link from 'next/link'
 import { useFirebase } from '@/firebase'
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore'
@@ -14,7 +14,7 @@ import { ClientOnly } from '@/components/client-only'
 import { cn } from '@/lib/utils'
 import type { Contact, Message } from '@/lib/types'
 import { BadgeCheck, Pin, Users } from 'lucide-react'
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from './profile-avatar-preview'
+import { AppContext } from '@/app/(app)/layout'
 
 
 function formatLastMessageTimestamp(timestamp: any) {
@@ -32,9 +32,9 @@ function formatLastMessageTimestamp(timestamp: any) {
 
 export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLongPress: (contact: Contact) => void }) {
   const { firestore, user } = useFirebase();
+  const { setAvatarPreview } = useContext(AppContext);
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const chatId = useMemo(() => {
@@ -56,7 +56,6 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
       orderBy("timestamp", "desc"),
     );
 
-    // Using a simpler onSnapshot to just get the latest message
     const unsubscribe = onSnapshot(messagesQuery, (snapshot) => {
       if (!snapshot.empty) {
         const doc = snapshot.docs[0];
@@ -76,7 +75,9 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setAvatarPreview({ avatarUrl: contact.avatar, name: contact.displayName || contact.name });
+    if(contact.avatar) {
+      setAvatarPreview({ avatarUrl: contact.avatar, name: contact.displayName || contact.name });
+    }
   };
 
   const lastMessageText = useMemo(() => {
@@ -172,10 +173,6 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
                 </div>
             </div>
         </Link>
-        <ProfileAvatarPreview
-            preview={avatarPreview}
-            onOpenChange={(open) => !open && setAvatarPreview(null)}
-        />
       </>
   );
 }

@@ -1,13 +1,13 @@
 
 "use client"
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Check, UserPlus } from "lucide-react"
 import type { NearbyUser } from "@/lib/types"
 import { useToast } from '@/hooks/use-toast'
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
+import { AppContext } from '@/app/(app)/layout';
 
 
 type NearbyUserSheetProps = {
@@ -19,7 +19,7 @@ type NearbyUserSheetProps = {
 
 export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyUserSheetProps) {
   const { toast } = useToast()
-  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
+  const { setAvatarPreview } = useContext(AppContext);
 
 
   if (!open) return null;
@@ -94,10 +94,6 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
           </Button>
         </div>
       </motion.div>
-       <ProfileAvatarPreview
-        preview={avatarPreview}
-        onOpenChange={(open) => !open && setAvatarPreview(null)}
-      />
     </>
   );
 }

@@ -19,7 +19,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from "./profile-avatar-preview"
+import { AppContext } from "@/app/(app)/layout"
 
 
 type DeveloperDetailSheetProps = {
@@ -30,7 +30,7 @@ type DeveloperDetailSheetProps = {
 };
 
 export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect }: DeveloperDetailSheetProps) {
-  const [avatarPreview, setAvatarPreview] = React.useState<ProfileAvatarPreviewState>(null);
+  const { setAvatarPreview } = React.useContext(AppContext);
   
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -40,7 +40,6 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
   };
 
   return (
-      <>
     <Drawer.Root open={open} onOpenChange={onOpenChange} snapPoints={[0.6, 1]} modal={true}>
       <Drawer.Portal>
         <Drawer.Overlay className="fixed inset-0 bg-black/40 z-50" />
@@ -102,12 +101,6 @@ export function DeveloperDetailSheet({ open, onOpenChange, developer, onConnect 
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-     <ProfileAvatarPreview
-        preview={avatarPreview}
-        onOpenChange={(isOpen) => {
-            if (!isOpen) setAvatarPreview(null);
-        }}
-      />
     </>
   )
 }

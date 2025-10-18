@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useContext } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, Camera, BadgeCheck, LoaderCircle, Save } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -10,17 +10,18 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, getDocs, collection, writeBatch } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { ImageCropperDialog } from '@/components/image-cropper-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
+import { AppContext } from '@/app/(app)/layout'
 
 export default function EditProfilePage() {
   const { toast } = useToast()
   const { firestore, user } = useFirebase();
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const { setAvatarPreview } = useContext(AppContext);
 
   const userDocRef = useMemoFirebase(() => {
       if (!firestore || !user) return null;
@@ -32,7 +33,6 @@ export default function EditProfilePage() {
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [avatar, setAvatar] = useState('')
-  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -219,10 +219,6 @@ export default function EditProfilePage() {
           </Button>
         </footer>
     </div>
-     <ProfileAvatarPreview
-        preview={avatarPreview}
-        onOpenChange={(open) => !open && setAvatarPreview(null)}
-      />
       <ImageCropperDialog 
         imageSrc={imageToCrop}
         onClose={() => setImageToCrop(null)}

@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useContext } from 'react';
 import Link from 'next/link'
 import {
   User,
@@ -24,7 +24,6 @@ import {
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { ComingSoonDialog } from './coming-soon-dialog';
-import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Badge } from './ui/badge';
@@ -33,6 +32,7 @@ import { signOut } from 'firebase/auth';
 import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
+import { AppContext } from '@/app/(app)/layout'; // Import the context
 
 type SidebarProps = {
   open: boolean
@@ -41,7 +41,7 @@ type SidebarProps = {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
+  const { setAvatarPreview } = useContext(AppContext); // Use the context
   const { firestore, auth, user } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
@@ -69,7 +69,6 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       setAvatarPreview({ avatarUrl: userProfile.profilePictureUrl, name: userProfile.name });
     }
   };
-
 
   return (
     <>
@@ -116,12 +115,6 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       </SheetContent>
     </Sheet>
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
-    <ProfileAvatarPreview
-        preview={avatarPreview}
-        onOpenChange={(isOpen) => {
-            if (!isOpen) setAvatarPreview(null);
-        }}
-      />
     </>
   )
 }
