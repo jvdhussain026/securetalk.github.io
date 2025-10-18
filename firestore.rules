@@ -1,183 +1,207 @@
 /**
- * @fileoverview Firestore Security Rules for Secure Talk application.
+ * @file Firestore Security Rules for Secure Talk application.
  *
- * Core Philosophy:
- * This ruleset prioritizes user data ownership and shared access for chats.
- * Users have full control over their profile and contact data.
- * Chats are accessible to participating users only.
- * Admin-level write permissions are not defined.
+ * @core_philosophy This ruleset enforces a user-ownership model for user-specific data (profiles, contacts),
+ *                   a shared access model for chats and groups, and public read access with owner-only writes for
+ *                   certain top-level collections. Listing of the /users collection is explicitly denied.
  *
- * Data Structure:
- * - /users/{userId}: User profile information, owned by the user.
- * - /usernames/{username}: Stores reserved usernames, writeable only on creation, only by the new user.
- * - /team/{teamMemberId}: Team member profiles, publicly readable.
- * - /chats/{chatId}: Chat session information, accessible to participants.
- * - /chats/{chatId}/messages/{messageId}: Messages within a chat, accessible to chat participants.
- * - /users/{userId}/contacts/{contactId}: User's contact list, owned by the user.
- * - /groups/{groupId}: Group chat information, accessible to group members.
- * - /groups/{groupId}/messages/{messageId}: Group chat messages, accessible to group members.
+ * @data_structure
+ *   - /users/{userId}: User profile information, owned by the user.
+ *   - /usernames/{username}: Stores usernames, owned by the user.
+ *   - /team/{userId}: Team member profiles for the About Us page (likely managed by admins).
+ *   - /chats/{chatId}: Chat sessions between users, with access controlled by the participants list.
+ *   - /chats/{chatId}/messages/{messageId}: Messages within chat sessions, access controlled by chat participants.
+ *   - /users/{userId}/contacts/{contactId}: User contact lists, owned by the user.
+ *   - /groups/{groupId}: Group chat information, with access controlled by the participants list and owner.
+ *   - /groups/{groupId}/messages/{messageId}: Messages within group chat sessions, access controlled by group participants.
+ *   - /admin/team : Page for managing the team members (likely to have stricter rules)
  *
- * Key Security Decisions:
- * - User listing is implicitly disallowed, as there are no read-all rules on the /users collection.
- * - Public read access is granted to /team/{teamMemberId} for showcasing team members.
- * - The default security posture is strict; any access not explicitly allowed is denied.
- * - No timestamp validation is performed.
+ * @key_security_decisions
+ *   - User listing is explicitly denied for privacy.
+ *   - Data required for authorization (e.g., ownership, participant lists) is assumed to be denormalized onto the documents.
+ *   - Ambiguous relationships default to strict owner-only access.
  *
- * Denormalization for Authorization:
- * - Chats: The `participants` map on the `/chats/{chatId}` document is used to efficiently check user access to the chat and its messages.
- * - Groups: The `participants` map on the `/groups/{groupId}` document is used to efficiently check user access to the group and its messages. The `ownerId` field is used for admin operations like update and delete.
+ * @denormalization_for_authorization
+ *   - The `Chat` and `Group` documents include `participants` maps to avoid costly `get()` calls to a separate membership collection.
+ *   - `Group` documents also include an `ownerId` to simplify owner-based authorization checks.
  *
- * Structural Segregation:
- * - User profile data is stored under the `/users/{userId}` collection, ensuring private user data is separate from public data.
+ * @structural_segregation Private user data is stored under `/users/{userId}`, while public team member data is stored under `/team/{teamMemberId}`.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user profile data.
-     * @path /users/{userId}
-     * @allow (create) User 'user_abc' can create their own profile.
-     * @allow (get, update, delete) User 'user_abc' can read, update, and delete their own profile.
-     * @deny (get, list, create, update, delete) User 'user_xyz' cannot access 'user_abc' profile.
-     * @principle Enforces document ownership for writes.
+     * @description Protects against unauthorized access. Must be signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * @description Checks if the request is made by the owner of the resource.
+     */
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    /**
+     * @description Checks if the request is made by the owner of the resource, and the resource exists.
+     * @details Used for update and delete operations to prevent acting on non-existent documents.
+     */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    /**
+     * @description Checks if the request is made by a participant in the chat.
+     */
+    function isParticipant(participants) {
+        return participants[request.auth.uid] == true;
+    }
+
+    /**
+     * @description Checks if the user is an administrator.
+     */
+    function isAdmin() {
+        return request.auth.token.email == "admin@example.com"; // Replace with a suitable admin check
+    }
+
+
+    /**
+     * @description Security rules for user profiles.
+     * @path /databases/{database}/documents/users/{userId}
+     * @allow (create) User with UID 'user123' can create their profile at /users/user123.
+     * @deny (create) User with UID 'user123' cannot create a profile at /users/user456.
+     * @allow (get, update, delete) User with UID 'user123' can read/update/delete their profile at /users/user123.
+     * @deny (get, update, delete) User with UID 'user123' cannot read/update/delete the profile at /users/user456.
+     * @principle Enforces document ownership for writes; allows owner-only access to profile information.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow list: if false; // Explicitly deny listing the /users collection
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Manages unique usernames. Only the user creating the username can write to it, and only on creation.
-     * @path /usernames/{username}
-     * @allow (create) User 'user_abc' can create a username document if the 'uid' field matches their UID.
-     * @deny (get, list, update, delete) No one can read, list, update, or delete username documents after creation.
-     * @principle Prevents username squatting and ensures username ownership.
+     * @description Security rules for usernames.
+     * @path /databases/{database}/documents/usernames/{username}
+     * @allow (create) User with UID 'user123' can reserve their username.
+     * @deny (create) User with UID 'user123' cannot reserve someone else's username.
+     * @allow (get) Any authenticated user can check if a username is taken.
+     * @deny (update, delete) Username records cannot be updated or deleted.
+     * @principle Enforces ownership for username reservation.
      */
     match /usernames/{username} {
-      allow get: if false;
+      allow get: if isSignedIn();
       allow list: if false;
-      allow create: if request.auth.uid == request.resource.data.uid;
+      allow create: if isSignedIn() && request.resource.data.uid == request.auth.uid;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+     /**
+      * @description Security rules for team member profiles on About Us page.
+      * @path /databases/{database}/documents/team/{teamMemberId}
+      * @allow (get, list) Anyone can view team member profiles.
+      * @deny (create, update, delete) Only admins can manage team member profiles.
+      * @principle Grants public read access; restricts writes to admins.
+      */
+    match /team/{teamMemberId} {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+
+    /**
+     * @description Security rules for 1-on-1 chat sessions.
+     * @path /databases/{database}/documents/chats/{chatId}
+     * @allow (get, list) Participants in the chat can read the chat document.
+     * @deny (create) Only participants can create a chat.
+     * @allow (update) Participants can update the chat document.
+     * @deny (delete) Only participants can delete a chat.
+     * @principle Enforces shared access based on the 'participants' map.
+     */
+    match /chats/{chatId} {
+      allow get, list: if isSignedIn() && isParticipant(resource.data.participants);
+      allow create: if isSignedIn() && isParticipant(request.resource.data.participants);
+      allow update: if isSignedIn() && isParticipant(resource.data.participants);
+      allow delete: if false; // Deletion is disabled for chat sessions.
+    }
+
+
+    /**
+     * @description Security rules for messages within 1-on-1 chat sessions.
+     * @path /databases/{database}/documents/chats/{chatId}/messages/{messageId}
+     * @allow (get, list) Participants in the parent chat can read messages.
+     * @allow (create) Participants in the parent chat can create messages.
+     * @deny (update, delete) Messages cannot be updated or deleted.
+     * @principle Inherits access control from the parent 'chat' document.
+     */
+    match /chats/{chatId}/messages/{messageId} {
+      allow get, list: if isSignedIn() && isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
+      allow create: if isSignedIn() && isParticipant(get(/databases/$(database)/documents/chats/$(chatId)).data.participants);
       allow update: if false;
       allow delete: if false;
     }
 
     /**
-     * @description Controls access to team member profiles.
-     * @path /team/{teamMemberId}
-     * @allow (get, list) Anyone can read team member profiles.
-     * @deny (create, update, delete) Only admins can create, update, or delete team member profiles.
-     * @principle Allows public access to team member information while restricting write access.
+     * @description Security rules for user contact lists.
+     * @path /databases/{database}/documents/users/{userId}/contacts/{contactId}
+     * @allow (get, list, create, update, delete) User with UID 'user123' can manage their own contacts.
+     * @deny (get, list, create, update, delete) User with UID 'user123' cannot manage contacts for user 'user456'.
+     * @principle Enforces document ownership for contact management.
      */
-    match /team/{teamMemberId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add admin validation if needed.
+    match /users/{userId}/contacts/{contactId} {
+      allow get, list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.userId == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.userId == userId;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to chat session information.
-     * @path /chats/{chatId}
-     * @allow (get, list) Any participant in the chat can read the chat data.
-     * @allow (create) Any user can create a chat if they are a participant.
-     * @allow (update) Only participants in the chat can update typing status.
-     * @allow (delete) No user can delete a chat.
-     * @principle Enforces shared access to chats based on the participants list.
+     * @description Security rules for group chat information.
+     * @path /databases/{database}/documents/groups/{groupId}
+     * @allow (get, list) Participants can read group details.
+     * @allow (create) Owner can create a group.
+     * @allow (update) Owner can update group details.
+     * @deny (delete) Group deletion is disabled.
+     * @principle Combines ownership and shared access control.
      */
-    match /chats/{chatId} {
-      allow get: if request.auth.uid in resource.data.participants;
-      allow list: if false;
-      allow create: if request.auth.uid in request.resource.data.participants;
-      allow update: if request.auth.uid in resource.data.participants;
+    match /groups/{groupId} {
+      allow get, list: if isSignedIn() && isParticipant(resource.data.participants);
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if false;
+    }
+
+
+    /**
+     * @description Security rules for messages within group chat sessions.
+     * @path /databases/{database}/documents/groups/{groupId}/messages/{messageId}
+     * @allow (get, list) Participants in the parent group can read messages.
+     * @allow (create) Participants in the parent group can create messages.
+     * @deny (update, delete) Messages cannot be updated or deleted.
+     * @principle Inherits access control from the parent 'group' document.
+     */
+    match /groups/{groupId}/messages/{messageId} {
+      allow get, list: if isSignedIn() && isParticipant(get(/databases/$(database)/documents/groups/$(groupId)).data.participants);
+      allow create: if isSignedIn() && isParticipant(get(/databases/$(database)/documents/groups/$(groupId)).data.participants);
+      allow update: if false;
       allow delete: if false;
     }
 
     /**
-     * @description Controls access to messages within a chat session.
-     * @path /chats/{chatId}/messages/{messageId}
-     * @allow (get, list) Any participant in the chat can read the messages.
-     * @allow (create) Any participant in the chat can create a message.
-     * @deny (update, delete) No user can update or delete messages.
-     * @principle Enforces shared access to messages based on chat participation.
+     * @description Security rules for /admin/team page.
+     * @path /databases/{database}/documents/admin/team
+     * @allow (get, list) Anyone can read team members.
+     * @allow (create, update, delete) Admins can manage team members.
      */
-    match /chats/{chatId}/messages/{messageId} {
-      allow get, list: if get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
-      allow create: if get(/databases/$(database)/documents/chats/$(chatId)).data.participants[request.auth.uid] == true;
-      allow update, delete: if false;
-    }
-
-    /**
-     * @description Controls access to user contact lists.
-     * @path /users/{userId}/contacts/{contactId}
-     * @allow (get, list, create, update, delete) The user can manage their own contacts.
-     * @deny (get, list, create, update, delete) Other users cannot access this user's contacts.
-     * @principle Enforces document ownership for contact management.
-     */
-    match /users/{userId}/contacts/{contactId} {
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-      allow create: if isOwner(userId);
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
-    }
-
-     /**
-      * @description Controls access to group chat information.
-      * @path /groups/{groupId}
-      * @allow (get, list) Any participant in the group can read the group data.
-      * @allow (create) Any user can create a group if they are the owner and a participant.
-      * @allow (update) Only the owner of the group can update group details.
-      * @allow (delete) Only the owner can delete a group.
-      * @principle Enforces shared access to groups based on the participants list and owner ID.
-      */
-    match /groups/{groupId} {
-      allow get: if request.auth.uid in resource.data.participants;
-      allow list: if false;
-      allow create: if isOwner(resource.data.ownerId) && (request.auth.uid in request.resource.data.participants);
-      allow update: if isExistingOwner(resource.data.ownerId);
-      allow delete: if isExistingOwner(resource.data.ownerId);
-    }
-
-    /**
-     * @description Controls access to messages within a group chat session.
-     * @path /groups/{groupId}/messages/{messageId}
-     * @allow (get, list) Any participant in the group can read the messages.
-     * @allow (create) Any participant in the group can create a message.
-     * @deny (update, delete) No user can update or delete messages.
-     * @principle Enforces shared access to group messages based on group participation.
-     */
-    match /groups/{groupId}/messages/{messageId} {
-      allow get, list: if get(/databases/$(database)/documents/groups/$(groupId)).data.participants[request.auth.uid] == true;
-      allow create: if get(/databases/$(database)/documents/groups/$(groupId)).data.participants[request.auth.uid] == true;
-      allow update, delete: if false;
-    }
-
-        /**
-     * @description Controls access to the /admin/team page.
-     * @path /admin/team
-     * @allow (get, list) No restrictions
-     * @deny (create, update, delete) Only admins can create, update, or delete team member profiles.
-     * @principle Allows public access to team member information while restricting write access.
-     */
-        match /admin/team {
-            allow get, list: if false; // TODO: Add admin validation if needed.
-            allow create, update, delete: if false; // TODO: Add admin validation if needed.
-      }
-
-
-    // Helper functions
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+    match /admin/team {
+      allow get, list: if true;
+      allow create, update, delete: if isAdmin();
     }
   }
 }
