@@ -33,6 +33,7 @@ import { useRouter } from 'next/navigation';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { AppContext } from '@/app/(app)/layout'; // Import the context
+import { cn } from '@/lib/utils';
 
 type SidebarProps = {
   open: boolean
@@ -41,7 +42,7 @@ type SidebarProps = {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { setAvatarPreview } = useContext(AppContext); // Use the context
+  const { setAvatarPreview, isAvatarPreviewOpen } = useContext(AppContext);
   const { firestore, auth, user } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
@@ -73,7 +74,10 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="left" className="p-0 flex flex-col bg-card">
+      <SheetContent 
+        side="left" 
+        className={cn("p-0 flex flex-col bg-card", isAvatarPreviewOpen && "pointer-events-none")}
+      >
         <SheetHeader>
           <SheetTitle className="sr-only">User Menu</SheetTitle>
           <SheetDescription className="sr-only">A menu with user profile, settings, and other options.</SheetDescription>

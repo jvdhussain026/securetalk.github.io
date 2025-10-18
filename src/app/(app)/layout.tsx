@@ -14,8 +14,10 @@ import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/componen
 // Create a context to share the avatar preview state
 export const AppContext = React.createContext<{
   setAvatarPreview: (preview: ProfileAvatarPreviewState) => void;
+  isAvatarPreviewOpen: boolean;
 }>({
   setAvatarPreview: () => {},
+  isAvatarPreviewOpen: false,
 });
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -27,6 +29,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // State for the avatar preview is now managed here at the layout level
   const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
+  const isAvatarPreviewOpen = !!avatarPreview;
 
   const userDocRef = useMemoFirebase(() => {
     if (!firestore || !user) return null;
@@ -165,7 +168,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [contacts, pathname, toast, user, firestore]);
 
   return (
-    <AppContext.Provider value={{ setAvatarPreview }}>
+    <AppContext.Provider value={{ setAvatarPreview, isAvatarPreviewOpen }}>
         <div className={cn("h-full md:max-w-md md:mx-auto md:border-x")}>
             {children}
         </div>
