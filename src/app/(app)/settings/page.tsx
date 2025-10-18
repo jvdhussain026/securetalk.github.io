@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, ChevronRight, User, Bell, Palette, Languages, HardDrive, Lock, Shield, Info, Heart, MessageSquareWarning, FileText, BadgeCheck, LoaderCircle, Map } from 'lucide-react';
+import { ArrowLeft, ChevronRight, User, Bell, Palette, Languages, HardDrive, Lock, Shield, Info, Heart, MessageSquareWarning, FileText, BadgeCheck, LoaderCircle, Map, KeyRound } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useFirebase } from '@/firebase';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +23,7 @@ export default function SettingsPage() {
     const { userProfile, isUserLoading } = useFirebase();
 
     const generalSettings = [
+        { href: '/settings/account', icon: KeyRound, title: 'Account' },
         { href: '/settings/notifications', icon: Bell, title: 'Notifications' },
         { href: '/settings/chat-customization', icon: Palette, title: 'Chat Customization' },
         { href: '/settings/translation', icon: Languages, title: 'Translation' },

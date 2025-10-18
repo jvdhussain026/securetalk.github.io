@@ -189,13 +189,18 @@ export default function EditProfilePage() {
             <div className="space-y-4">
                 <div>
                 <div className="flex justify-between items-center mb-1">
-                    <Label htmlFor="name">Name</Label>
+                    <Label htmlFor="name">Full Name</Label>
                     <span className="text-xs text-muted-foreground">{name.length} / 50</span>
                 </div>
                 <div className="relative">
                     <Input id="name" value={name} onChange={(e) => setName(e.target.value)} className="pr-10" maxLength={50} />
                     {userProfile?.verified && <BadgeCheck className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 text-primary" />}
                 </div>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="username">Username</Label>
+                    <Input id="username" value={userProfile?.username || ''} disabled />
+                     <p className="text-xs text-muted-foreground">Your unique username cannot be changed.</p>
                 </div>
                 <div>
                 <div className="flex justify-between items-center mb-1">

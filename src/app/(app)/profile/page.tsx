@@ -9,7 +9,7 @@ import { useFirebase } from '@/firebase'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
-function DetailItem({ label, value }: { label: string, value: string | undefined }) {
+function DetailItem({ label, value }: { label: string, value: string | undefined | null }) {
     if (!value) return null;
     return (
         <div>
@@ -91,9 +91,10 @@ export default function ProfileViewPage() {
                         <CardTitle>Details</CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        <DetailItem label="Display Name" value={userProfile?.name} />
+                        <DetailItem label="Full Name" value={userProfile?.name} />
+                        <DetailItem label="Username" value={userProfile?.username} />
                         <DetailItem label="Email" value={userProfile?.email} />
-                        <DetailItem label="User ID" value={userProfile?.uid} />
+                        <DetailItem label="User ID" value={userProfile?.uid || userProfile?.id} />
                     </CardContent>
                 </Card>
             </main>
