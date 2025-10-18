@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect, useMemo, useContext } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin, Archive, Pencil } from 'lucide-react'
@@ -33,6 +33,7 @@ import { Badge } from '@/components/ui/badge'
 import { EditContactDialog } from '@/components/edit-contact-dialog'
 import { ChatListItem } from '@/components/chat-list-item'
 import { Sidebar } from '@/components/sidebar'
+import { AppContext } from '@/app/(app)/layout'
 
 
 export default function ChatsPage() {
@@ -43,6 +44,14 @@ export default function ChatsPage() {
   const { user, isUserLoading } = useUser();
   const { firestore } = useFirebase();
   const router = useRouter();
+
+  const { isAvatarPreviewOpen } = useContext(AppContext);
+
+  useEffect(() => {
+    if (isAvatarPreviewOpen) {
+      setIsSidebarOpen(false);
+    }
+  }, [isAvatarPreviewOpen]);
 
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [isContactOptionsOpen, setIsContactOptionsOpen] = useState(false);
