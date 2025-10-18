@@ -31,6 +31,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { MessageOptions } from '@/components/message-options'
 import { useToast } from '@/hooks/use-toast'
 import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { AttachmentOptions } from '@/components/attachment-options'
 import { AudioPlayer } from '@/components/audio-player'
 import { DeleteMessageDialog } from '@/components/delete-message-dialog'
@@ -514,6 +515,7 @@ export default function ChatPage() {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
   const [isMessageOptionsOpen, setIsMessageOptionsOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const [isAttachmentSheetOpen, setIsAttachmentSheetOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -1218,12 +1220,9 @@ export default function ChatPage() {
     });
   };
   
-  const handleAvatarClick = (avatarUrl?: string) => {
+  const handleAvatarClick = (avatarUrl?: string, name?: string) => {
       if (avatarUrl) {
-        setImagePreview({ 
-          contact: { id: '', name: displayName, avatar: avatarUrl, language: '' }, 
-          startIndex: 0 
-        });
+        setAvatarPreview({ avatarUrl, name: name || 'Avatar' });
       }
   };
   
@@ -1683,7 +1682,7 @@ export default function ChatPage() {
                     <span className="sr-only">Back</span>
                 </Link>
                 </Button>
-                <button onClick={() => handleAvatarClick(chatAvatar)}>
+                <button onClick={() => handleAvatarClick(chatAvatar, displayName)}>
                 <Avatar className="h-10 w-10">
                     <AvatarImage src={chatAvatar} alt={displayName} data-ai-hint="person portrait" />
                     <AvatarFallback>{(displayName || '').charAt(0)}</AvatarFallback>
@@ -2038,6 +2037,10 @@ export default function ChatPage() {
       <ImagePreviewDialog
         imagePreview={imagePreview}
         onOpenChange={(open) => !open && setImagePreview(null)}
+      />
+       <ProfileAvatarPreview
+        preview={avatarPreview}
+        onOpenChange={(open) => !open && setAvatarPreview(null)}
       />
       <AttachmentOptions
         isOpen={isAttachmentSheetOpen}

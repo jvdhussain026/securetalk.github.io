@@ -10,7 +10,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useToast } from '@/hooks/use-toast'
-import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase'
 import { doc, getDocs, collection, writeBatch } from 'firebase/firestore'
 import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
@@ -32,7 +32,7 @@ export default function EditProfilePage() {
   const [name, setName] = useState('')
   const [bio, setBio] = useState('')
   const [avatar, setAvatar] = useState('')
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const [isSaving, setIsSaving] = useState(false);
   
   const [imageToCrop, setImageToCrop] = useState<string | null>(null);
@@ -132,7 +132,7 @@ export default function EditProfilePage() {
 
   const handleAvatarClick = () => {
     if (avatar) {
-      setImagePreview({ urls: [avatar], startIndex: 0 });
+      setAvatarPreview({ avatarUrl: avatar, name: name });
     }
   };
 
@@ -219,9 +219,9 @@ export default function EditProfilePage() {
           </Button>
         </footer>
     </div>
-     <ImagePreviewDialog
-        imagePreview={imagePreview}
-        onOpenChange={(open) => !open && setImagePreview(null)}
+     <ProfileAvatarPreview
+        preview={avatarPreview}
+        onOpenChange={(open) => !open && setAvatarPreview(null)}
       />
       <ImageCropperDialog 
         imageSrc={imageToCrop}

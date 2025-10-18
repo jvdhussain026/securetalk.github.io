@@ -1,3 +1,4 @@
+
 'use client'
 
 import { useState } from 'react'
@@ -6,7 +7,7 @@ import { ArrowLeft, BadgeCheck, LoaderCircle, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useFirebase } from '@/firebase'
-import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 
 function DetailItem({ label, value }: { label: string, value: string | undefined | null }) {
@@ -22,11 +23,11 @@ function DetailItem({ label, value }: { label: string, value: string | undefined
 
 export default function ProfileViewPage() {
   const { userProfile, isUserLoading } = useFirebase();
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
 
   const handleAvatarClick = () => {
     if (userProfile?.profilePictureUrl) {
-      setImagePreview({ urls: [userProfile.profilePictureUrl], startIndex: 0 });
+      setAvatarPreview({ avatarUrl: userProfile.profilePictureUrl, name: userProfile.name });
     }
   };
 
@@ -99,9 +100,9 @@ export default function ProfileViewPage() {
                 </Card>
             </main>
         </div>
-        <ImagePreviewDialog
-            imagePreview={imagePreview}
-            onOpenChange={(open) => !open && setImagePreview(null)}
+        <ProfileAvatarPreview
+            preview={avatarPreview}
+            onOpenChange={(open) => !open && setAvatarPreview(null)}
         />
     </>
   )

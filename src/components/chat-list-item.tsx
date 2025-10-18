@@ -10,12 +10,11 @@ import { format, isToday, isYesterday, differenceInMinutes } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
-import { ImagePreviewDialog } from '@/components/image-preview-dialog'
-import type { ImagePreviewState } from '@/components/image-preview-dialog'
 import { ClientOnly } from '@/components/client-only'
 import { cn } from '@/lib/utils'
 import type { Contact, Message } from '@/lib/types'
 import { BadgeCheck, Pin, Users } from 'lucide-react'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from './profile-avatar-preview'
 
 
 function formatLastMessageTimestamp(timestamp: any) {
@@ -35,7 +34,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   const { firestore, user } = useFirebase();
   const [lastMessage, setLastMessage] = useState<Message | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState | null>(null);
+  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const longPressTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   
   const chatId = useMemo(() => {
@@ -77,7 +76,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
   const handleAvatarClick = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setImagePreview({ urls: [contact.avatar], startIndex: 0 });
+    setAvatarPreview({ avatarUrl: contact.avatar, name: contact.displayName || contact.name });
   };
 
   const lastMessageText = useMemo(() => {
@@ -136,12 +135,14 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
             onTouchMove={handleTouchEnd}
         >
             <div className="relative">
-                <Avatar className={cn("h-12 w-12", contact.isGroup && "rounded-lg")} onClick={handleAvatarClick}>
-                    <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
-                    <AvatarFallback className={cn(contact.isGroup ? "bg-muted text-muted-foreground" : "bg-muted")}>
-                        {contact.isGroup ? <Users className="h-6 w-6"/> : displayName.charAt(0)}
-                    </AvatarFallback>
-                </Avatar>
+                <div onClick={handleAvatarClick} className="cursor-pointer">
+                    <Avatar className={cn("h-12 w-12", contact.isGroup && "rounded-lg")}>
+                        <AvatarImage src={contact.avatar} alt={displayName} data-ai-hint="person portrait" />
+                        <AvatarFallback className={cn(contact.isGroup ? "bg-muted text-muted-foreground" : "bg-muted")}>
+                            {contact.isGroup ? <Users className="h-6 w-6"/> : displayName.charAt(0)}
+                        </AvatarFallback>
+                    </Avatar>
+                </div>
             </div>
             <div className="flex-1 overflow-hidden">
                 <div className="flex items-baseline justify-between">
@@ -171,9 +172,9 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
                 </div>
             </div>
         </Link>
-        <ImagePreviewDialog
-            imagePreview={imagePreview}
-            onOpenChange={(open) => !open && setImagePreview(null)}
+        <ProfileAvatarPreview
+            preview={avatarPreview}
+            onOpenChange={(open) => !open && setAvatarPreview(null)}
         />
       </>
   );

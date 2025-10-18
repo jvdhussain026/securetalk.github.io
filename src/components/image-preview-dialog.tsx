@@ -35,7 +35,6 @@ export type ImagePreviewState = {
   onReply?: (message: Message) => void;
   onStar?: (message: Message) => void;
   onDelete?: (message: Message) => void;
-  urls?: string[];
 } | null;
 
 type ImagePreviewDialogProps = {
@@ -196,7 +195,7 @@ function MediaPreviewHeader({
 }
 
 export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewDialogProps) {
-  const { message, contact, startIndex, onViewInChat, onReply, onStar, onDelete, urls } = imagePreview || {};
+  const { message, contact, startIndex, onViewInChat, onReply, onStar, onDelete } = imagePreview || {};
   const [isUiVisible, setIsUiVisible] = React.useState(true);
   const panzoomRef = React.useRef<any>(null);
   const [zoom, setZoom] = React.useState(1);
@@ -221,10 +220,9 @@ export function ImagePreviewDialog({ imagePreview, onOpenChange }: ImagePreviewD
   }, [emblaApi]);
   
   const mediaItems = React.useMemo(() => {
-    if (!message && !urls) return [];
-    const items = message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || (urls || []).map(url => ({ type: 'image' as const, url }));
-    return items;
-  }, [message, urls]);
+    if (!message) return [];
+    return message?.attachments?.filter(a => a.type === 'image' || a.type === 'video') || [];
+  }, [message]);
 
 
   if (!imagePreview) {

@@ -24,7 +24,7 @@ import {
 } from '@/components/ui/sheet';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar'
 import { ComingSoonDialog } from './coming-soon-dialog';
-import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Badge } from './ui/badge';
@@ -41,7 +41,7 @@ type SidebarProps = {
 
 export function Sidebar({ open, onOpenChange }: SidebarProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
   const { firestore, auth, user } = useFirebase();
   const router = useRouter();
   const { toast } = useToast();
@@ -65,7 +65,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
   
   const handleAvatarClick = () => {
     if (userProfile?.profilePictureUrl) {
-      setImagePreview({ urls: [userProfile.profilePictureUrl], startIndex: 0 });
+      setAvatarPreview({ avatarUrl: userProfile.profilePictureUrl, name: userProfile.name });
     }
   };
 
@@ -115,9 +115,9 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
       </SheetContent>
     </Sheet>
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />
-    <ImagePreviewDialog
-        imagePreview={imagePreview}
-        onOpenChange={(open) => !open && setImagePreview(null)}
+    <ProfileAvatarPreview
+        preview={avatarPreview}
+        onOpenChange={(open) => !open && setAvatarPreview(null)}
       />
     </>
   )

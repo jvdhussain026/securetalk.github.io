@@ -13,7 +13,7 @@ import Image from "next/image"
 import { FileText, Link as LinkIcon, Download, PlayCircle, BadgeCheck, Image as ImageIcon, Video, FileUp, Globe, Shield, Edit, Save, X, LoaderCircle } from "lucide-react"
 
 import type { Contact, Message } from "@/lib/types"
-import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { Badge } from "./ui/badge"
 import { useFirebase, useDoc, useMemoFirebase } from "@/firebase"
 import { updateDocumentNonBlocking } from "@/firebase"
@@ -39,7 +39,7 @@ const EmptyState = ({ icon: Icon, text }: { icon: React.ElementType, text: strin
 export function UserDetailsSheet({ open, onOpenChange, contact, messages }: UserDetailsSheetProps) {
   const { firestore, user } = useFirebase();
   const { toast } = useToast();
-  const [imagePreview, setImagePreview] = React.useState<ImagePreviewState>(null);
+  const [avatarPreview, setAvatarPreview] = React.useState<ProfileAvatarPreviewState>(null);
   const [isEditing, setIsEditing] = React.useState(false);
   const [isSaving, setIsSaving] = React.useState(false);
   const [editedName, setEditedName] = React.useState(contact.displayName || contact.name);
@@ -61,7 +61,7 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
   const realName = contact.name;
 
   const handleAvatarClick = (url: string) => {
-    setImagePreview({ urls: [url], startIndex: 0 });
+    setAvatarPreview({ avatarUrl: url, name: displayName });
   };
   
   const handleSaveName = () => {
@@ -268,9 +268,9 @@ export function UserDetailsSheet({ open, onOpenChange, contact, messages }: User
         </Drawer.Content>
       </Drawer.Portal>
     </Drawer.Root>
-     <ImagePreviewDialog
-        imagePreview={imagePreview}
-        onOpenChange={(open) => !open && setImagePreview(null)}
+     <ProfileAvatarPreview
+        preview={avatarPreview}
+        onOpenChange={(open) => !open && setAvatarPreview(null)}
       />
     </>
   )

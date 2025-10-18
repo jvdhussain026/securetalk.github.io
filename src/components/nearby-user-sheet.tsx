@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Check, UserPlus } from "lucide-react"
 import type { NearbyUser } from "@/lib/types"
 import { useToast } from '@/hooks/use-toast'
-import { ImagePreviewDialog, type ImagePreviewState } from '@/components/image-preview-dialog'
+import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 
 
 type NearbyUserSheetProps = {
@@ -19,7 +19,7 @@ type NearbyUserSheetProps = {
 
 export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyUserSheetProps) {
   const { toast } = useToast()
-  const [imagePreview, setImagePreview] = useState<ImagePreviewState>(null);
+  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
 
 
   if (!open) return null;
@@ -30,7 +30,7 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
   }
   
   const handleAvatarClick = () => {
-    setImagePreview({ urls: [user.avatar], startIndex: 0 });
+    setAvatarPreview({ avatarUrl: user.avatar, name: user.name });
   };
 
   const getButtonContent = () => {
@@ -94,9 +94,9 @@ export function NearbyUserSheet({ open, onOpenChange, user, onConnect }: NearbyU
           </Button>
         </div>
       </motion.div>
-       <ImagePreviewDialog
-        imagePreview={imagePreview}
-        onOpenChange={(open) => !open && setImagePreview(null)}
+       <ProfileAvatarPreview
+        preview={avatarPreview}
+        onOpenChange={(open) => !open && setAvatarPreview(null)}
       />
     </>
   );
