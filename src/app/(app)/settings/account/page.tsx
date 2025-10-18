@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, linkWithCredential } from 'firebase/auth';
 import { doc, getDoc, writeBatch } from 'firebase/firestore';
 
 function PasswordRequirement({ meets, text }: { meets: boolean; text: string }) {
@@ -31,7 +31,7 @@ export default function AccountPage() {
   const { firestore, auth, user, userProfile } = useFirebase();
 
   // Username state
-  const [newUsername, setNewUsername] = useState(userProfile?.username || '');
+  const [newUsername, setNewUsername] = useState('');
   const [isChecking, setIsChecking] = useState(false);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
 
@@ -40,14 +40,26 @@ export default function AccountPage() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
-
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
   const [passLength, setPassLength] = useState(false);
   const [passChars, setPassChars] = useState(false);
   const [passMatch, setPassMatch] = useState(false);
+  
+  const [hasPassword, setHasPassword] = useState(false);
+  
+  useEffect(() => {
+    if (user) {
+        const passwordProvider = user.providerData.some(
+            (provider) => provider.providerId === 'password'
+        );
+        setHasPassword(passwordProvider);
+    }
+    if (userProfile?.username) {
+        setNewUsername(userProfile.username);
+    }
+  }, [user, userProfile]);
 
   useEffect(() => {
     setPassLength(newPassword.length >= 8);
@@ -74,24 +86,18 @@ export default function AccountPage() {
 
   const handleUsernameChange = async () => {
     if (!isAvailable || !user || !firestore || newUsername === userProfile?.username) return;
-
     setIsSaving(true);
     const newUsernameLower = newUsername.toLowerCase();
     const oldUsernameLower = userProfile?.username;
-
     const batch = writeBatch(firestore);
-    
     const userRef = doc(firestore, 'users', user.uid);
     batch.update(userRef, { username: newUsernameLower });
-
     if (oldUsernameLower) {
         const oldUsernameRef = doc(firestore, 'usernames', oldUsernameLower);
         batch.delete(oldUsernameRef);
     }
-    
     const newUsernameRef = doc(firestore, 'usernames', newUsernameLower);
     batch.set(newUsernameRef, { uid: user.uid });
-
     try {
         await batch.commit();
         toast({ title: 'Username Updated Successfully' });
@@ -105,28 +111,45 @@ export default function AccountPage() {
   };
 
   const handlePasswordChange = async () => {
-    if (!passLength || !passChars || !passMatch || !user || !auth) return;
-    
+    if (!passLength || !passChars || !passMatch || !user || !auth || !userProfile?.username) return;
     setIsSaving(true);
-    try {
-      if (!user.email) throw new Error("User email is not available for re-authentication.");
-      
-      const credential = EmailAuthProvider.credential(user.email, currentPassword);
-      await reauthenticateWithCredential(user, credential);
-      await updatePassword(user, newPassword);
 
-      toast({ title: 'Password Updated Successfully' });
+    try {
+      if (hasPassword) {
+        // --- LOGIC FOR USERS WHO ALREADY HAVE A PASSWORD ---
+        if (!user.email) throw new Error("User email is not available for re-authentication.");
+        const credential = EmailAuthProvider.credential(user.email, currentPassword);
+        await reauthenticateWithCredential(user, credential);
+        await updatePassword(user, newPassword);
+        toast({ title: 'Password Updated Successfully' });
+      } else {
+        // --- LOGIC FOR ANONYMOUS USERS SETTING A PASSWORD FOR THE FIRST TIME ---
+        const email = `${userProfile.username.toLowerCase()}@secure-talk.app`;
+        const credential = EmailAuthProvider.credential(email, newPassword);
+        await linkWithCredential(user, credential);
+        // Update user profile to reflect the new email (optional but good practice)
+        const userRef = doc(firestore, 'users', user.uid);
+        await writeBatch(firestore).update(userRef, { email }).commit();
+        toast({ title: 'Account Secured!', description: 'Your password has been set.' });
+        setHasPassword(true); // Update UI state
+      }
+      // Reset form on success
       setCurrentPassword(''); setNewPassword(''); setConfirmPassword('');
     } catch (err: any) {
       console.error(err);
-      const message = err.code === 'auth/wrong-password' ? 'The current password you entered is incorrect.' : 'An unknown error occurred.';
+      let message = 'An unknown error occurred.';
+      if (err.code === 'auth/wrong-password') {
+        message = 'The current password you entered is incorrect.';
+      } else if (err.code === 'auth/email-already-in-use') {
+        message = 'This account is already linked to another user.';
+      }
       toast({ variant: 'destructive', title: 'Update Failed', description: message });
     } finally {
       setIsSaving(false);
     }
   };
 
-  const isPasswordFormValid = passLength && passChars && passMatch && currentPassword !== '';
+  const isPasswordFormValid = hasPassword ? passLength && passChars && passMatch && currentPassword !== '' : passLength && passChars && passMatch;
 
   return (
     <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
@@ -139,7 +162,6 @@ export default function AccountPage() {
         </Button>
         <h1 className="text-2xl font-bold font-headline">Account</h1>
       </header>
-
       <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
         <Card>
           <CardHeader>
@@ -151,35 +173,36 @@ export default function AccountPage() {
                 <Label htmlFor="username">New Username</Label>
                 <div className="flex gap-2">
                     <Input id="username" value={newUsername} onChange={(e) => { setNewUsername(e.target.value); setIsAvailable(null); }} />
-                    <Button onClick={checkUsernameAvailability} disabled={isChecking || newUsername.length < 3 || newUsername === userProfile?.username} variant="outline">
+                    <Button onClick={checkUsernameAvailability} disabled={isChecking || newUsername.length < 3 || newUsername.toLowerCase() === userProfile?.username} variant="outline">
                         {isChecking ? <LoaderCircle className="animate-spin" /> : 'Check'}
                     </Button>
                 </div>
-                 {isAvailable === true && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
+                 {isAvailable === true && newUsername.toLowerCase() !== userProfile?.username && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
                 {isAvailable === false && <p className="text-sm text-destructive flex items-center gap-1"><X className="h-4 w-4"/> Taken, try another.</p>}
             </div>
-            <Button onClick={handleUsernameChange} disabled={isSaving || !isAvailable || newUsername === userProfile?.username} className="w-full">
+            <Button onClick={handleUsernameChange} disabled={isSaving || !isAvailable || newUsername.toLowerCase() === userProfile?.username} className="w-full">
               {isSaving ? <LoaderCircle className="mr-2 animate-spin" /> : <Shield className="mr-2" />}
               {isSaving ? 'Updating...' : 'Update Username'}
             </Button>
           </CardContent>
         </Card>
-
         <Card>
           <CardHeader>
-            <CardTitle className="flex items-center gap-2"><KeyRound /> Change Password</CardTitle>
-            <CardDescription>Update the password for your Secure Talk account.</CardDescription>
+            <CardTitle className="flex items-center gap-2"><KeyRound /> {hasPassword ? 'Change Password' : 'Secure Your Account'}</CardTitle>
+            <CardDescription>{hasPassword ? 'Update the password for your account.' : 'Add a password to your account to enable recovery.'}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <div className="relative">
-                <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
-                <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
-                    {showCurrentPassword ? <EyeOff /> : <Eye />}
-                </Button>
+            {hasPassword && (
+              <div className="space-y-2">
+                <Label htmlFor="current-password">Current Password</Label>
+                <div className="relative">
+                  <Input id="current-password" type={showCurrentPassword ? 'text' : 'password'} value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} />
+                  <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowCurrentPassword(!showCurrentPassword)}>
+                      {showCurrentPassword ? <EyeOff /> : <Eye />}
+                  </Button>
+                </div>
               </div>
-            </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="new-password">New Password</Label>
               <div className="relative">
@@ -205,7 +228,7 @@ export default function AccountPage() {
             </div>
             <Button onClick={handlePasswordChange} disabled={isSaving || !isPasswordFormValid} className="w-full">
               {isSaving ? <LoaderCircle className="mr-2 animate-spin" /> : <Shield className="mr-2" />}
-              {isSaving ? 'Updating...' : 'Update Password'}
+              {isSaving ? 'Saving...' : hasPassword ? 'Update Password' : 'Set Password'}
             </Button>
           </CardContent>
         </Card>
