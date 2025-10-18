@@ -194,7 +194,7 @@ export default function GroupInvitePage() {
             </CardContent>
         </Card>
       </main>
-      <footer className="p-4 border-t bg-card">
+      <footer className="p-4 border-t bg-card shrink-0">
         <Button onClick={handleSendInvites} className="w-full" disabled={selectedContacts.length === 0 || isSending}>
             {isSending ? <LoaderCircle className="mr-2 animate-spin" /> : <Send className="mr-2" />}
             {isSending ? 'Sending...' : `Send Invite${selectedContacts.length > 1 ? 's' : ''} (${selectedContacts.length})`}

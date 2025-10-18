@@ -151,82 +151,80 @@ export default function WallpaperPage() {
                 <h1 className="text-2xl font-bold font-headline">Chat Wallpaper</h1>
             </header>
 
-            <ScrollArea className="flex-1">
-                <main className="p-4 md:p-6 space-y-6">
-                    <Card>
-                        <CardContent className="p-2">
-                            <div 
-                                className={cn(
-                                    "relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-muted",
-                                    !selectedWallpaper && "bg-chat"
-                                )}
-                                style={ selectedWallpaper ? { backgroundImage: `url(${selectedWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
-                            >
-                                <ChatPreview />
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <h3 className="font-semibold text-muted-foreground px-2">Choose Wallpaper</h3>
-
-                    <div className="grid grid-cols-3 gap-3">
-                        <button 
-                            onClick={handleFileUploadClick} 
-                            className="aspect-square bg-card rounded-lg flex flex-col items-center justify-center gap-2 text-primary border-2 border-dashed hover:bg-accent"
+            <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+                <Card>
+                    <CardContent className="p-2">
+                        <div 
+                            className={cn(
+                                "relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-muted",
+                                !selectedWallpaper && "bg-chat"
+                            )}
+                            style={ selectedWallpaper ? { backgroundImage: `url(${selectedWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                         >
-                            <Upload className="w-8 h-8" />
-                            <span className="text-sm font-medium">Upload Photo</span>
-                        </button>
-                        <input 
-                            type="file" 
-                            ref={fileInputRef} 
-                            className="hidden"
-                            accept="image/*"
-                            onChange={handleFileChange}
-                        />
+                            <ChatPreview />
+                        </div>
+                    </CardContent>
+                </Card>
 
-                        {customWallpaper && (
-                            <button onClick={() => handleSelectWallpaper(customWallpaper)} className="relative aspect-square rounded-lg overflow-hidden group">
-                                <Image src={customWallpaper} alt="Custom Uploaded Wallpaper" layout="fill" objectFit="cover" data-ai-hint="custom wallpaper"/>
-                                <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === customWallpaper ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === customWallpaper ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
-                                        <Check className="w-5 h-5" />
-                                    </div>
-                                </div>
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <span className="text-white text-xs font-semibold">Your Photo</span>
-                                </div>
-                            </button>
-                        )}
+                <h3 className="font-semibold text-muted-foreground px-2">Choose Wallpaper</h3>
 
-                        <button onClick={() => handleSelectWallpaper(null)} className="relative aspect-square rounded-lg overflow-hidden group bg-muted border">
-                            <div className="w-full h-full bg-chat" />
-                            <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === null ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === null ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
+                <div className="grid grid-cols-3 gap-3">
+                    <button 
+                        onClick={handleFileUploadClick} 
+                        className="aspect-square bg-card rounded-lg flex flex-col items-center justify-center gap-2 text-primary border-2 border-dashed hover:bg-accent"
+                    >
+                        <Upload className="w-8 h-8" />
+                        <span className="text-sm font-medium">Upload Photo</span>
+                    </button>
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden"
+                        accept="image/*"
+                        onChange={handleFileChange}
+                    />
+
+                    {customWallpaper && (
+                        <button onClick={() => handleSelectWallpaper(customWallpaper)} className="relative aspect-square rounded-lg overflow-hidden group">
+                            <Image src={customWallpaper} alt="Custom Uploaded Wallpaper" layout="fill" objectFit="cover" data-ai-hint="custom wallpaper"/>
+                            <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === customWallpaper ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === customWallpaper ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
                                     <Check className="w-5 h-5" />
                                 </div>
                             </div>
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                <span className="text-white text-xs font-semibold">Default</span>
+                                <span className="text-white text-xs font-semibold">Your Photo</span>
                             </div>
                         </button>
+                    )}
 
-                        {ChatWallpapers.map(wallpaper => (
-                            <button key={wallpaper.id} onClick={() => handleSelectWallpaper(wallpaper.imageUrl)} className="relative aspect-square rounded-lg overflow-hidden group">
-                                <Image src={wallpaper.imageUrl} alt={wallpaper.description} layout="fill" objectFit="cover" data-ai-hint={wallpaper.imageHint}/>
-                                <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === wallpaper.imageUrl ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === wallpaper.imageUrl ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
-                                        <Check className="w-5 h-5" />
-                                    </div>
+                    <button onClick={() => handleSelectWallpaper(null)} className="relative aspect-square rounded-lg overflow-hidden group bg-muted border">
+                        <div className="w-full h-full bg-chat" />
+                        <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === null ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                            <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === null ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
+                                <Check className="w-5 h-5" />
+                            </div>
+                        </div>
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <span className="text-white text-xs font-semibold">Default</span>
+                        </div>
+                    </button>
+
+                    {ChatWallpapers.map(wallpaper => (
+                        <button key={wallpaper.id} onClick={() => handleSelectWallpaper(wallpaper.imageUrl)} className="relative aspect-square rounded-lg overflow-hidden group">
+                            <Image src={wallpaper.imageUrl} alt={wallpaper.description} layout="fill" objectFit="cover" data-ai-hint={wallpaper.imageHint}/>
+                            <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === wallpaper.imageUrl ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
+                                <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === wallpaper.imageUrl ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
+                                    <Check className="w-5 h-5" />
                                 </div>
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <span className="text-white text-xs font-semibold">{wallpaper.name}</span>
-                                </div>
-                            </button>
-                        ))}
-                    </div>
-                </main>
-            </ScrollArea>
+                            </div>
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                                <span className="text-white text-xs font-semibold">{wallpaper.name}</span>
+                            </div>
+                        </button>
+                    ))}
+                </div>
+            </div>
                 
             <footer className="shrink-0 p-4 border-t bg-card">
                 <div className="flex gap-2">

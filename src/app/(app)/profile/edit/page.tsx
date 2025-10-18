@@ -157,8 +157,8 @@ export default function EditProfilePage() {
         <h1 className="text-2xl font-bold font-headline">Edit Profile</h1>
       </header>
 
-      <ScrollArea className="flex-1">
-        <main className="p-4 md:p-6 space-y-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="space-y-6">
             <div className="flex flex-col items-center space-y-4">
             <div className="relative">
                 <button onClick={handleAvatarClick}>
@@ -210,8 +210,8 @@ export default function EditProfilePage() {
                 <Textarea id="bio" placeholder="Tell us a little about yourself..." value={bio} onChange={(e) => setBio(e.target.value)} rows={4} maxLength={160} />
                 </div>
             </div>
-        </main>
-      </ScrollArea>
+        </div>
+      </main>
        <footer className="p-4 shrink-0 border-t bg-card">
           <Button className="w-full" onClick={handleSave} disabled={isSaving || !hasChanges}>
               {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : <Save className="mr-2" />}

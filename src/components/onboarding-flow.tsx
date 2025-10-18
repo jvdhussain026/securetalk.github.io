@@ -19,8 +19,8 @@ import { Card } from './ui/card';
 
 const InitialWelcomeStep = ({ onNext }: { onNext: () => void; }) => {
     return (
-        <div className="h-full w-full flex flex-col justify-between p-8 text-foreground text-center bg-background">
-            <div className="flex-1 flex flex-col justify-center items-center">
+        <div className="h-full w-full flex flex-col p-8 text-foreground text-center bg-background">
+            <div className="flex-1 flex flex-col justify-center items-center overflow-y-auto">
                 <ShieldCheck className="w-16 h-16 mb-6 text-primary drop-shadow-lg" />
                 <h1 className="text-4xl font-bold font-headline drop-shadow-md">Welcome to Secure Talk</h1>
                 <p className="text-lg text-muted-foreground mt-2">(Developer Preview)</p>
@@ -38,9 +38,11 @@ const InitialWelcomeStep = ({ onNext }: { onNext: () => void; }) => {
                     Thanks for helping us build something truly secure. 🔐
                 </p>
             </div>
-            <Button size="lg" className="w-full" onClick={onNext}>
-                Get Started <ArrowRight className="ml-2" />
-            </Button>
+            <div className="shrink-0 pt-4">
+                <Button size="lg" className="w-full" onClick={onNext}>
+                    Get Started <ArrowRight className="ml-2" />
+                </Button>
+            </div>
         </div>
     )
 }
@@ -48,12 +50,12 @@ const InitialWelcomeStep = ({ onNext }: { onNext: () => void; }) => {
 
 const WelcomeStep = ({ onNavigate, isSigningIn }: { onNavigate: (target: 'create' | 'recover') => void; isSigningIn: boolean; }) => {
     return (
-        <div className="h-full w-full flex flex-col justify-between p-8 text-foreground text-center bg-background">
+        <div className="h-full w-full flex flex-col p-8 text-foreground text-center bg-background">
              <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ duration: 1, delay: 0.2 }}
-                className="flex-1 flex flex-col justify-center items-center"
+                className="flex-1 flex flex-col justify-center items-center overflow-y-auto"
             >
                 <ShieldCheck className="w-20 h-20 mb-6 text-primary drop-shadow-lg" />
                 <h1 className="text-4xl font-bold font-headline drop-shadow-md">You're All Set</h1>
@@ -65,7 +67,7 @@ const WelcomeStep = ({ onNavigate, isSigningIn }: { onNavigate: (target: 'create
                  initial={{ opacity: 0, y: 20 }}
                  animate={{ opacity: 1, y: 0 }}
                  transition={{ duration: 0.5, delay: 0.8 }}
-                 className="space-y-3"
+                 className="space-y-3 shrink-0 pt-4"
             >
                 <Button size="lg" className="w-full" onClick={() => onNavigate('create')} disabled={isSigningIn}>
                     <UserPlus className="mr-2" />
@@ -141,10 +143,12 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     }
 
     return (
-        <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
-            <h2 className="text-2xl font-bold mb-2 font-headline text-center">Create Your Account</h2>
-            <p className="text-muted-foreground mb-8 text-center">Set up your profile to get started.</p>
-            <div className="w-full max-w-sm space-y-4">
+        <div className="h-full w-full flex flex-col p-8 bg-background">
+            <div className="text-center shrink-0">
+                <h2 className="text-2xl font-bold mb-2 font-headline">Create Your Account</h2>
+                <p className="text-muted-foreground mb-8">Set up your profile to get started.</p>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-4">
                 <div className="space-y-2">
                     <Label htmlFor="username">Unique Username</Label>
                     <div className="flex gap-2">
@@ -184,6 +188,8 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                     <PasswordRequirement meets={passChars} text="Contains letters and numbers" />
                     <PasswordRequirement meets={passMatch} text="Passwords match" />
                 </div>
+            </div>
+            <div className="shrink-0 pt-4 space-y-2">
                 <Button size="lg" className="w-full" onClick={handleNextClick} disabled={!isFormValid || isSaving}>
                     {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : <ArrowRight className="mr-2" />}
                     {isSaving ? 'Creating Account...' : 'Continue'}
@@ -200,10 +206,12 @@ const RecoverAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: s
     const [showPassword, setShowPassword] = useState(false);
     
     return (
-        <div className="h-full w-full flex flex-col justify-center items-center p-8 bg-background">
-            <h2 className="text-2xl font-bold mb-2 font-headline text-center">Recover Your Account</h2>
-            <p className="text-muted-foreground mb-8 text-center">Enter your credentials to sign in.</p>
-            <div className="w-full max-w-sm space-y-4">
+        <div className="h-full w-full flex flex-col p-8 bg-background">
+             <div className="text-center shrink-0">
+                <h2 className="text-2xl font-bold mb-2 font-headline">Recover Your Account</h2>
+                <p className="text-muted-foreground mb-8">Enter your credentials to sign in.</p>
+            </div>
+            <div className="flex-1 overflow-y-auto space-y-4">
                  <div className="space-y-2">
                     <Label htmlFor="recover-username">Username</Label>
                     <Input id="recover-username" placeholder="javed_026" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus />
@@ -217,6 +225,8 @@ const RecoverAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: s
                         </Button>
                     </div>
                 </div>
+            </div>
+             <div className="shrink-0 pt-4 space-y-2">
                 <Button size="lg" className="w-full" onClick={() => onNext(username, password)} disabled={username.length < 3 || password.length < 8 || isSaving}>
                     {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : <LogIn className="mr-2" />}
                     {isSaving ? 'Signing In...' : 'Sign In'}

@@ -62,6 +62,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Heart, label: 'Support Us', href: '/support', show: true },
     { icon: Code, label: 'Developer', href: '/readme', show: true },
     { icon: Shield, label: 'Admin', href: '/admin', show: userProfile?.verified },
+    { icon: LogOut, label: 'Sign Out', action: () => handleLogout(), show: true }
   ]
   
   const handleAvatarClick = (e: React.MouseEvent) => {
@@ -115,26 +116,23 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
         </div>
         <ScrollArea className="flex-1">
             <div className="space-y-2 p-4">
-            {menuItems.map((item, index) => (
+            {menuItems.map((item) => (
                 item.show && (
-                    <div key={index}>
-                    <Link href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => {
-                        onOpenChange(false);
-                    }}>
-                        <item.icon className="h-6 w-6 mr-4 text-primary" />
-                        <span className="flex-1 font-medium">{item.label}</span>
-                    </Link>
-                    </div>
+                    item.href ? (
+                        <Link key={item.label} href={item.href} className="flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80" onClick={() => onOpenChange(false)}>
+                            <item.icon className="h-6 w-6 mr-4 text-primary" />
+                            <span className="flex-1 font-medium">{item.label}</span>
+                        </Link>
+                    ) : (
+                         <button key={item.label} onClick={item.action} className={cn("flex items-center p-3 rounded-lg hover:bg-accent transition-colors text-foreground/80 w-full", item.label === 'Sign Out' && 'text-destructive')}>
+                            <item.icon className={cn("h-6 w-6 mr-4", item.label === 'Sign Out' ? 'text-destructive' : 'text-primary')} />
+                            <span className="flex-1 font-medium text-left">{item.label}</span>
+                        </button>
+                    )
                 )
             ))}
             </div>
         </ScrollArea>
-         <div className="p-4 border-t">
-            <Button variant="outline" className="w-full" onClick={handleLogout}>
-                <LogOut className="mr-2"/>
-                Sign Out
-            </Button>
-        </div>
       </SheetContent>
     </Sheet>
     <ComingSoonDialog open={isModalOpen} onOpenChange={setIsModalOpen} />

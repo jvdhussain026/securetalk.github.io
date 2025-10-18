@@ -153,7 +153,7 @@ export default function NewGroupPage() {
         <h1 className="text-2xl font-bold font-headline">New Group</h1>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
         <Card>
           <CardHeader className="text-center">
              <div className="flex flex-col items-center space-y-4">
@@ -219,7 +219,7 @@ export default function NewGroupPage() {
           </CardContent>
         </Card>
       </main>
-      <footer className="p-4 border-t bg-card">
+      <footer className="p-4 border-t bg-card shrink-0">
         <Button onClick={handleCreateGroup} className="w-full" disabled={isCreating || !name}>
           {isCreating ? <LoaderCircle className="mr-2 animate-spin" /> : <Save className="mr-2" />}
           {isCreating ? 'Creating...' : 'Create & Continue'}
