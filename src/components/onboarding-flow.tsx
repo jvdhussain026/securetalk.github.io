@@ -100,10 +100,9 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
         }
         setIsChecking(true);
         setIsAvailable(null);
-        const usersRef = collection(firestore, 'users');
-        const q = query(usersRef, where("username", "==", username.toLowerCase()));
-        const querySnapshot = await getDocs(q);
-        setIsAvailable(querySnapshot.empty);
+        const usernameRef = doc(firestore, 'usernames', username.toLowerCase());
+        const usernameDoc = await getDocumentNonBlocking(usernameRef);
+        setIsAvailable(!usernameDoc?.exists());
         setIsChecking(false);
     };
     
@@ -276,6 +275,8 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             const newUser = userCredential.user;
 
             const batch = writeBatch(firestore);
+            
+            // Create user document
             const userRef = doc(firestore, 'users', newUser.uid);
             const profileData = {
                 id: newUser.uid,
@@ -289,6 +290,10 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
                 createdAt: serverTimestamp(),
             };
             batch.set(userRef, profileData);
+
+            // Create username document for uniqueness check
+            const usernameRef = doc(firestore, 'usernames', username.toLowerCase());
+            batch.set(usernameRef, { uid: newUser.uid });
 
             // Add dev contact
             const devId = '4YaPPGcDw2NLe31LwT05h3TihTz1';

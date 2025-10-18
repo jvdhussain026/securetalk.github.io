@@ -56,6 +56,19 @@
         "email"
       ]
     },
+    "Username": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Username",
+      "type": "object",
+      "description": "Represents a unique, reserved username to prevent duplicates.",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "The UID of the user who owns this username."
+        }
+      },
+      "required": ["uid"]
+    },
     "TeamMember": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "Team Member",
@@ -210,6 +223,14 @@
           "entityName": "User",
           "schema": { "$ref": "#/backend/entities/User" },
           "description": "Stores user profile information."
+        }
+      },
+      {
+        "path": "usernames/{username}",
+        "definition": {
+          "entityName": "Username",
+          "schema": { "$ref": "#/backend/entities/Username" },
+          "description": "Stores a list of unique usernames to prevent duplicates."
         }
       },
       {
