@@ -62,7 +62,6 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     { icon: Heart, label: 'Support Us', href: '/support', show: true },
     { icon: Code, label: 'Developer', href: '/readme', show: true },
     { icon: Shield, label: 'Admin', href: '/admin', show: userProfile?.verified },
-    { icon: LogOut, label: 'Sign Out', action: () => handleLogout(), show: true }
   ]
   
   const handleAvatarClick = (e: React.MouseEvent) => {
