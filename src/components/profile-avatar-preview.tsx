@@ -64,11 +64,12 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                 initial={{ scale: 0.8 }}
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.8 }}
+                className="w-[90vw] h-[90vw] max-w-md max-h-md rounded-full overflow-hidden"
+                 onClick={(e) => e.stopPropagation()} // Stop click from bubbling to overlay
             >
                 <div
-                    className="w-full h-full flex items-center justify-center"
+                    className="w-full h-full flex items-center justify-center bg-black"
                     onDoubleClick={handleDoubleClick}
-                    onClick={(e) => e.stopPropagation()}
                 >
                     <Panzoom
                         ref={panzoomRef}
@@ -78,14 +79,14 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                         preventPan={() => zoom === 1}
                         onStateChange={handleStateChange}
                         style={{ touchAction: 'none' }}
-                        className="w-[90vw] h-[90vw] max-w-lg max-h-lg"
+                        className="w-full h-full"
                     >
                         <Image
                             src={preview.avatarUrl}
                             alt={`${preview.name}'s profile picture`}
                             width={512}
                             height={512}
-                            className="rounded-full object-cover w-full h-full shadow-2xl"
+                            className="object-cover w-full h-full shadow-2xl"
                         />
                     </Panzoom>
                 </div>
