@@ -8,15 +8,42 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X } from 'lucide-react';
+import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
-import { createUserWithEmailAndPassword, signInAnonymously, signInWithEmailAndPassword } from 'firebase/auth';
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, collection, getDocs, writeBatch, serverTimestamp, query, where, updateDoc } from 'firebase/firestore';
-import { setDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import { Card } from './ui/card';
+
+const InitialWelcomeStep = ({ onNext }: { onNext: () => void; }) => {
+    return (
+        <div className="h-full w-full flex flex-col justify-between p-8 text-foreground text-center bg-background">
+            <div className="flex-1 flex flex-col justify-center items-center">
+                <ShieldCheck className="w-16 h-16 mb-6 text-primary drop-shadow-lg" />
+                <h1 className="text-4xl font-bold font-headline drop-shadow-md">Welcome to Secure Talk</h1>
+                <p className="text-lg text-muted-foreground mt-2">(Developer Preview)</p>
+                <p className="mt-6 text-md text-muted-foreground max-w-md">
+                    You're among the first to try Secure Talk! 🎉 This early release is for testers and developers. Your feedback shapes the future of private communication.
+                </p>
+                <Card className="mt-8 text-left p-4 w-full max-w-sm">
+                    <h3 className="font-bold flex items-center gap-2"><MessageSquare className="h-5 w-5" /> Share feedback directly with us:</h3>
+                    <ul className="text-sm text-muted-foreground list-disc list-inside mt-2 space-y-1">
+                        <li>Open <Settings className="inline h-4 w-4" /> Settings → <Send className="inline h-4 w-4" /> Feedback & Report</li>
+                        <li>Chat directly with **Secure Talk Dev** (we'll add them for you).</li>
+                    </ul>
+                </Card>
+                 <p className="mt-6 text-md text-muted-foreground max-w-md">
+                    Thanks for helping us build something truly secure. 🔐
+                </p>
+            </div>
+            <Button size="lg" className="w-full" onClick={onNext}>
+                Get Started <ArrowRight className="ml-2" />
+            </Button>
+        </div>
+    )
+}
 
 
 const WelcomeStep = ({ onNavigate, isSigningIn }: { onNavigate: (target: 'create' | 'recover') => void; isSigningIn: boolean; }) => {
@@ -29,9 +56,9 @@ const WelcomeStep = ({ onNavigate, isSigningIn }: { onNavigate: (target: 'create
                 className="flex-1 flex flex-col justify-center items-center"
             >
                 <ShieldCheck className="w-20 h-20 mb-6 text-primary drop-shadow-lg" />
-                <h1 className="text-4xl font-bold font-headline drop-shadow-md">Welcome to Secure Talk</h1>
+                <h1 className="text-4xl font-bold font-headline drop-shadow-md">You're All Set</h1>
                 <p className="mt-4 text-md text-muted-foreground max-w-md">
-                    The secure, private way to communicate.
+                    Create a new account to begin, or recover a previous one.
                 </p>
             </motion.div>
             <motion.div
@@ -55,6 +82,7 @@ const WelcomeStep = ({ onNavigate, isSigningIn }: { onNavigate: (target: 'create
 
 const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: string, fullName: string, password: string) => void; onBack: () => void; isSaving: boolean; }) => {
     const { firestore } = useFirebase();
+    const { toast } = useToast();
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
@@ -230,8 +258,12 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     
     const handleNavigation = (target: 'create' | 'recover') => {
         setFlow(target);
-        setStep(1);
+        setStep(2);
     };
+    
+    const handleInitialNext = () => {
+        setStep(1);
+    }
 
     const handleCreateAccount = async (username: string, fullName: string, password: string) => {
         if (!auth || !firestore) return;
@@ -310,16 +342,19 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
     
     const renderStep = () => {
         if (step === 0) {
+            return <InitialWelcomeStep onNext={handleInitialNext} />;
+        }
+        if (step === 1) {
             return <WelcomeStep onNavigate={handleNavigation} isSigningIn={isSigningIn} />;
         }
-        if (step === 1 && flow === 'create') {
-            return <CreateAccountStep onNext={handleCreateAccount} onBack={() => setStep(0)} isSaving={isSavingProfile} />;
-        }
-        if (step === 1 && flow === 'recover') {
-            return <RecoverAccountStep onNext={handleRecoverAccount} onBack={() => setStep(0)} isSaving={isSigningIn} />;
-        }
         if (step === 2 && flow === 'create') {
-            return <TermsStep onNext={onComplete} onBack={() => setStep(1)} />;
+            return <CreateAccountStep onNext={handleCreateAccount} onBack={() => setStep(1)} isSaving={isSavingProfile} />;
+        }
+        if (step === 2 && flow === 'recover') {
+            return <RecoverAccountStep onNext={handleRecoverAccount} onBack={() => setStep(1)} isSaving={isSigningIn} />;
+        }
+        if (step === 3 && flow === 'create') {
+            return <TermsStep onNext={onComplete} onBack={() => setStep(2)} />;
         }
     };
 
