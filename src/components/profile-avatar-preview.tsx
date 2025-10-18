@@ -45,7 +45,7 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
   };
 
   const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    e.stopPropagation();
+    // This event is for the main container, so clicking it closes the preview.
     handleClose();
   };
 
@@ -65,7 +65,7 @@ export function ProfileAvatarPreview({ preview, onOpenChange }: ProfileAvatarPre
                 animate={{ scale: 1 }}
                 exit={{ scale: 0.8 }}
                 className="w-[90vw] h-[90vw] max-w-md max-h-md rounded-full overflow-hidden"
-                 onClick={(e) => e.stopPropagation()} // Stop click from bubbling to overlay
+                 onClick={(e) => e.stopPropagation()} // Stop click from bubbling to overlay and closing
             >
                 <div
                     className="w-full h-full flex items-center justify-center bg-black"
