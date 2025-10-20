@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send, Eye, EyeOff, Camera } from 'lucide-react';
+import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send, Eye, EyeOff, Camera, User as UserIcon } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
@@ -131,12 +131,9 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     }, [password, confirmPassword]);
 
     const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value.toLowerCase();
-        const usernameRegex = /^[a-z0-9_.]*$/;
-        if (usernameRegex.test(value)) {
-            setUsername(value);
-            setIsAvailable(null);
-        }
+        const value = e.target.value.toLowerCase().replace(/[^a-z0-9_.]/g, '');
+        setUsername(value);
+        setIsAvailable(null);
     };
     
     const checkUsernameAvailability = async () => {
@@ -207,7 +204,7 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                         <Avatar className="w-24 h-24 text-2xl">
                             <AvatarImage src={selectedAvatar} />
                             <AvatarFallback>
-                                {fullName ? fullName.charAt(0) : <UserPlus />}
+                                {fullName ? fullName.charAt(0) : <UserIcon />}
                             </AvatarFallback>
                         </Avatar>
                         {isUploading && (
@@ -242,7 +239,7 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                             {isChecking ? <LoaderCircle className="animate-spin" /> : 'Check'}
                         </Button>
                     </div>
-                    <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, underscores, and periods. No spaces.</p>
+                    <p className="text-xs text-muted-foreground">Your unique username cannot be changed later.</p>
                      {isAvailable === true && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
                     {isAvailable === false && <p className="text-sm text-destructive flex items-center gap-1"><X className="h-4 w-4"/> Taken, try another.</p>}
                 </div>
@@ -435,7 +432,6 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
             const profileData = {
                 id: newUser.uid,
                 name: fullName,
-                email: newUser.email,
                 username: username.toLowerCase(),
                 profilePictureUrl: avatar,
                 bio: `Just joined Secure Talk!`,
@@ -532,5 +528,3 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         </div>
     );
 }
-
-    

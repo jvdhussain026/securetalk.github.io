@@ -30,102 +30,12 @@ export default function AccountPage() {
   const { firestore, auth, user, userProfile } = useFirebase();
 
   const [newUsername, setNewUsername] = useState('');
-  const [isChecking, setIsChecking] = useState(false);
-  const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isReauthOpen, setIsReauthOpen] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-
-
+  
   useEffect(() => {
     if (userProfile?.username) {
         setNewUsername(userProfile.username);
     }
   }, [userProfile]);
-
-  const handleUsernameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.toLowerCase();
-    const usernameRegex = /^[a-z0-9_.]*$/;
-    if (usernameRegex.test(value)) {
-        setNewUsername(value);
-        setIsAvailable(null);
-    }
-  };
-
-  const checkUsernameAvailability = async () => {
-    if (newUsername.length < 3) {
-        toast({ variant: 'destructive', title: "Username too short."});
-        return;
-    }
-    if (newUsername.toLowerCase() === userProfile?.username) {
-        setIsAvailable(true);
-        return;
-    }
-    setIsChecking(true);
-    setIsAvailable(null);
-    const usernameRef = doc(firestore, 'usernames', newUsername.toLowerCase());
-    const usernameDoc = await getDoc(usernameRef);
-    setIsAvailable(!usernameDoc.exists());
-    setIsChecking(false);
-  };
-  
-  const initiateUsernameChange = () => {
-      if (!isAvailable || !user || !firestore || newUsername === userProfile?.username) return;
-      setIsReauthOpen(true);
-  }
-
-  const handleUsernameChange = async () => {
-    if (!user || !auth) return;
-    
-    setIsReauthOpen(false);
-    setIsSaving(true);
-
-    try {
-        // 1. Re-authenticate user
-        if (!user.email) throw new Error("User email is not available for re-authentication.");
-        const credential = EmailAuthProvider.credential(user.email, currentPassword);
-        await reauthenticateWithCredential(user, credential);
-        
-        // 2. Update email in Firebase Auth
-        const newEmail = `${newUsername.toLowerCase()}@secure-talk.app`;
-        await updateEmail(user, newEmail);
-        
-        // 3. Update Firestore database in a batch
-        const newUsernameLower = newUsername.toLowerCase();
-        const oldUsernameLower = userProfile?.username;
-        const batch = writeBatch(firestore);
-
-        const userRef = doc(firestore, 'users', user.uid);
-        batch.update(userRef, { username: newUsernameLower, email: newEmail });
-
-        if (oldUsernameLower) {
-            const oldUsernameRef = doc(firestore, 'usernames', oldUsernameLower);
-            batch.delete(oldUsernameRef);
-        }
-        
-        const newUsernameRef = doc(firestore, 'usernames', newUsernameLower);
-        batch.set(newUsernameRef, { uid: user.uid });
-        
-        await batch.commit();
-        
-        toast({ title: 'Username Updated Successfully' });
-        setIsAvailable(null);
-
-    } catch (err: any) {
-        console.error(err);
-        let message = 'Could not update username. Please try again.';
-        if (err.code === 'auth/wrong-password') {
-            message = 'The password you entered is incorrect.';
-        } else if (err.code === 'auth/requires-recent-login') {
-            message = 'For security, please sign out and sign back in before changing your username.';
-        }
-        toast({ variant: 'destructive', title: 'Update Failed', description: message });
-    } finally {
-        setIsSaving(false);
-        setCurrentPassword('');
-    }
-  };
 
 
   return (
@@ -167,25 +77,14 @@ export default function AccountPage() {
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><User /> Username</CardTitle>
-            <CardDescription>Change the unique username for your account.</CardDescription>
+            <CardDescription>Your unique username for your account.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-                <Label htmlFor="username">New Username</Label>
-                <div className="flex gap-2">
-                    <Input id="username" value={newUsername} onChange={handleUsernameInputChange} />
-                    <Button onClick={checkUsernameAvailability} disabled={isChecking || newUsername.length < 3 || newUsername.toLowerCase() === userProfile?.username} variant="outline">
-                        {isChecking ? <LoaderCircle className="animate-spin" /> : 'Check'}
-                    </Button>
-                </div>
-                 <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, underscores, and periods. No spaces.</p>
-                 {isAvailable === true && newUsername.toLowerCase() !== userProfile?.username && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
-                {isAvailable === false && <p className="text-sm text-destructive flex items-center gap-1"><X className="h-4 w-4"/> Taken, try another.</p>}
+                <Label htmlFor="username">Username</Label>
+                <Input id="username" value={newUsername} disabled />
+                 <p className="text-xs text-muted-foreground">Your unique username cannot be changed.</p>
             </div>
-            <Button onClick={initiateUsernameChange} disabled={isSaving || !isAvailable || newUsername.toLowerCase() === userProfile?.username} className="w-full">
-              {isSaving ? <LoaderCircle className="mr-2 animate-spin" /> : <Shield className="mr-2" />}
-              {isSaving ? 'Updating...' : 'Update Username'}
-            </Button>
           </CardContent>
         </Card>
 
@@ -204,35 +103,6 @@ export default function AccountPage() {
         </Card>
       </main>
     </div>
-        <AlertDialog open={isReauthOpen} onOpenChange={setIsReauthOpen}>
-            <AlertDialogContent>
-                <AlertDialogHeader>
-                    <AlertDialogTitle>Re-authenticate to continue</AlertDialogTitle>
-                    <AlertDialogDescription>
-                        For your security, please enter your current password to change your username.
-                    </AlertDialogDescription>
-                </AlertDialogHeader>
-                 <div className="space-y-2 py-2">
-                    <Label htmlFor="current-password">Current Password</Label>
-                    <div className="relative">
-                      <Input 
-                          id="current-password" 
-                          type={showPassword ? 'text' : 'password'} 
-                          value={currentPassword} 
-                          onChange={(e) => setCurrentPassword(e.target.value)}
-                          autoFocus
-                      />
-                      <Button variant="ghost" size="icon" className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8" onClick={() => setShowPassword(!showPassword)}>
-                          {showPassword ? <EyeOff /> : <Eye />}
-                      </Button>
-                    </div>
-                </div>
-                <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleUsernameChange} disabled={!currentPassword}>Confirm</AlertDialogAction>
-                </AlertDialogFooter>
-            </AlertDialogContent>
-        </AlertDialog>
     </>
   );
 }
