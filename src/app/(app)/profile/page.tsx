@@ -1,7 +1,7 @@
 
 'use client'
 
-import { useState } from 'react'
+import { useState, useContext } from 'react'
 import Link from 'next/link'
 import { ArrowLeft, BadgeCheck, LoaderCircle, Edit } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -9,6 +9,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useFirebase } from '@/firebase'
 import { ProfileAvatarPreview, type ProfileAvatarPreviewState } from '@/components/profile-avatar-preview'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { AppContext } from '@/app/(app)/layout'
 
 function DetailItem({ label, value }: { label: string, value: string | undefined | null }) {
     if (!value) return null;
@@ -23,7 +24,7 @@ function DetailItem({ label, value }: { label: string, value: string | undefined
 
 export default function ProfileViewPage() {
   const { userProfile, isUserLoading } = useFirebase();
-  const [avatarPreview, setAvatarPreview] = useState<ProfileAvatarPreviewState>(null);
+  const { setAvatarPreview } = useContext(AppContext);
 
   const handleAvatarClick = () => {
     if (userProfile?.profilePictureUrl) {
@@ -94,16 +95,11 @@ export default function ProfileViewPage() {
                     <CardContent className="space-y-4">
                         <DetailItem label="Full Name" value={userProfile?.name} />
                         <DetailItem label="Username" value={userProfile?.username} />
-                        <DetailItem label="Email" value={userProfile?.email} />
                         <DetailItem label="User ID" value={userProfile?.uid || userProfile?.id} />
                     </CardContent>
                 </Card>
             </main>
         </div>
-        <ProfileAvatarPreview
-            preview={avatarPreview}
-            onOpenChange={(open) => !open && setAvatarPreview(null)}
-        />
     </>
   )
 }

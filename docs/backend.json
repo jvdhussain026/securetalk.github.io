@@ -15,11 +15,6 @@
           "type": "string",
           "description": "The user's username."
         },
-        "email": {
-          "type": "string",
-          "description": "The user's email address.",
-          "format": "email"
-        },
         "profilePictureUrl": {
           "type": "string",
           "description": "URL of the user's profile picture.",
@@ -52,8 +47,7 @@
       },
       "required": [
         "id",
-        "username",
-        "email"
+        "username"
       ]
     },
     "Username": {
