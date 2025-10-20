@@ -44,8 +44,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: contacts } = useCollection<Contact>(contactsQuery);
   
   useEffect(() => {
-    console.log("%cHey, genius! You found an easter egg. \ud83d\udc23", "color: #2563eb; font-size: 20px; font-weight: bold;");
-    console.log("Since you're here, you might be interested in checking out the project on GitHub. Contributions are welcome!");
+    console.log("%c👋 Hey there, curious genius!", "color: #2563eb; font-size: 20px; font-weight: bold;");
+    console.log("%cYou just unlocked Secure Talk’s hidden console message 👀", "font-style: italic; font-size: 14px;");
+    console.log("We love curious minds like yours — people who explore beyond the UI.");
+    console.log("\n%c🚀 Secure Talk is an open-source, privacy-first messenger built by students for the world.", "font-size: 14px;");
+    console.log("If you’d like to contribute, join us on GitHub:\n🔗 https://github.com/jvdhussain026/secure_talk");
+    console.log("\n%cP.S. – Curiosity is your superpower. Never lose it 💫", "font-weight: bold; font-size: 14px;");
   }, []);
 
   React.useEffect(() => {
