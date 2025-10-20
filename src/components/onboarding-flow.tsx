@@ -19,8 +19,9 @@ import { Card } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
-import { ImageCropperDialog } from './image-cropper-dialog';
+import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import Image from 'next/image';
 
 
 const InitialWelcomeStep = ({ onNext }: { onNext: () => void; }) => {
