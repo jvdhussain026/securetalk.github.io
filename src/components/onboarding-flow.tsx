@@ -18,7 +18,6 @@ import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import { Card } from './ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
-import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from '@/components/ui/carousel';
 import { ImageCropperDialog } from '@/components/image-cropper-dialog';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import Image from 'next/image';
@@ -109,7 +108,7 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [selectedAvatar, setSelectedAvatar] = useState(PlaceHolderImages[0].imageUrl);
+    const [selectedAvatar, setSelectedAvatar] = useState('');
     
     const [isChecking, setIsChecking] = useState(false);
     const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
@@ -125,13 +124,21 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
     const [isUploading, setIsUploading] = useState(false);
 
-
     useEffect(() => {
         setPassLength(password.length >= 8);
         setPassChars(/\d/.test(password) && /[a-zA-Z]/.test(password));
         setPassMatch(password !== '' && password === confirmPassword);
     }, [password, confirmPassword]);
 
+    const handleUsernameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const value = e.target.value.toLowerCase();
+        const usernameRegex = /^[a-z0-9_.]*$/;
+        if (usernameRegex.test(value)) {
+            setUsername(value);
+            setIsAvailable(null);
+        }
+    };
+    
     const checkUsernameAvailability = async () => {
         if (username.length < 3) {
             toast({ variant: 'destructive', title: "Username too short."});
@@ -230,11 +237,12 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                 <div className="space-y-2">
                     <Label htmlFor="username">Unique Username</Label>
                     <div className="flex gap-2">
-                        <Input id="username" placeholder="e.g. javed_026" value={username} onChange={(e) => { setUsername(e.target.value); setIsAvailable(null); }} />
+                        <Input id="username" placeholder="e.g. javed_026" value={username} onChange={handleUsernameChange} />
                         <Button onClick={checkUsernameAvailability} disabled={isChecking || username.length < 3} variant="outline">
                             {isChecking ? <LoaderCircle className="animate-spin" /> : 'Check'}
                         </Button>
                     </div>
+                    <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, underscores, and periods. No spaces.</p>
                      {isAvailable === true && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
                     {isAvailable === false && <p className="text-sm text-destructive flex items-center gap-1"><X className="h-4 w-4"/> Taken, try another.</p>}
                 </div>
@@ -524,3 +532,5 @@ export function OnboardingFlow({ onComplete }: { onComplete: () => void }) {
         </div>
     );
 }
+
+    
