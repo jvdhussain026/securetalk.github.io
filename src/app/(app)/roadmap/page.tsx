@@ -2,7 +2,7 @@
 'use client';
 
 import Link from 'next/link';
-import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff, CheckCircle, Smartphone, UserCog, Languages as LanguagesIcon, Bell, Lightbulb } from 'lucide-react';
+import { ArrowLeft, Construction, WifiOff, Users, Video, Search, Settings, DollarSign, MessageSquare, Heart, ShieldOff, CheckCircle, Smartphone, UserCog, Languages as LanguagesIcon, Bell, Lightbulb, BellOff as BellOffIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -90,6 +90,12 @@ export default function DeveloperPreviewPage() {
           },
       ],
       "Not Implemented": [
+           {
+              icon: BellOffIcon,
+              title: "Advanced Notification Badges",
+              description: "Displaying a count of unread messages on the app icon or in chat lists is not currently possible for a Progressive Web App (PWA) due to limitations with background service workers. This will be fully implemented in the native Android app.",
+              status: 'Not Implemented' as const
+          },
            {
               icon: Video,
               title: "Video Uploads",

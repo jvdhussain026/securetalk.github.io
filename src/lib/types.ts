@@ -57,7 +57,6 @@ export type Contact = {
   lastMessageTimestamp?: Timestamp;
   profilePictureUrl?: string;
   createdAt?: Timestamp; // Added this field
-  unreadCount?: number;
   call?: {
     type: 'incoming' | 'outgoing' | 'missed';
     callType: 'voice' | 'video';

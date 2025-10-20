@@ -544,7 +544,6 @@ export default function ChatPage() {
   const [enterToSend, setEnterToSend] = useState(false);
   const [menuPage, setMenuPage] = useState(1);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [unreadCountOnLoad, setUnreadCountOnLoad] = useState(0);
   
   const [isMultiSelectMode, setIsMultiSelectMode] = useState(false);
   const [selectedMessageIds, setSelectedMessageIds] = useState<string[]>([]);
@@ -558,7 +557,6 @@ export default function ChatPage() {
   const messageRefs = useRef<Record<string, HTMLDivElement>>({});
   const prevMessagesCountRef = useRef(messages?.length || 0);
   
-  const unreadDividerRef = useRef<HTMLDivElement>(null);
   const initialScrollDoneRef = useRef(false);
 
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -587,15 +585,6 @@ export default function ChatPage() {
         window.removeEventListener('storage', handleStorageChange);
     };
   }, [chat?.wallpaper]);
-
-
-  useEffect(() => {
-    if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
-        setUnreadCountOnLoad(contact.unreadCount);
-        updateDoc(contactDocRef, { unreadCount: 0 });
-    }
-  }, [contactDocRef, contact]);
-  
 
   useEffect(() => {
     // Only show toast for new incoming messages and if the document is hidden
@@ -701,13 +690,7 @@ export default function ChatPage() {
     
     // Logic for initial scroll
     if (!initialScrollDoneRef.current) {
-        if (unreadDividerRef.current) {
-            // If there's an unread divider, scroll to it
-            unreadDividerRef.current.scrollIntoView({ block: 'center' });
-        } else {
-            // Otherwise, scroll to the bottom
-            scrollToBottom();
-        }
+        scrollToBottom();
         initialScrollDoneRef.current = true;
     } else {
         // Logic for subsequent message updates
@@ -805,39 +788,30 @@ export default function ChatPage() {
       isEdited: !!editingMessage,
     };
   
-    const batch = writeBatch(firestore);
-  
     if (editingMessage) {
       const messageRef = doc(firestore, collectionPath, editingMessage.id);
-      batch.update(messageRef, { text: finalText, isEdited: true });
+      updateDocumentNonBlocking(messageRef, { text: finalText, isEdited: true });
       setEditingMessage(null);
       toast({ title: "Message updated" });
     } else {
-      const newMessageRef = doc(collection(firestore, collectionPath));
-      batch.set(newMessageRef, messageData);
+      const collectionRef = collection(firestore, collectionPath);
+      addDocumentNonBlocking(collectionRef, messageData);
     }
   
-    // --- Update contact lists and unread counts ---
+    // Update lastMessageTimestamp for relevant contact entries
     if (isGroupChat && group) {
       const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
-      for (const pid of participantIds) {
+      participantIds.forEach(pid => {
         const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
-        const updateData: any = { lastMessageTimestamp: currentTimestamp };
-        if (pid !== user.uid) {
-          updateData.unreadCount = increment(1);
-        }
-        batch.set(contactRef, updateData, { merge: true });
-      }
+        setDocumentNonBlocking(contactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+      });
     } else if (!isGroupChat && contactId) {
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
-      batch.update(userContactRef, { lastMessageTimestamp: currentTimestamp });
+      updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
   
       const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
-      batch.set(otherUserContactRef, { lastMessageTimestamp: currentTimestamp, unreadCount: increment(1) }, { merge: true });
+      setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
     }
-    
-    // --- Commit all changes ---
-    await batch.commit();
   
     // --- Send Push Notification (non-blocking) ---
     if (!editingMessage && contact && !contact.isGroup) {
@@ -1505,8 +1479,6 @@ export default function ChatPage() {
     }
   };
 
-  const dividerIndex = filteredMessages.length - unreadCountOnLoad;
-
   const MessageItem = ({ message, repliedToMessage, translatedText, sender }: { message: Message, repliedToMessage?: Message, translatedText?: string, sender?: Contact }) => {
     const x = useMotionValue(0);
     const controls = useAnimation();
@@ -1792,7 +1764,7 @@ export default function ChatPage() {
         <main className="flex-1 overflow-y-auto">
           <ScrollArea className="h-full" ref={scrollAreaRef}>
             <div className="p-4 space-y-6">
-              {filteredMessages.map((message, messageIndex) => {
+              {filteredMessages.map((message) => {
                 const repliedToMessage = message.replyTo ? messages.find(m => m.id === message.replyTo) : undefined;
                 const translatedText = translatedMessages[message.id];
                 const sender = isGroupChat ? groupMembers.get(message.senderId) : undefined;
@@ -1801,33 +1773,14 @@ export default function ChatPage() {
                     return <SystemMessage key={message.id} text={message.text} />;
                 }
 
-                const firstUnreadMessage = filteredMessages[dividerIndex];
-                const showDivider =
-                  unreadCountOnLoad > 0 &&
-                  messageIndex === dividerIndex &&
-                  firstUnreadMessage?.senderId !== user?.uid;
-
                 return (
-                    <React.Fragment key={message.id}>
-                    {showDivider && (
-                        <div ref={unreadDividerRef} className="relative text-center my-4">
-                            <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                                <div className="w-full border-t border-primary/50" />
-                            </div>
-                            <div className="relative flex justify-center">
-                                <span className="bg-card px-2 text-sm font-medium text-primary">
-                                {unreadCountOnLoad} New Message{unreadCountOnLoad > 1 ? 's' : ''}
-                                </span>
-                            </div>
-                        </div>
-                    )}
                      <MessageItem
+                        key={message.id}
                         message={message}
                         repliedToMessage={repliedToMessage}
                         translatedText={translatedText}
                         sender={sender}
                       />
-                  </React.Fragment>
                 );
               })}
             </div>

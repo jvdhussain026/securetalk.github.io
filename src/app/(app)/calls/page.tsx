@@ -114,18 +114,13 @@ export default function CallsPage() {
     }
   }, [contacts]);
 
-  const totalUnreadCount = useMemo(() => {
-    if (!contacts) return 0;
-    return contacts.reduce((sum, contact) => sum + (contact.unreadCount || 0), 0);
-  }, [contacts]);
-
   const hasMissedCalls = useMemo(() => {
     return callHistory.some(c => c.call?.type === 'missed');
   }, [callHistory]);
 
 
   const navItems = [
-    { href: '/chats', icon: MessageSquare, label: 'Chats', hasNotification: totalUnreadCount > 0 },
+    { href: '/chats', icon: MessageSquare, label: 'Chats', hasNotification: false },
     { href: '/calls', icon: Phone, label: 'Calls', hasNotification: hasMissedCalls },
     { href: '/nearby', icon: Users, label: 'Nearby', hasNotification: false },
   ]
