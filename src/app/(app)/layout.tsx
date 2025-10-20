@@ -1,7 +1,7 @@
 
 'use client'
 
-import React, { useState, useContext } from 'react'
+import React, { useState, useContext, useEffect } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { doc, onSnapshot, updateDoc, collection, query, orderBy, Timestamp, limit, getDocs, serverTimestamp as firestoreServerTimestamp, setDoc } from 'firebase/firestore'
@@ -42,6 +42,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [firestore, user]);
 
   const { data: contacts } = useCollection<Contact>(contactsQuery);
+  
+  useEffect(() => {
+    console.log("%cHey, genius! You found an easter egg. \ud83d\udc23", "color: #2563eb; font-size: 20px; font-weight: bold;");
+    console.log("Since you're here, you might be interested in checking out the project on GitHub. Contributions are welcome!");
+  }, []);
 
   React.useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
