@@ -29,6 +29,15 @@ export default function AccountPage() {
     }
   }, [userProfile]);
 
+  const handleUsernameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const usernameRegex = /^[a-zA-Z0-9_.]*$/;
+    if (usernameRegex.test(value)) {
+        setNewUsername(value);
+        setIsAvailable(null);
+    }
+  };
+
   const checkUsernameAvailability = async () => {
     if (newUsername.length < 3) {
         toast({ variant: 'destructive', title: "Username too short."});
@@ -117,11 +126,12 @@ export default function AccountPage() {
             <div className="space-y-2">
                 <Label htmlFor="username">New Username</Label>
                 <div className="flex gap-2">
-                    <Input id="username" value={newUsername} onChange={(e) => { setNewUsername(e.target.value); setIsAvailable(null); }} />
+                    <Input id="username" value={newUsername} onChange={handleUsernameInputChange} />
                     <Button onClick={checkUsernameAvailability} disabled={isChecking || newUsername.length < 3 || newUsername.toLowerCase() === userProfile?.username} variant="outline">
                         {isChecking ? <LoaderCircle className="animate-spin" /> : 'Check'}
                     </Button>
                 </div>
+                 <p className="text-xs text-muted-foreground">Only letters, numbers, underscores, and periods are allowed. No spaces.</p>
                  {isAvailable === true && newUsername.toLowerCase() !== userProfile?.username && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
                 {isAvailable === false && <p className="text-sm text-destructive flex items-center gap-1"><X className="h-4 w-4"/> Taken, try another.</p>}
             </div>
