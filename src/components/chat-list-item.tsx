@@ -166,7 +166,7 @@ export function ChatListItem({ contact, onLongPress }: { contact: Contact, onLon
                     </p>
                     <div className="flex items-center gap-2 pl-2 flex-shrink-0">
                      {contact.isPinned && <Pin className="h-4 w-4 text-muted-foreground" />}
-                     {contact.unreadCount > 0 && (
+                     {contact.unreadCount && contact.unreadCount > 0 && (
                         <Badge className="h-5 shrink-0">{contact.unreadCount}</Badge>
                      )}
                     </div>
