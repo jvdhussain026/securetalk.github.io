@@ -108,7 +108,7 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     const [fullName, setFullName] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [selectedAvatar, setSelectedAvatar] = useState('');
+    const [selectedAvatar, setSelectedAvatar] = useState(PlaceHolderImages[0].imageUrl);
     
     const [isChecking, setIsChecking] = useState(false);
     const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
