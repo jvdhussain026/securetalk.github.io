@@ -23,7 +23,7 @@ export default function SettingsPage() {
     const { userProfile, isUserLoading } = useFirebase();
 
     const generalSettings = [
-        { href: '/settings/account', icon: KeyRound, title: 'Account' },
+        { href: '/settings/account', icon: KeyRound, title: 'My Account' },
         { href: '/settings/notifications', icon: Bell, title: 'Notifications' },
         { href: '/settings/chat-customization', icon: Palette, title: 'Chat Customization' },
         { href: '/settings/translation', icon: Languages, title: 'Translation' },
