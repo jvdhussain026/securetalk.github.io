@@ -30,8 +30,8 @@ export default function AccountPage() {
   }, [userProfile]);
 
   const handleUsernameInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const usernameRegex = /^[a-zA-Z0-9_.]*$/;
+    const value = e.target.value.toLowerCase();
+    const usernameRegex = /^[a-z0-9_.]*$/;
     if (usernameRegex.test(value)) {
         setNewUsername(value);
         setIsAvailable(null);
@@ -131,7 +131,7 @@ export default function AccountPage() {
                         {isChecking ? <LoaderCircle className="animate-spin" /> : 'Check'}
                     </Button>
                 </div>
-                 <p className="text-xs text-muted-foreground">Only letters, numbers, underscores, and periods are allowed. No spaces.</p>
+                 <p className="text-xs text-muted-foreground">Only lowercase letters, numbers, underscores, and periods. No spaces.</p>
                  {isAvailable === true && newUsername.toLowerCase() !== userProfile?.username && <p className="text-sm text-green-500 flex items-center gap-1"><Check className="h-4 w-4"/> Available!</p>}
                 {isAvailable === false && <p className="text-sm text-destructive flex items-center gap-1"><X className="h-4 w-4"/> Taken, try another.</p>}
             </div>
