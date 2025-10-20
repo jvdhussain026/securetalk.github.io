@@ -590,21 +590,13 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    // When entering a 1-on-1 chat, if there are unread messages, store the count and then reset it.
-    if (!isGroupChat && contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
+    // When entering a chat, if there are unread messages, store the count and then reset it.
+    if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
         setUnreadCountOnLoad(contact.unreadCount);
         updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
     }
-  }, [isGroupChat, contactDocRef, contact]);
+  }, [contactDocRef, contact]);
   
-  useEffect(() => {
-    // When entering a group chat, reset the unread count on the contact document.
-    if (isGroupChat && contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
-      setUnreadCountOnLoad(contact.unreadCount);
-      updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
-    }
-  }, [isGroupChat, contactDocRef, contact]);
-
 
   useEffect(() => {
     // Only show toast for new incoming messages and if the document is hidden
