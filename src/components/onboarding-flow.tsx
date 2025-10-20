@@ -8,7 +8,7 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
-import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send, Eye, EyeOff, Camera, Upload } from 'lucide-react';
+import { ShieldCheck, UserPlus, LogIn, ArrowRight, ArrowLeft, LoaderCircle, Check, X, Settings, MessageSquare, Send, Eye, EyeOff, Camera } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
 import { useFirebase } from '@/firebase';
@@ -123,6 +123,8 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [imageToCrop, setImageToCrop] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+
 
     useEffect(() => {
         setPassLength(password.length >= 8);
@@ -201,12 +203,18 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                                 {fullName ? fullName.charAt(0) : <UserPlus />}
                             </AvatarFallback>
                         </Avatar>
+                        {isUploading && (
+                            <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center">
+                                <LoaderCircle className="animate-spin text-white" />
+                            </div>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
                             size="icon"
                             className="absolute bottom-0 right-0 rounded-full h-8 w-8 bg-background/80 backdrop-blur-sm"
                             onClick={handleAvatarChangeClick}
+                            disabled={isUploading}
                         >
                             <Camera className="h-4 w-4" />
                         </Button>
@@ -260,7 +268,7 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                 </div>
             </div>
             <div className="shrink-0 pt-4 space-y-2">
-                <Button size="lg" className="w-full" onClick={handleNextClick} disabled={!isFormValid || isSaving}>
+                <Button size="lg" className="w-full" onClick={handleNextClick} disabled={!isFormValid || isSaving || isUploading}>
                     {isSaving ? <LoaderCircle className="animate-spin mr-2" /> : <ArrowRight className="mr-2" />}
                     {isSaving ? 'Creating Account...' : 'Continue'}
                 </Button>
@@ -271,11 +279,14 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
             onClose={() => setImageToCrop(null)}
             onSave={async (croppedImage) => {
                 setImageToCrop(null);
+                setIsUploading(true);
                 try {
                     const downloadURL = await uploadCroppedImage(croppedImage);
                     setSelectedAvatar(downloadURL);
                 } catch (e) {
                     toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload avatar.' });
+                } finally {
+                    setIsUploading(false);
                 }
             }}
         />
