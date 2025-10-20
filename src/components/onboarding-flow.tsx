@@ -102,96 +102,8 @@ function PasswordRequirement({ meets, text }: { meets: boolean; text: string }) 
   );
 }
 
-const AvatarSelector = ({ onAvatarSelect, selectedAvatar }: { onAvatarSelect: (url: string) => void; selectedAvatar: string }) => {
-    const fileInputRef = useRef<HTMLInputElement>(null);
-    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
-    const { toast } = useToast();
-    const { storage, user } = useFirebase();
-
-    const handleUploadClick = () => {
-        fileInputRef.current?.click();
-    };
-
-    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-        const file = event.target.files?.[0];
-        if (file) {
-            if (file.size > 5 * 1024 * 1024) { // 5MB limit
-                toast({ variant: 'destructive', title: 'Image too large', description: 'Please select an image smaller than 5MB.' });
-                return;
-            }
-            const reader = new FileReader();
-            reader.onloadend = () => setImageToCrop(reader.result as string);
-            reader.readAsDataURL(file);
-        }
-        event.target.value = '';
-    };
-
-    const uploadCroppedImage = async (croppedImage: string): Promise<string> => {
-        if (!storage) throw new Error("Storage not available");
-        const tempUserId = user?.uid || `temp_user_${Date.now()}`;
-        const storageRef = ref(storage, `avatars/${tempUserId}/profile.jpeg`);
-        const snapshot = await uploadString(storageRef, croppedImage, 'data_url', { contentType: 'image/jpeg' });
-        return getDownloadURL(snapshot.ref);
-    };
-
-    return (
-        <>
-            <div className="space-y-2">
-                <Label>Choose Avatar</Label>
-                <Carousel opts={{ align: 'start' }} className="w-full">
-                    <CarouselContent className="-ml-2">
-                        <CarouselItem className="basis-1/4 pl-2">
-                             <button type="button" onClick={handleUploadClick} className="flex flex-col items-center justify-center w-full aspect-square bg-muted rounded-lg border-2 border-dashed gap-1 text-primary hover:bg-accent">
-                                <Upload className="h-6 w-6" />
-                                <span className="text-xs font-semibold">Upload</span>
-                            </button>
-                        </CarouselItem>
-                        {PlaceHolderImages.map(img => (
-                            <CarouselItem key={img.id} className="basis-1/4 pl-2">
-                                <button
-                                    type="button"
-                                    onClick={() => onAvatarSelect(img.imageUrl)}
-                                    className={cn(
-                                        "w-full aspect-square rounded-lg overflow-hidden border-2 transition-all",
-                                        selectedAvatar === img.imageUrl ? "border-primary" : "border-transparent"
-                                    )}
-                                >
-                                    <Image src={img.imageUrl} alt={img.description} width={100} height={100} className="w-full h-full object-cover" />
-                                </button>
-                            </CarouselItem>
-                        ))}
-                    </CarouselContent>
-                    <CarouselPrevious />
-                    <CarouselNext />
-                </Carousel>
-                <input
-                    type="file"
-                    ref={fileInputRef}
-                    className="hidden"
-                    accept="image/png, image/jpeg, image/gif, image/webp"
-                    onChange={handleFileChange}
-                />
-            </div>
-            <ImageCropperDialog 
-                imageSrc={imageToCrop}
-                onClose={() => setImageToCrop(null)}
-                onSave={async (croppedImage) => {
-                    setImageToCrop(null);
-                    try {
-                        const downloadURL = await uploadCroppedImage(croppedImage);
-                        onAvatarSelect(downloadURL);
-                    } catch (e) {
-                        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload avatar.' });
-                    }
-                }}
-            />
-        </>
-    );
-};
-
-
 const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: string, fullName: string, password: string, avatar: string) => void; onBack: () => void; isSaving: boolean; }) => {
-    const { firestore } = useFirebase();
+    const { firestore, user, storage } = useFirebase();
     const { toast } = useToast();
     const [username, setUsername] = useState('');
     const [fullName, setFullName] = useState('');
@@ -208,6 +120,9 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
     const [passLength, setPassLength] = useState(false);
     const [passChars, setPassChars] = useState(false);
     const [passMatch, setPassMatch] = useState(false);
+    
+    const fileInputRef = useRef<HTMLInputElement>(null);
+    const [imageToCrop, setImageToCrop] = useState<string | null>(null);
 
     useEffect(() => {
         setPassLength(password.length >= 8);
@@ -237,8 +152,36 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
              toast({ variant: 'destructive', title: 'Please complete all fields correctly.'});
         }
     }
+    
+    const handleAvatarChangeClick = () => {
+        fileInputRef.current?.click();
+    };
+
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            if (file.size > 5 * 1024 * 1024) { // 5MB limit
+                toast({ variant: 'destructive', title: 'Image too large', description: 'Please select an image smaller than 5MB.' });
+                return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => setImageToCrop(reader.result as string);
+            reader.readAsDataURL(file);
+        }
+        event.target.value = '';
+    };
+
+    const uploadCroppedImage = async (croppedImage: string): Promise<string> => {
+        if (!storage) throw new Error("Storage not available");
+        const tempUserId = user?.uid || `temp_user_${Date.now()}`;
+        const storageRef = ref(storage, `avatars/${tempUserId}/profile.jpeg`);
+        const snapshot = await uploadString(storageRef, croppedImage, 'data_url', { contentType: 'image/jpeg' });
+        return getDownloadURL(snapshot.ref);
+    };
+
 
     return (
+        <>
         <div className="h-full w-full flex flex-col p-8 bg-background">
              <header className="shrink-0 -mx-4 -mt-4 mb-4">
                 <Button variant="ghost" size="icon" onClick={onBack}>
@@ -250,7 +193,32 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                 <p className="text-muted-foreground mb-8">Set up your profile to get started.</p>
             </div>
             <div className="flex-1 overflow-y-auto space-y-4 -mx-2 px-2">
-                 <AvatarSelector onAvatarSelect={setSelectedAvatar} selectedAvatar={selectedAvatar} />
+                <div className="flex flex-col items-center space-y-4">
+                     <div className="relative">
+                        <Avatar className="w-24 h-24 text-2xl">
+                            <AvatarImage src={selectedAvatar} />
+                            <AvatarFallback>
+                                {fullName ? fullName.charAt(0) : <UserPlus />}
+                            </AvatarFallback>
+                        </Avatar>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            size="icon"
+                            className="absolute bottom-0 right-0 rounded-full h-8 w-8 bg-background/80 backdrop-blur-sm"
+                            onClick={handleAvatarChangeClick}
+                        >
+                            <Camera className="h-4 w-4" />
+                        </Button>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/gif, image/webp"
+                            onChange={handleFileChange}
+                        />
+                    </div>
+                </div>
                 <div className="space-y-2">
                     <Label htmlFor="username">Unique Username</Label>
                     <div className="flex gap-2">
@@ -298,6 +266,20 @@ const CreateAccountStep = ({ onNext, onBack, isSaving }: { onNext: (username: st
                 </Button>
             </div>
         </div>
+         <ImageCropperDialog 
+            imageSrc={imageToCrop}
+            onClose={() => setImageToCrop(null)}
+            onSave={async (croppedImage) => {
+                setImageToCrop(null);
+                try {
+                    const downloadURL = await uploadCroppedImage(croppedImage);
+                    setSelectedAvatar(downloadURL);
+                } catch (e) {
+                    toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload avatar.' });
+                }
+            }}
+        />
+        </>
     );
 };
 
