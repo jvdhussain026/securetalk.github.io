@@ -590,10 +590,9 @@ export default function ChatPage() {
 
 
   useEffect(() => {
-    // When entering a chat, if there are unread messages, store the count and then reset it.
     if (contactDocRef && contact && contact.unreadCount && contact.unreadCount > 0) {
         setUnreadCountOnLoad(contact.unreadCount);
-        updateDocumentNonBlocking(contactDocRef, { unreadCount: 0 });
+        updateDoc(contactDocRef, { unreadCount: 0 });
     }
   }, [contactDocRef, contact]);
   
@@ -767,108 +766,90 @@ export default function ChatPage() {
   const handleSendMessage = async () => {
     const textToSend = newMessage.trim();
     const attachmentsToUpload = attachmentsToSend;
-
+  
     if ((textToSend === '' && attachmentsToUpload.length === 0) || !finalChatId || !firestore || !user?.uid || !userProfile) return;
-
+  
     setNewMessage('');
     setAttachmentsToSend([]);
     if (contentEditableRef.current) {
-        contentEditableRef.current.textContent = '';
-        contentEditableRef.current.innerHTML = '';
+      contentEditableRef.current.textContent = '';
+      contentEditableRef.current.innerHTML = '';
     }
     setReplyingTo(null);
     setShowOutboundTranslate(false);
-
+  
     let finalText = textToSend;
-
-    // Handle outbound translation if enabled
+  
     if (contact?.liveTranslationEnabled && textToSend) {
-        setIsOutboundTranslating(true);
-        try {
-            const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
-            finalText = result.translatedText || textToSend;
-        } catch (error) {
-            console.error("Live outbound translation error:", error);
-            toast({
-                variant: "destructive",
-                title: "Translation Failed",
-                description: "Message was not translated. Sending original.",
-            });
-        } finally {
-            setIsOutboundTranslating(false);
-        }
+      setIsOutboundTranslating(true);
+      try {
+        const result = await translateMessage({ text: textToSend, targetLanguage: contact.language });
+        finalText = result.translatedText || textToSend;
+      } catch (error) {
+        console.error("Live outbound translation error:", error);
+        toast({ variant: "destructive", title: "Translation Failed", description: "Message was not translated. Sending original." });
+      } finally {
+        setIsOutboundTranslating(false);
+      }
     }
-
+  
     const currentTimestamp = serverTimestamp();
     const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
-
+  
+    const messageData = {
+      text: finalText,
+      attachments: attachmentsToUpload,
+      senderId: user.uid,
+      timestamp: currentTimestamp,
+      replyTo: replyingTo?.id || null,
+      isEdited: !!editingMessage,
+    };
+  
+    const batch = writeBatch(firestore);
+  
     if (editingMessage) {
-        const messageRef = doc(firestore, collectionPath, editingMessage.id);
-        await updateDoc(messageRef, {
-            text: finalText,
-            isEdited: true,
-        });
-        setEditingMessage(null);
-        toast({ title: "Message updated" });
+      const messageRef = doc(firestore, collectionPath, editingMessage.id);
+      batch.update(messageRef, { text: finalText, isEdited: true });
+      setEditingMessage(null);
+      toast({ title: "Message updated" });
     } else {
-        const collectionRef = collection(firestore, collectionPath);
-        const messageData = {
-            text: finalText,
-            attachments: attachmentsToUpload,
-            senderId: user.uid,
-            timestamp: currentTimestamp,
-            replyTo: replyingTo?.id || null,
-        };
-        addDocumentNonBlocking(collectionRef, messageData);
-        
-        if (contact && !contact.isGroup) {
-            const notificationPayload = {
-                userId: contact.id,
-                payload: {
-                    title: userProfile.name || 'New Message',
-                    body: finalText || 'Sent an attachment',
-                    icon: userProfile.profilePictureUrl || '/icons/icon-192x192.png',
-                    tag: finalChatId,
-                }
-            };
-            sendPushNotification(notificationPayload).catch(err => {
-                console.error("Failed to send push notification:", err);
-            });
-        }
+      const newMessageRef = doc(collection(firestore, collectionPath));
+      batch.set(newMessageRef, messageData);
     }
-
-    const isVisible = typeof document !== 'undefined' && !document.hidden;
-    
+  
+    // --- Update contact lists and unread counts ---
     if (isGroupChat && group) {
-        const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
-        
-        for (const pid of participantIds) {
-             if (!pid.startsWith('group_')) { // Ensure we don't try to update a non-user
-                const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
-                const updateData: any = { lastMessageTimestamp: currentTimestamp };
-                if (pid !== user.uid) { // Don't increment for self
-                  updateData.unreadCount = increment(1);
-                }
-                // Use set with merge to prevent error if doc doesn't exist
-                await setDocumentNonBlocking(contactRef, updateData, { merge: true });
-            }
+      const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
+      for (const pid of participantIds) {
+        const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
+        const updateData: any = { lastMessageTimestamp: currentTimestamp };
+        if (pid !== user.uid) {
+          updateData.unreadCount = increment(1);
         }
-
+        batch.set(contactRef, updateData, { merge: true });
+      }
     } else if (!isGroupChat && contactId) {
-        const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
-        updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
-        
-        const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
-        if (isVisible) {
-            updateDocumentNonBlocking(otherUserContactRef, {
-                lastMessageTimestamp: currentTimestamp,
-            });
-        } else {
-            updateDocumentNonBlocking(otherUserContactRef, {
-                lastMessageTimestamp: currentTimestamp,
-                unreadCount: increment(1)
-            });
+      const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
+      batch.update(userContactRef, { lastMessageTimestamp: currentTimestamp });
+  
+      const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
+      batch.set(otherUserContactRef, { lastMessageTimestamp: currentTimestamp, unreadCount: increment(1) }, { merge: true });
+    }
+    
+    // --- Commit all changes ---
+    await batch.commit();
+  
+    // --- Send Push Notification (non-blocking) ---
+    if (!editingMessage && contact && !contact.isGroup) {
+      sendPushNotification({
+        userId: contact.id,
+        payload: {
+          title: userProfile.name || 'New Message',
+          body: finalText || 'Sent an attachment',
+          icon: userProfile.profilePictureUrl || '/icons/icon-192x192.png',
+          tag: finalChatId,
         }
+      }).catch(err => console.error("Failed to send push notification:", err));
     }
   };
 
