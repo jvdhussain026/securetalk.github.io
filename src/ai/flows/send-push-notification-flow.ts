@@ -7,17 +7,20 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'zod';
 import { getFirestore } from 'firebase-admin/firestore';
-import { initializeApp, getApps } from 'firebase-admin/app';
+import { initializeApp, getApps, App } from 'firebase-admin/app';
 import { getMessaging, MulticastMessage, BatchResponse } from 'firebase-admin/messaging';
 
 // Ensure Firebase Admin is initialized.
 // In a Google Cloud environment, this will use Application Default Credentials.
+let adminApp: App;
 if (!getApps().length) {
-  initializeApp();
+  adminApp = initializeApp();
+} else {
+  adminApp = getApps()[0];
 }
 
-const db = getFirestore();
-const messaging = getMessaging();
+const db = getFirestore(adminApp);
+const messaging = getMessaging(adminApp);
 
 const PushPayloadSchema = z.object({
     title: z.string(),
@@ -25,6 +28,12 @@ const PushPayloadSchema = z.object({
     icon: z.string().optional(),
     badge: z.string().optional(),
     tag: z.string().optional(),
+    type: z.enum(['call', 'message', 'general']).optional(),
+    contactId: z.string().optional(),
+    callType: z.enum(['voice', 'video']).optional(),
+    messageCount: z.number().optional(),
+    sound: z.string().optional(),
+    vibrate: z.boolean().optional(),
 });
 
 const SendPushNotificationInputSchema = z.object({
@@ -78,9 +87,33 @@ const sendPushNotificationFlow = ai.defineFlow(
         },
         webpush: {
           notification: {
-            icon: payload.icon || '/icon-192x192.png',
-            badge: payload.badge,
+            icon: payload.icon || '/icons/icon-192x192.png',
+            badge: payload.badge || '/icons/icon-192x192.png',
             tag: payload.tag,
+            requireInteraction: payload.type === 'call',
+            vibrate: payload.vibrate !== false ? (payload.type === 'call' ? [400, 200, 400, 200, 400] : [200, 100, 200]) : undefined,
+            sound: payload.sound || (payload.type === 'call' ? '/sounds/ringtone.mp3' : undefined),
+            actions: payload.type === 'call' ? [
+              {
+                action: 'accept',
+                title: 'Accept',
+                icon: '/icons/accept-call.png'
+              },
+              {
+                action: 'decline',
+                title: 'Decline', 
+                icon: '/icons/decline-call.png'
+              }
+            ] : undefined
+          },
+          data: {
+            type: payload.type || 'general',
+            contactId: payload.contactId || '',
+            callType: payload.callType || '',
+            messageCount: (payload.messageCount || 0).toString(),
+            url: payload.type === 'call' 
+                ? `/call?contactId=${payload.contactId}&type=${payload.callType || 'voice'}&status=incoming` 
+                : (payload.contactId ? `/chats/${payload.contactId}`: '/chats'),
           }
         },
         tokens: tokens,

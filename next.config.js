@@ -1,9 +1,11 @@
+
 /** @type {import('next').NextConfig} */
 
 const withPWA = require('next-pwa')({
   dest: 'public',
   register: true,
   skipWaiting: true,
+  publicExcludes: ['!firebase-messaging-sw.js'],
 });
 
 const nextConfig = {

@@ -587,18 +587,22 @@ export default function ChatPage() {
   }, [chat?.wallpaper]);
 
   useEffect(() => {
-    // Only show toast for new incoming messages and if the document is hidden
-    if (messages && messages.length > prevMessagesCountRef.current) {
+    if (messages && prevMessagesCountRef.current > 0) { // Only run for new messages, not initial load
         const lastMessage = messages[messages.length - 1];
-        if (lastMessage.senderId !== user?.uid && document.hidden) {
+        const isNewMessage = messages.length > prevMessagesCountRef.current;
+
+        if (isNewMessage && lastMessage.senderId !== user?.uid && document.hidden) {
+            // Already handled by service worker for background notifications.
+            // This toast is for when the tab is just hidden, not closed.
             toast({
                 title: `New message from ${contact?.displayName || contact?.name || group?.name}`,
                 description: lastMessage.text || 'Sent an attachment',
             });
         }
-        prevMessagesCountRef.current = messages.length;
     }
-  }, [messages, contact?.displayName, contact?.name, group?.name, user?.uid, toast]);
+    prevMessagesCountRef.current = messages?.length || 0;
+}, [messages, contact, group, user?.uid, toast]);
+
 
   useEffect(() => {
     const lang = localStorage.getItem('preferredLang');
@@ -798,20 +802,21 @@ export default function ChatPage() {
       addDocumentNonBlocking(collectionRef, messageData);
     }
   
-    // Update lastMessageTimestamp for relevant contact entries
+    const batch = writeBatch(firestore);
     if (isGroupChat && group) {
       const participantIds = Object.keys(group.participants || {}).filter(pId => group.participants[pId]);
       participantIds.forEach(pid => {
         const contactRef = doc(firestore, 'users', pid, 'contacts', `group_${group.id}`);
-        setDocumentNonBlocking(contactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+        batch.set(contactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
       });
     } else if (!isGroupChat && contactId) {
       const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contactId);
-      updateDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp });
+      batch.update(userContactRef, { lastMessageTimestamp: currentTimestamp });
   
       const otherUserContactRef = doc(firestore, 'users', contactId, 'contacts', user.uid);
-      setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+      batch.set(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
     }
+    await batch.commit();
   
     // --- Send Push Notification (non-blocking) ---
     if (!editingMessage && contact && !contact.isGroup) {
@@ -822,6 +827,8 @@ export default function ChatPage() {
           body: finalText || 'Sent an attachment',
           icon: userProfile.profilePictureUrl || '/icons/icon-192x192.png',
           tag: finalChatId,
+          type: 'message',
+          contactId: user.uid, // The sender becomes the contactId for the recipient
         }
       }).catch(err => console.error("Failed to send push notification:", err));
     }

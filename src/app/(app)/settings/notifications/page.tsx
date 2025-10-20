@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, BellRing, BellOff, Info, LoaderCircle, MessageSquare, Music, Phone, ChevronRight } from 'lucide-react';
+import { ArrowLeft, BellRing, BellOff, Info, LoaderCircle, MessageSquare, Music, Phone, ChevronRight, PhoneCall } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
@@ -27,6 +27,7 @@ export default function NotificationsPage() {
   const [isSubscribing, setIsSubscribing] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [isClientTesting, setIsClientTesting] = useState(false);
+  const [isCallTesting, setIsCallTesting] = useState(false);
   const [isSupported, setIsSupported] = useState(true);
   const [messageAlerts, setMessageAlerts] = useState(true);
 
@@ -130,6 +131,9 @@ export default function NotificationsPage() {
             payload: {
                 title: 'Test Notification',
                 body: 'If you can see this, push notifications are working!',
+                type: 'message',
+                tag: 'test-message',
+                contactId: user.uid
             }
         });
 
@@ -180,6 +184,40 @@ export default function NotificationsPage() {
     }
   };
 
+  const handleSendTestCall = async () => {
+    if (!user) {
+      toast({ variant: 'destructive', title: 'You must be logged in to send a test.' });
+      return;
+    }
+    setIsCallTesting(true);
+    try {
+      const result = await sendPushNotification({
+        userId: user.uid,
+        payload: {
+          title: 'Incoming Call',
+          body: 'Secure Talk Dev Team',
+          type: 'call',
+          tag: 'incoming-call',
+          contactId: '4YaPPGcDw2NLe31LwT05h3TihTz1', // Dev team ID
+          callType: 'voice',
+          vibrate: true,
+          sound: '/sounds/ringtone.mp3'
+        }
+      });
+      if (result.successCount > 0) {
+        toast({ title: 'Test call sent!', description: 'You should receive it shortly.' });
+      } else {
+        throw new Error('Test call notification was not sent.');
+      }
+    } catch (error) {
+      console.error("Failed to send test call:", error);
+      toast({ variant: 'destructive', title: 'Test Failed', description: 'Could not send the test call.' });
+    } finally {
+      setIsCallTesting(false);
+    }
+  };
+
+
   const handleOpenToneDialog = (type: 'message' | 'call') => {
     setToneDialogType(type);
     setIsToneDialogOpen(true);
@@ -218,17 +256,17 @@ export default function NotificationsPage() {
               <BellRing className="h-4 w-4" />
               <AlertTitle>Push Notifications Enabled</AlertTitle>
               <AlertDescription>
-                You can manage this permission in your browser's site settings.
+                You can manage this permission in your browser's site settings. For background notifications, ensure the app is "installed" to your home screen.
               </AlertDescription>
             </Alert>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Button onClick={handleClientSideTest} disabled={isClientTesting} variant="outline">
-                    {isClientTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <BellRing className="mr-2" />}
-                    {isClientTesting ? 'Sending...' : 'Send Client-Side Test'}
+                <Button onClick={handleSendTestNotification} disabled={isTesting} variant="outline">
+                    {isTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <MessageSquare className="mr-2" />}
+                    {isTesting ? 'Sending...' : 'Test Message'}
                 </Button>
-                <Button onClick={handleSendTestNotification} disabled={isTesting}>
-                    {isTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <BellRing className="mr-2" />}
-                    {isTesting ? 'Sending...' : 'Send Test Notification'}
+                <Button onClick={handleSendTestCall} disabled={isCallTesting} variant="outline">
+                    {isCallTesting ? <LoaderCircle className="mr-2 animate-spin" /> : <PhoneCall className="mr-2" />}
+                    {isCallTesting ? 'Calling...' : 'Test Call'}
                 </Button>
             </div>
           </div>
