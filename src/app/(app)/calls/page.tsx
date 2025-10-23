@@ -1,4 +1,5 @@
 
+
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react'
@@ -23,10 +24,12 @@ import { useFirebase, useCollection, useMemoFirebase } from '@/firebase'
 import { collection, query, orderBy } from 'firebase/firestore'
 import { LoaderCircle } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { ComingSoonDialog } from '@/components/coming-soon-dialog';
 
 
 function CallItem({ contact }: { contact: Contact }) {
   const [isSheetOpen, setIsSheetOpen] = useState(false);
+  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   const call = contact.call || {
       type: 'outgoing',
@@ -34,9 +37,13 @@ function CallItem({ contact }: { contact: Contact }) {
       timestamp: new Date()
   };
 
-  const handleCallAgain = (e: React.MouseEvent) => {
+  const handleCallAgain = (e: React.MouseEvent, callType: 'voice' | 'video') => {
     e.stopPropagation();
-    setIsSheetOpen(true);
+    if (callType === 'video') {
+      setIsComingSoonOpen(true);
+    } else {
+       setIsSheetOpen(true);
+    }
   };
   
   const formatTimestamp = (timestamp: any) => {
@@ -72,12 +79,13 @@ function CallItem({ contact }: { contact: Contact }) {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={handleCallAgain}>
+          <Button variant="ghost" size="icon" onClick={(e) => handleCallAgain(e, call.callType)}>
             {call.callType === 'voice' ? <Phone className="h-6 w-6 text-primary" /> : <Video className="h-6 w-6 text-primary" />}
           </Button>
         </div>
       </div>
       <CallDetailsSheet open={isSheetOpen} onOpenChange={setIsSheetOpen} contact={contact} />
+      <ComingSoonDialog open={isComingSoonOpen} onOpenChange={setIsComingSoonOpen} />
     </>
   );
 }

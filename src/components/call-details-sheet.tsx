@@ -1,6 +1,8 @@
 
+
 "use client"
 
+import { useState } from 'react';
 import { motion } from 'framer-motion'
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -9,6 +11,7 @@ import { useToast } from "@/hooks/use-toast"
 import type { Contact } from "@/lib/types"
 import { cn } from '@/lib/utils'
 import Link from 'next/link'
+import { ComingSoonDialog } from './coming-soon-dialog';
 
 type CallDetailsSheetProps = {
   open: boolean;
@@ -18,6 +21,7 @@ type CallDetailsSheetProps = {
 
 export function CallDetailsSheet({ open, onOpenChange, contact }: CallDetailsSheetProps) {
   const { toast } = useToast()
+  const [isComingSoonOpen, setIsComingSoonOpen] = useState(false);
 
   if (!open) return null;
 
@@ -60,14 +64,13 @@ export function CallDetailsSheet({ open, onOpenChange, contact }: CallDetailsShe
                 Voice Call
             </Link>
           </Button>
-          <Button size="lg" asChild>
-             <Link href={`/call?contactId=${contact.id}&type=video&status=outgoing`}>
-                <Video className="mr-2" />
-                Video Call
-            </Link>
+          <Button size="lg" onClick={() => setIsComingSoonOpen(true)}>
+             <Video className="mr-2" />
+             Video Call
           </Button>
         </div>
       </motion.div>
+      <ComingSoonDialog open={isComingSoonOpen} onOpenChange={setIsComingSoonOpen} />
     </>
   );
 }

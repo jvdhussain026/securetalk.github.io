@@ -1670,11 +1670,9 @@ export default function ChatPage() {
                                     <span>Voice Call</span>
                                 </Link>
                             </DropdownMenuItem>
-                            <DropdownMenuItem asChild>
-                                <Link href={`/call?contactId=${contact?.id}&type=video&status=outgoing`}>
-                                    <Video className="mr-2 h-4 w-4" />
-                                    <span>Video Call</span>
-                                </Link>
+                            <DropdownMenuItem onSelect={() => setIsComingSoonOpen(true)}>
+                                <Video className="mr-2 h-4 w-4" />
+                                <span>Video Call</span>
                             </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
