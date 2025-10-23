@@ -17,6 +17,29 @@ type ActiveCallProps = {
   onEndCall: (duration: number, signal?: boolean) => void;
 };
 
+const RingingAnimation = () => (
+    <div className="absolute inset-0 flex items-center justify-center">
+        {[...Array(3)].map((_, i) => (
+             <motion.div
+                key={i}
+                className="absolute h-48 w-48 rounded-full border-2 border-white/30"
+                initial={{ scale: 1, opacity: 1 }}
+                animate={{
+                    scale: 2.5,
+                    opacity: 0,
+                }}
+                transition={{
+                    delay: i * 0.7,
+                    duration: 2.1,
+                    repeat: Infinity,
+                    ease: "easeInOut",
+                }}
+            />
+        ))}
+    </div>
+);
+
+
 export function ActiveCall({ contact, callType, initialStatus, onEndCall }: ActiveCallProps) {
   const router = useRouter();
 
@@ -102,18 +125,10 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
   };
 
   const CallStatus = () => {
-    switch (initialStatus) {
-      case 'outgoing':
-         return <p className="text-lg text-white/80 animate-pulse">Ringing...</p>;
-      case 'connected':
-         return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
-      case 'ended':
-        return <p className="text-lg text-white">Call Ended</p>;
-      default:
-        // For incoming calls that get connected
-        if(status === 'connected') return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
-        return <p className="text-lg text-white/80 animate-pulse">Connecting...</p>;
+    if (status === 'connected') {
+        return <p className="text-lg text-white font-mono">{formatDuration(callDuration)}</p>;
     }
+    return <p className="text-lg text-white/80 animate-pulse">Ringing...</p>;
   };
 
   const controlButtons = [
@@ -173,16 +188,17 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
         <CallStatus />
       </div>
 
-      {/* Voice Call Avatar */}
+      {/* Voice Call Avatar & Ringing Animation */}
       <AnimatePresence>
         {!isVideoEnabled && (
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0.8, opacity: 0 }}
-            className="z-10 flex flex-col items-center"
+            className="z-10 flex flex-col items-center relative"
           >
-            <Avatar className="w-40 h-40 border-4 border-white/50">
+            {status === 'ringing' && <RingingAnimation />}
+            <Avatar className="w-40 h-40 border-4 border-white/50 relative">
               <AvatarImage src={contact.avatar} alt={contact.name} />
               <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
             </Avatar>
@@ -209,8 +225,15 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
 
       {/* Controls */}
       <div className="z-10 w-full p-6 space-y-8">
+         <AnimatePresence>
         {status === 'connected' && (
-          <div className="grid grid-cols-4 gap-4">
+          <motion.div
+            className="grid grid-cols-4 gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ delay: 0.2 }}
+           >
             {controlButtons.map((btn, index) => (
               btn.show && (
                 <button
@@ -230,8 +253,9 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
                 </button>
               )
             ))}
-          </div>
+          </motion.div>
         )}
+        </AnimatePresence>
         <Button
           size="lg"
           variant="destructive"
