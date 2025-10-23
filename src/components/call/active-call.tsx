@@ -5,10 +5,11 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
-import { Mic, MicOff, Video, VideoOff, PhoneMissed, Volume2, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneMissed, Volume2, RefreshCw, MessageSquare, ArrowLeft, Pause } from 'lucide-react';
 import type { Contact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useToast } from '@/hooks/use-toast';
 
 const Ring = ({ delay }: { delay: number }) => {
   return (
@@ -37,9 +38,17 @@ const RingingAnimation = () => (
   </div>
 );
 
+type ActiveCallProps = {
+  contact: Contact;
+  callType: 'voice' | 'video';
+  initialStatus: 'outgoing' | 'connected';
+  onEndCall: (duration: number, signal: boolean) => void;
+};
+
 
 export function ActiveCall({ contact, callType, initialStatus, onEndCall }: ActiveCallProps) {
   const router = useRouter();
+  const { toast } = useToast();
 
   const [status, setStatus] = useState<'ringing' | 'connected' | 'ended'>(
     initialStatus === 'connected' ? 'connected' : 'ringing'
@@ -48,6 +57,7 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(false);
   const [isVideoEnabled, setIsVideoEnabled] = useState(callType === 'video');
+  const [isHeld, setIsHeld] = useState(false);
   const [stream, setStream] = useState<MediaStream | null>(null);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -116,6 +126,23 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
     onEndCall(callDuration, true); // Signal to the other user and pass duration
   };
 
+  const handleNavigateToChat = () => {
+    toast({
+        title: 'Navigating to chat...',
+        description: 'Picture-in-picture view for calls is coming soon!'
+    });
+    const chatUrl = contact.isGroup ? `/chats/group_${contact.id}` : `/chats/${contact.id}`;
+    router.push(chatUrl);
+  };
+  
+  const handleNavigateBack = () => {
+      toast({
+        title: 'Returning to app...',
+        description: 'Picture-in-picture view for calls is coming soon!'
+      });
+      router.back();
+  }
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60).toString().padStart(2, '0');
     const secs = (seconds % 60).toString().padStart(2, '0');
@@ -142,6 +169,20 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
       icon: Volume2,
       action: () => setIsSpeakerOn(!isSpeakerOn),
       active: isSpeakerOn,
+      show: true,
+    },
+     {
+      label: isHeld ? 'Unhold' : 'Hold',
+      icon: Pause,
+      action: () => setIsHeld(!isHeld),
+      active: isHeld,
+      show: true,
+    },
+    {
+      label: 'Message',
+      icon: MessageSquare,
+      action: handleNavigateToChat,
+      active: false,
       show: true,
     },
     {
@@ -179,11 +220,16 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
       </AnimatePresence>
       <div className="absolute inset-0 bg-black/50 z-0" />
 
-
       {/* Header Info */}
-      <div className="z-10 text-center pt-16">
-        <h2 className="text-4xl font-bold font-headline">{contact.name}</h2>
-        <CallStatus />
+      <div className="absolute top-0 left-0 right-0 z-20 flex items-center justify-between p-4">
+        <Button variant="ghost" size="icon" onClick={handleNavigateBack}>
+          <ArrowLeft className="h-6 w-6 text-white" />
+        </Button>
+        <div className="text-center">
+            <h2 className="text-2xl font-bold font-headline">{contact.name}</h2>
+            <CallStatus />
+        </div>
+        <div className="w-10"/> {/* Spacer */}
       </div>
 
       {/* Voice Call Avatar & Ringing Animation */}
