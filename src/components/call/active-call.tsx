@@ -203,25 +203,9 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
 
   return (
     <div className="relative h-full flex flex-col text-white bg-gray-800">
-      {/* Background Video/Image */}
-      <AnimatePresence>
-        {isVideoEnabled && (
-          <motion.video
-            ref={remoteVideoRef}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            autoPlay
-            muted
-            playsInline
-            className="absolute inset-0 w-full h-full object-cover z-0 bg-black"
-          />
-        )}
-      </AnimatePresence>
       <div className="absolute inset-0 bg-black/50 z-0" />
-
       {/* Header Info */}
-      <header className="relative z-20 flex items-center justify-between p-4 shrink-0">
+       <header className="relative z-20 flex items-center justify-between p-4 shrink-0">
         <Button variant="ghost" size="icon" onClick={handleNavigateBack}>
           <ArrowLeft className="h-6 w-6 text-white" />
         </Button>
@@ -232,23 +216,34 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
         <div className="w-10"/> {/* Spacer */}
       </header>
 
-      {/* Main Content Area (Avatar or Video) */}
-      <main className="flex-1 flex flex-col items-center justify-center relative z-10">
+       {/* Main Content Area (Avatar or Video) */}
+      <main className="flex-1 flex flex-col items-center justify-center relative z-10 overflow-hidden">
         <AnimatePresence>
-          {!isVideoEnabled && (
-            <motion.div
-              initial={{ scale: 0.8, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.8, opacity: 0 }}
-              className="flex flex-col items-center relative"
-            >
-              {status === 'ringing' && <RingingAnimation />}
-              <Avatar className="w-40 h-40 border-4 border-white/50 relative">
-                <AvatarImage src={contact.avatar} alt={contact.name} />
-                <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
-              </Avatar>
-            </motion.div>
-          )}
+            {isVideoEnabled ? (
+                <motion.video
+                    ref={remoteVideoRef}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    autoPlay
+                    muted
+                    playsInline
+                    className="absolute inset-0 w-full h-full object-cover z-0"
+                />
+            ) : (
+                <motion.div
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    exit={{ scale: 0.8, opacity: 0 }}
+                    className="flex flex-col items-center relative"
+                >
+                  {status === 'ringing' && callType === 'voice' && <RingingAnimation />}
+                  <Avatar className="w-40 h-40 border-4 border-white/50 relative">
+                    <AvatarImage src={contact.avatar} alt={contact.name} />
+                    <AvatarFallback>{contact.name.charAt(0)}</AvatarFallback>
+                  </Avatar>
+                </motion.div>
+            )}
         </AnimatePresence>
       </main>
       
@@ -267,7 +262,6 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
             />
         )}
        </AnimatePresence>
-
 
       {/* Controls */}
       <footer className="relative z-10 w-full p-6 space-y-8 shrink-0">
