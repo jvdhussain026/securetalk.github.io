@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -121,24 +122,28 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
       icon: isMuted ? MicOff : Mic,
       action: () => setIsMuted(!isMuted),
       active: isMuted,
+      show: true,
     },
     {
-      label: isSpeakerOn ? 'Speaker Off' : 'Speaker On',
+      label: isSpeakerOn ? 'Earpiece' : 'Speaker',
       icon: Volume2,
       action: () => setIsSpeakerOn(!isSpeakerOn),
       active: isSpeakerOn,
+      show: true,
     },
     {
       label: isVideoEnabled ? 'Video Off' : 'Video On',
       icon: isVideoEnabled ? Video : VideoOff,
       action: () => setIsVideoEnabled(!isVideoEnabled),
       active: !isVideoEnabled,
+      show: callType === 'video',
     },
     {
       label: 'Flip Camera',
       icon: RefreshCw,
       action: () => {},
       active: false,
+      show: callType === 'video',
     },
   ];
 
@@ -204,25 +209,29 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
 
       {/* Controls */}
       <div className="z-10 w-full p-6 space-y-8">
-        <div className="grid grid-cols-4 gap-4">
-          {controlButtons.map((btn, index) => (
-            <button
-              key={index}
-              onClick={btn.action}
-              className="flex flex-col items-center gap-2 text-white/90"
-            >
-              <div
-                className={cn(
-                  'w-14 h-14 rounded-full flex items-center justify-center transition-colors',
-                  btn.active ? 'bg-white text-black' : 'bg-white/20 hover:bg-white/30'
-                )}
-              >
-                <btn.icon className="w-7 h-7" />
-              </div>
-              <span className="text-xs">{btn.label}</span>
-            </button>
-          ))}
-        </div>
+        {status === 'connected' && (
+          <div className="grid grid-cols-4 gap-4">
+            {controlButtons.map((btn, index) => (
+              btn.show && (
+                <button
+                  key={index}
+                  onClick={btn.action}
+                  className="flex flex-col items-center gap-2 text-white/90"
+                >
+                  <div
+                    className={cn(
+                      'w-14 h-14 rounded-full flex items-center justify-center transition-colors',
+                      btn.active ? 'bg-white text-black' : 'bg-white/20 hover:bg-white/30'
+                    )}
+                  >
+                    <btn.icon className="w-7 h-7" />
+                  </div>
+                  <span className="text-xs">{btn.label}</span>
+                </button>
+              )
+            ))}
+          </div>
+        )}
         <Button
           size="lg"
           variant="destructive"
