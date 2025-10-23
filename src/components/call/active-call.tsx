@@ -10,42 +10,31 @@ import type { Contact } from '@/lib/types';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 
-type ActiveCallProps = {
-  contact: Contact;
-  callType: 'voice' | 'video';
-  initialStatus: 'ringing' | 'connected' | 'outgoing';
-  onEndCall: (duration: number, signal?: boolean) => void;
+const Ring = ({ delay }: { delay: number }) => {
+  return (
+    <motion.div
+      className="absolute h-full w-full rounded-full border border-white/30"
+      initial={{ scale: 0.8, opacity: 1 }}
+      animate={{ scale: 1.5, opacity: 0 }}
+      transition={{
+        duration: 1.5,
+        ease: 'easeInOut',
+        repeat: Infinity,
+        repeatDelay: 1,
+        delay,
+      }}
+    />
+  );
 };
 
 const RingingAnimation = () => (
-    <div className="absolute inset-0 flex items-center justify-center">
-        <motion.div
-            className="absolute h-48 w-48 rounded-full border-2 border-white/50"
-            animate={{
-                scale: [1, 1.2, 1],
-                opacity: [0.7, 0.3, 0.7],
-            }}
-            transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-            }}
-        />
-         <motion.div
-            className="absolute h-48 w-48 rounded-full"
-            style={{boxShadow: '0 0 20px 5px rgba(255, 255, 255, 0.2)'}}
-            animate={{
-                scale: [1.1, 1.3, 1.1],
-                opacity: [0.3, 0.7, 0.3],
-            }}
-            transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-                delay: 0.5,
-            }}
-        />
-    </div>
+  <div className="absolute inset-0 flex items-center justify-center">
+      <div className="relative h-48 w-48">
+          <Ring delay={0} />
+          <Ring delay={0.5} />
+          <Ring delay={1} />
+      </div>
+  </div>
 );
 
 
