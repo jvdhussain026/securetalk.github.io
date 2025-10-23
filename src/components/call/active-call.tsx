@@ -19,23 +19,32 @@ type ActiveCallProps = {
 
 const RingingAnimation = () => (
     <div className="absolute inset-0 flex items-center justify-center">
-        {[...Array(3)].map((_, i) => (
-             <motion.div
-                key={i}
-                className="absolute h-48 w-48 rounded-full border-2 border-white/30"
-                initial={{ scale: 1, opacity: 1 }}
-                animate={{
-                    scale: 2.5,
-                    opacity: 0,
-                }}
-                transition={{
-                    delay: i * 0.7,
-                    duration: 2.1,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                }}
-            />
-        ))}
+        <motion.div
+            className="absolute h-48 w-48 rounded-full border-2 border-white/50"
+            animate={{
+                scale: [1, 1.2, 1],
+                opacity: [0.7, 0.3, 0.7],
+            }}
+            transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+            }}
+        />
+         <motion.div
+            className="absolute h-48 w-48 rounded-full"
+            style={{boxShadow: '0 0 20px 5px rgba(255, 255, 255, 0.2)'}}
+            animate={{
+                scale: [1.1, 1.3, 1.1],
+                opacity: [0.3, 0.7, 0.3],
+            }}
+            transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+                delay: 0.5,
+            }}
+        />
     </div>
 );
 
@@ -158,7 +167,7 @@ export function ActiveCall({ contact, callType, initialStatus, onEndCall }: Acti
       icon: RefreshCw,
       action: () => {},
       active: false,
-      show: callType === 'video',
+      show: callType === 'video' && isVideoEnabled,
     },
   ];
 
