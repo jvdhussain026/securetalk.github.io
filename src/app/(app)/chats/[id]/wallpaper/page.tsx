@@ -59,24 +59,29 @@ export default function PerChatWallpaperPage() {
 
     const { data: chatData } = useDoc(chatDocRef);
 
-    const [activeWallpaper, setActiveWallpaper] = useState<string | null | undefined>(undefined);
+    // This state tracks the user's selection in the UI.
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null | undefined>(undefined);
-    const [customWallpaper, setCustomWallpaper] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    const defaultGlobalWallpaper = typeof window !== 'undefined' ? localStorage.getItem('chatWallpaper') : null;
+    // Get the global default wallpaper once.
+    const globalDefaultWallpaper = useMemo(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('chatWallpaper');
+        }
+        return null;
+    }, []);
 
+    // Effect to initialize the selected wallpaper from Firestore or global default
     useEffect(() => {
-        if (chatData !== undefined) {
+        if (chatData !== undefined) { // Check if useDoc has loaded
+            // Use chat-specific wallpaper if it exists, otherwise fall back to global, then to null.
             const initialWallpaper = chatData?.wallpaper !== undefined 
                 ? chatData.wallpaper 
-                : (defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper);
-            
-            setActiveWallpaper(initialWallpaper);
+                : (globalDefaultWallpaper === 'null' ? null : globalDefaultWallpaper);
             setSelectedWallpaper(initialWallpaper);
         }
-    }, [chatData, defaultGlobalWallpaper]);
+    }, [chatData, globalDefaultWallpaper]);
 
     const handleSelectWallpaper = (wallpaperUrl: string | null) => {
         setSelectedWallpaper(wallpaperUrl);
@@ -103,7 +108,7 @@ export default function PerChatWallpaperPage() {
         reader.readAsDataURL(file);
         reader.onload = () => {
             const dataUrl = reader.result as string;
-            setCustomWallpaper(dataUrl); // This is now a base64 Data URL
+            // Set the new upload as the selected wallpaper for preview
             setSelectedWallpaper(dataUrl);
             toast({ title: 'Preview updated!', description: 'Click "Save Changes" to apply.' });
         };
@@ -113,7 +118,7 @@ export default function PerChatWallpaperPage() {
     };
     
     const handleResetToDefault = () => {
-        const globalDefault = defaultGlobalWallpaper === 'null' ? null : defaultGlobalWallpaper;
+        const globalDefault = globalDefaultWallpaper === 'null' ? null : globalDefaultWallpaper;
         handleSelectWallpaper(globalDefault);
         toast({ title: 'Preview reset to global default.', description: 'Click Save Changes to apply to this chat.' });
     };
@@ -137,7 +142,6 @@ export default function PerChatWallpaperPage() {
 
             await updateDoc(chatDocRef, { wallpaper: finalUrlToSave });
             
-            setActiveWallpaper(selectedWallpaper);
             toast({ title: 'Chat Wallpaper Saved!', description: 'Your new wallpaper has been applied to this chat.' });
             router.back();
 
@@ -149,7 +153,12 @@ export default function PerChatWallpaperPage() {
         }
     };
     
-    const hasChanges = activeWallpaper !== selectedWallpaper;
+    // Determine if there are changes to be saved.
+    // The chatData?.wallpaper could be `null`, `undefined`, or a URL string.
+    const savedWallpaper = chatData?.wallpaper !== undefined 
+        ? chatData.wallpaper 
+        : (globalDefaultWallpaper === 'null' ? null : globalDefaultWallpaper);
+    const hasChanges = savedWallpaper !== selectedWallpaper;
 
     const finalPreviewWallpaper = selectedWallpaper;
 
@@ -198,20 +207,6 @@ export default function PerChatWallpaperPage() {
                             accept="image/*"
                             onChange={handleFileChange}
                         />
-
-                        {customWallpaper && (
-                            <button onClick={() => handleSelectWallpaper(customWallpaper)} className="relative aspect-square rounded-lg overflow-hidden group">
-                                <Image src={customWallpaper} alt="Custom Uploaded Wallpaper for this chat" layout="fill" objectFit="cover" data-ai-hint="custom wallpaper"/>
-                                <div className={cn("absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity", selectedWallpaper === customWallpaper ? "opacity-100" : "opacity-0 group-hover:opacity-100")}>
-                                    <div className={cn("h-8 w-8 rounded-full flex items-center justify-center", selectedWallpaper === customWallpaper ? 'bg-primary text-primary-foreground' : 'bg-white/50 text-white')}>
-                                        <Check className="w-5 h-5" />
-                                    </div>
-                                </div>
-                                <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/60 to-transparent p-2 text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                                    <span className="text-white text-xs font-semibold">Your Photo</span>
-                                </div>
-                            </button>
-                        )}
 
                         <button onClick={() => handleSelectWallpaper(null)} className="relative aspect-square rounded-lg overflow-hidden group bg-muted border">
                             <div className="w-full h-full bg-chat" />
