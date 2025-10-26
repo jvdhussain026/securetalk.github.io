@@ -120,7 +120,8 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
       isUserLoading: userAuthState.isUserLoading,
       userError: userAuthState.userError,
     };
-  }, [firebaseApp, firestore, auth, storage, userAuthState, userProfile]);
+  // This dependency array is CRITICAL to prevent infinite loops.
+  }, [firebaseApp, firestore, auth, storage, userAuthState.user, userAuthState.isUserLoading, userAuthState.userError, userProfile]);
 
   return (
     <FirebaseContext.Provider value={contextValue}>
