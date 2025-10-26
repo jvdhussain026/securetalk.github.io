@@ -374,7 +374,7 @@ function ReplyPreview({ message, isSender, contactName, onClick }: { message?: M
                 <p className={cn("font-bold", isSender ? "text-primary-foreground/80" : "text-primary")}>
                     {message.senderId === useFirebase().user?.uid ? "You" : contactName}
                 </p>
-                <p className={cn("truncate", isSender ? "text-primary-foreground/80" : "text-muted-foreground")}>
+                <p className={cn("line-clamp-2", isSender ? "text-primary-foreground/80" : "text-muted-foreground")}>
                     {message.text || "Media"}
                 </p>
             </div>
