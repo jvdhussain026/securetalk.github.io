@@ -16,10 +16,11 @@ import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { ImageCropperDialog } from '@/components/image-cropper-dialog'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { AppContext } from '@/app/(app)/layout'
+import { ref, uploadString, getDownloadURL } from 'firebase/storage'
 
 export default function EditProfilePage() {
   const { toast } = useToast()
-  const { firestore, user } = useFirebase();
+  const { firestore, user, storage } = useFirebase();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { setAvatarPreview } = useContext(AppContext);
 
@@ -129,6 +130,13 @@ export default function EditProfilePage() {
     // Reset file input to allow selecting the same file again
     event.target.value = '';
   };
+  
+  const uploadCroppedImage = async (croppedImage: string): Promise<string> => {
+    if (!storage || !user) throw new Error("Storage not available");
+    const storageRef = ref(storage, `avatars/${user.uid}/profile.jpeg`);
+    const snapshot = await uploadString(storageRef, croppedImage, 'data_url', { contentType: 'image/jpeg' });
+    return getDownloadURL(snapshot.ref);
+  };
 
   const handleAvatarClick = () => {
     if (avatar) {
@@ -222,9 +230,17 @@ export default function EditProfilePage() {
       <ImageCropperDialog 
         imageSrc={imageToCrop}
         onClose={() => setImageToCrop(null)}
-        onSave={(croppedImage) => {
-            setAvatar(croppedImage);
+        onSave={async (croppedImage) => {
             setImageToCrop(null);
+            setIsSaving(true); // Show loading indicator
+            try {
+              const downloadURL = await uploadCroppedImage(croppedImage);
+              setAvatar(downloadURL);
+            } catch (e) {
+              toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload avatar.'});
+            } finally {
+              setIsSaving(false);
+            }
         }}
       />
     </>
