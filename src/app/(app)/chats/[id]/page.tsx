@@ -418,7 +418,13 @@ export default function ChatPage() {
 
   const isGroupChat = params.id.toString().startsWith('group_');
   const chatIdFromParams = params.id.toString();
-  const contactId = isGroupChat ? null : (chatIdFromParams);
+  
+  const contactId = useMemo(() => {
+    if (isGroupChat || !user?.uid) return null;
+    const ids = chatIdFromParams.split('_');
+    return ids.find(id => id !== user.uid) || null;
+  }, [chatIdFromParams, user?.uid, isGroupChat]);
+
   const groupId = isGroupChat ? chatIdFromParams.replace('group_', '') : null;
   const finalChatId = isGroupChat ? groupId : (user?.uid && contactId ? createChatId(user.uid, contactId) : null);
   const contactDocRefId = isGroupChat ? `group_${groupId}` : contactId;
