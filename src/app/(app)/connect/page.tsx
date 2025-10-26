@@ -6,9 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle } from 'lucide-react';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
-import { doc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, updateDoc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 
 function Connect() {
@@ -71,7 +70,7 @@ function Connect() {
 
             // Add new contact to current user's contact list
             const currentUserContactsRef = doc(firestore, 'users', currentUser.uid, 'contacts', newContactId);
-            setDocumentNonBlocking(currentUserContactsRef, {
+            await setDoc(currentUserContactsRef, {
                 id: newContactId,
                 name: newContactData.name,
                 avatar: newContactData.profilePictureUrl,
@@ -84,7 +83,7 @@ function Connect() {
             
             // Add current user to the new contact's contact list (mutual connection)
             const newContactUserContactsRef = doc(firestore, 'users', newContactId, 'contacts', currentUser.uid);
-            setDocumentNonBlocking(newContactUserContactsRef, {
+            await setDoc(newContactUserContactsRef, {
                 id: currentUser.uid,
                 name: userProfile.name,
                 avatar: userProfile.profilePictureUrl,
@@ -98,7 +97,7 @@ function Connect() {
             // This is a workaround to trigger a real-time update for the other user.
             // In a real production app, this would be handled by a Cloud Function and FCM.
             const otherUserDocForUpdate = doc(firestore, 'users', newContactId);
-            updateDoc(otherUserDocForUpdate, { lastConnection: currentUser.uid });
+            await updateDoc(otherUserDocForUpdate, { lastConnection: currentUser.uid });
 
 
             toast({

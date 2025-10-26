@@ -7,7 +7,6 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { MoreVertical, User, Search, MessageSquare, Phone, Users, BadgeCheck, UserPlus, Radio, Settings, Palette, Image as ImageIcon, Languages, PhoneIncoming, LoaderCircle, Pin, Archive, Pencil } from 'lucide-react'
 import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy, Timestamp, serverTimestamp, increment, writeBatch } from 'firebase/firestore'
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { formatDistanceToNow, isToday, format, isYesterday } from 'date-fns'
 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
@@ -28,7 +27,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase } from '@/firebase'
+import { useFirebase, useUser, useCollection, useDoc, useMemoFirebase, updateDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase'
 import type { Contact, Message } from '@/lib/types'
 import { Badge } from '@/components/ui/badge'
 import { EditContactDialog } from '@/components/edit-contact-dialog'

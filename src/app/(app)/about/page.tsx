@@ -13,8 +13,7 @@ import React, { useState, useCallback } from 'react';
 import type { Contact } from '@/lib/types';
 import { DeveloperDetailSheet } from '@/components/developer-detail-sheet';
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { doc, serverTimestamp, collection } from 'firebase/firestore';
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { doc, serverTimestamp, collection, setDoc, updateDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 
 
@@ -66,7 +65,7 @@ export default function AboutUsPage() {
 
     // 1. Add dev to user's contact list
     const userContactRef = doc(firestore, 'users', currentUser.uid, 'contacts', devToConnect.id);
-    setDocumentNonBlocking(userContactRef, {
+    await setDoc(userContactRef, {
         id: devToConnect.id,
         name: devToConnect.name,
         avatar: devToConnect.profilePictureUrl || devToConnect.avatar,
@@ -78,7 +77,7 @@ export default function AboutUsPage() {
 
     // 2. Add user to dev's contact list
     const devContactRef = doc(firestore, 'users', devToConnect.id, 'contacts', currentUser.uid);
-     setDocumentNonBlocking(devContactRef, {
+    await setDoc(devContactRef, {
         id: currentUser.uid,
         name: userProfile.name,
         avatar: userProfile.profilePictureUrl,
@@ -90,7 +89,7 @@ export default function AboutUsPage() {
     
     // 3. Trigger realtime update for the dev to see the new chat
     const otherUserDocForUpdate = doc(firestore, 'users', devToConnect.id);
-    updateDocumentNonBlocking(otherUserDocForUpdate, { lastConnection: currentUser.uid });
+    await updateDoc(otherUserDocForUpdate, { lastConnection: currentUser.uid });
 
     toast({
         title: 'Connection Added!',

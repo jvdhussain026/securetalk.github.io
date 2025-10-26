@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { ArrowLeft, LoaderCircle, Users, Briefcase, X, UserPlus, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, orderBy } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, doc, orderBy, setDoc, deleteDoc } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -49,7 +49,7 @@ export default function TeamManagementPage() {
             verified: userToAdd.verified,
         };
         try {
-            await setDocumentNonBlocking(teamMemberRef, teamMemberData, { merge: true });
+            await setDoc(teamMemberRef, teamMemberData, { merge: true });
             toast({ title: `${userToAdd.name} added to the team!` });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Failed to add team member.' });
@@ -64,7 +64,7 @@ export default function TeamManagementPage() {
         if (!firestore) return;
         const teamMemberRef = doc(firestore, 'team', memberId);
         try {
-            await deleteDocumentNonBlocking(teamMemberRef);
+            await deleteDoc(teamMemberRef);
             toast({ title: 'Team member removed.' });
         } catch (error) {
             toast({ variant: 'destructive', title: 'Failed to remove team member.' });

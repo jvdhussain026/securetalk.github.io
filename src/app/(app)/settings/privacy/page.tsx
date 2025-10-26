@@ -10,8 +10,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { ComingSoonDialog } from '@/components/coming-soon-dialog';
-import { useFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const PrivacyItem = ({ icon: Icon, title, value, onClick }: { icon: React.ElementType, title: string, value: string, onClick: () => void }) => (
   <button onClick={onClick} className="flex w-full items-center justify-between py-4 text-left">
@@ -67,14 +67,14 @@ export default function PrivacyPage() {
     handleComingSoon();
   }
   
-  const handleBroadcastToggle = (checked: boolean) => {
+  const handleBroadcastToggle = async (checked: boolean) => {
     if (!firestore || !user) {
         toast({ variant: 'destructive', title: "You must be logged in to change settings."});
         return;
     }
     setReceiveBroadcast(checked);
     const userDocRef = doc(firestore, 'users', user.uid);
-    updateDocumentNonBlocking(userDocRef, { receiveBroadcasts: checked });
+    await updateDoc(userDocRef, { receiveBroadcasts: checked });
     toast({
         title: "Setting Updated",
         description: `You will ${checked ? 'now' : 'no longer'} receive broadcast messages.`

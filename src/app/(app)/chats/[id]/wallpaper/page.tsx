@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -57,31 +57,20 @@ export default function PerChatWallpaperPage() {
         return doc(firestore, 'chats', chatId);
     }, [firestore, chatId]);
 
-    const { data: chatData } = useDoc(chatDocRef);
+    const { data: chatData, isLoading: isChatLoading } = useDoc(chatDocRef);
 
-    // This state tracks the user's selection in the UI.
     const [selectedWallpaper, setSelectedWallpaper] = useState<string | null | undefined>(undefined);
+    const [savedWallpaper, setSavedWallpaper] = useState<string | null | undefined>(undefined);
     const [isSaving, setIsSaving] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Get the global default wallpaper once.
-    const globalDefaultWallpaper = useMemo(() => {
-        if (typeof window !== 'undefined') {
-            return localStorage.getItem('chatWallpaper');
-        }
-        return null;
-    }, []);
-
-    // Effect to initialize the selected wallpaper from Firestore or global default
     useEffect(() => {
-        if (chatData !== undefined) { // Check if useDoc has loaded
-            // Use chat-specific wallpaper if it exists, otherwise fall back to global, then to null.
-            const initialWallpaper = chatData?.wallpaper !== undefined 
-                ? chatData.wallpaper 
-                : (globalDefaultWallpaper === 'null' ? null : globalDefaultWallpaper);
-            setSelectedWallpaper(initialWallpaper);
+        if (!isChatLoading && chatData !== undefined) {
+             const initialWallpaper = chatData?.wallpaper; // Can be URL, null, or undefined
+             setSelectedWallpaper(initialWallpaper);
+             setSavedWallpaper(initialWallpaper);
         }
-    }, [chatData, globalDefaultWallpaper]);
+    }, [chatData, isChatLoading]);
 
     const handleSelectWallpaper = (wallpaperUrl: string | null) => {
         setSelectedWallpaper(wallpaperUrl);
@@ -108,7 +97,6 @@ export default function PerChatWallpaperPage() {
         reader.readAsDataURL(file);
         reader.onload = () => {
             const dataUrl = reader.result as string;
-            // Set the new upload as the selected wallpaper for preview
             setSelectedWallpaper(dataUrl);
             toast({ title: 'Preview updated!', description: 'Click "Save Changes" to apply.' });
         };
@@ -118,9 +106,9 @@ export default function PerChatWallpaperPage() {
     };
     
     const handleResetToDefault = () => {
-        const globalDefault = globalDefaultWallpaper === 'null' ? null : globalDefaultWallpaper;
-        handleSelectWallpaper(globalDefault);
-        toast({ title: 'Preview reset to global default.', description: 'Click Save Changes to apply to this chat.' });
+        // Reset to theme default (no wallpaper)
+        handleSelectWallpaper(null);
+        toast({ title: 'Preview reset to default.', description: 'Click Save Changes to apply.' });
     };
     
     const handleSave = async () => {
@@ -133,7 +121,6 @@ export default function PerChatWallpaperPage() {
         try {
             let finalUrlToSave = selectedWallpaper;
 
-            // Check if the selected wallpaper is a new custom upload (base64)
             if (selectedWallpaper && selectedWallpaper.startsWith('data:image')) {
                 const storageRef = ref(storage, `wallpapers/${chatId}/${Date.now()}.jpeg`);
                 const snapshot = await uploadString(storageRef, selectedWallpaper, 'data_url');
@@ -153,14 +140,15 @@ export default function PerChatWallpaperPage() {
         }
     };
     
-    // Determine if there are changes to be saved.
-    // The chatData?.wallpaper could be `null`, `undefined`, or a URL string.
-    const savedWallpaper = chatData?.wallpaper !== undefined 
-        ? chatData.wallpaper 
-        : (globalDefaultWallpaper === 'null' ? null : globalDefaultWallpaper);
     const hasChanges = savedWallpaper !== selectedWallpaper;
 
-    const finalPreviewWallpaper = selectedWallpaper;
+    if (isChatLoading || selectedWallpaper === undefined) {
+        return (
+             <div className="flex h-full items-center justify-center bg-secondary">
+                <LoaderCircle className="h-8 w-8 animate-spin" />
+            </div>
+        )
+    }
 
     return (
         <div className="flex flex-col h-full bg-secondary/50 md:bg-card">
@@ -181,9 +169,9 @@ export default function PerChatWallpaperPage() {
                             <div 
                                 className={cn(
                                     "relative aspect-[9/16] w-full rounded-lg overflow-hidden bg-muted",
-                                    !finalPreviewWallpaper && "bg-chat"
+                                    !selectedWallpaper && "bg-chat"
                                 )}
-                                style={ finalPreviewWallpaper ? { backgroundImage: `url(${finalPreviewWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+                                style={ selectedWallpaper ? { backgroundImage: `url(${selectedWallpaper})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
                             >
                                 <ChatPreview />
                             </div>
@@ -250,3 +238,5 @@ export default function PerChatWallpaperPage() {
         </div>
     );
 }
+
+    

@@ -7,14 +7,13 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, LoaderCircle, Shield, Users, BadgeCheck, Copy, Check, Briefcase } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useFirebase, useCollection, useMemoFirebase, setDocumentNonBlocking } from '@/firebase';
-import { collection, query, doc, serverTimestamp, orderBy } from 'firebase/firestore';
+import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, doc, serverTimestamp, orderBy, setDoc, updateDoc } from 'firebase/firestore';
 import type { Contact } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
 import { AdminUserDetailSheet } from '@/components/admin-user-detail-sheet';
-import { updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 
 function UserCard({ user, onUserSelect }: { user: Contact, onUserSelect: (user: Contact) => void }) {
     const [copied, setCopied] = useState(false);
@@ -92,7 +91,7 @@ export default function AdminPage() {
 
     // 1. Add user to admin's contact list
     const adminContactRef = doc(firestore, 'users', adminUser.uid, 'contacts', userToConnect.id);
-    setDocumentNonBlocking(adminContactRef, {
+    await setDoc(adminContactRef, {
         id: userToConnect.id,
         name: userToConnect.name,
         avatar: userToConnect.avatar || userToConnect.profilePictureUrl,
@@ -105,7 +104,7 @@ export default function AdminPage() {
 
     // 2. Add admin to user's contact list
     const userContactRef = doc(firestore, 'users', userToConnect.id, 'contacts', adminUser.uid);
-     setDocumentNonBlocking(userContactRef, {
+    await setDoc(userContactRef, {
         id: adminUser.uid,
         name: adminProfile.name,
         avatar: adminProfile.profilePictureUrl,
@@ -118,7 +117,7 @@ export default function AdminPage() {
     
     // 3. Trigger realtime update for the other user to see the new chat
     const otherUserDocForUpdate = doc(firestore, 'users', userToConnect.id);
-    updateDocumentNonBlocking(otherUserDocForUpdate, { lastConnection: adminUser.uid });
+    await updateDoc(otherUserDocForUpdate, { lastConnection: adminUser.uid });
 
     toast({
         title: 'Connection Added!',

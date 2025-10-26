@@ -8,8 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
 import { useFirebase } from '@/firebase';
-import { collection, doc } from 'firebase/firestore';
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc, setDoc } from 'firebase/firestore';
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Switch } from '@/components/ui/switch';
@@ -71,7 +70,7 @@ export default function NotificationsPage() {
         
         const docSnap = await getDocumentNonBlocking(tokenDocRef);
         if (!docSnap || !docSnap.exists()) {
-            await setDocumentNonBlocking(tokenDocRef, { createdAt: new Date() }, { merge: true });
+            await setDoc(tokenDocRef, { createdAt: new Date() }, { merge: true });
             console.log("FCM token saved successfully.");
         }
     } catch (error) {

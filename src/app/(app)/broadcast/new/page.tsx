@@ -23,8 +23,8 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useFirebase, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, serverTimestamp, doc } from 'firebase/firestore';
-import { addDocumentNonBlocking, getDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, serverTimestamp, doc, addDoc, setDoc } from 'firebase/firestore';
+import { getDocumentNonBlocking } from '@/firebase';
 import type { Contact } from '@/lib/types';
 
 
@@ -79,14 +79,14 @@ export default function NewBroadcastPage() {
                 };
                 
                 // Send the message
-                addDocumentNonBlocking(messagesRef, messageData);
+                await addDoc(messagesRef, messageData);
 
                 // Update the last message timestamp for both users' contact entries
                 const userContactRef = doc(firestore, 'users', user.uid, 'contacts', contact.id);
-                setDocumentNonBlocking(userContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+                await setDoc(userContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
 
                 const otherUserContactRef = doc(firestore, 'users', contact.id, 'contacts', user.uid);
-                setDocumentNonBlocking(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
+                await setDoc(otherUserContactRef, { lastMessageTimestamp: currentTimestamp }, { merge: true });
             }
         }
     });

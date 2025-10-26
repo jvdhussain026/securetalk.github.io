@@ -6,8 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { LoaderCircle, Users } from 'lucide-react';
-import { setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { doc, serverTimestamp, arrayUnion, collection, addDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, arrayUnion, collection, addDoc, updateDoc, setDoc } from 'firebase/firestore';
 import type { Group } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
@@ -30,7 +29,7 @@ function JoinGroup() {
     const { data: group, isLoading: isGroupLoading } = useDoc<Group>(groupDocRef);
     
     const handleJoinGroup = useCallback(async () => {
-        if (!firestore || !user || !group) {
+        if (!firestore || !user || !group || !groupDocRef) {
             toast({ variant: 'destructive', title: 'Could not join group.' });
             router.push('/chats');
             return;
@@ -40,14 +39,14 @@ function JoinGroup() {
 
         try {
             // 1. Add user to the group's participants list
-            await updateDocumentNonBlocking(groupDocRef, {
+            await updateDoc(groupDocRef, {
                 [`participants.${user.uid}`]: true
             });
 
             // 2. Add group to the user's contact list
-            const userContactRef = doc(firestore, 'users', user.uid, 'contacts', group.id);
-            await setDocumentNonBlocking(userContactRef, {
-                id: group.id,
+            const userContactRef = doc(firestore, 'users', user.uid, 'contacts', `group_${group.id}`);
+            await setDoc(userContactRef, {
+                id: `group_${group.id}`,
                 name: group.name,
                 avatar: group.avatar,
                 isGroup: true,

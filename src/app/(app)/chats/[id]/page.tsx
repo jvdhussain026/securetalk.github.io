@@ -1,5 +1,4 @@
 
-
 'use client'
 
 import React, { useState, useRef, useEffect, useMemo, useCallback, useContext } from 'react'
@@ -47,9 +46,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
-import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase'
 import { getDocumentNonBlocking } from '@/firebase/non-blocking-reads'
-import { setDocumentNonBlocking } from '@/firebase/non-blocking-updates'
 import { Switch } from '@/components/ui/switch'
 import { Label } from '@/components/ui/label'
 import { Separator } from '@/components/ui/separator'
@@ -800,12 +797,12 @@ export default function ChatPage() {
   
     if (editingMessage) {
       const messageRef = doc(firestore, collectionPath, editingMessage.id);
-      updateDocumentNonBlocking(messageRef, { text: finalText, isEdited: true });
+      await updateDoc(messageRef, { text: finalText, isEdited: true });
       setEditingMessage(null);
       toast({ title: "Message updated" });
     } else {
       const collectionRef = collection(firestore, collectionPath);
-      addDocumentNonBlocking(collectionRef, messageData);
+      await addDoc(collectionRef, messageData);
     }
   
     const batch = writeBatch(firestore);
@@ -978,7 +975,7 @@ export default function ChatPage() {
             };
             const collectionPath = isGroupChat ? `groups/${finalChatId}/messages` : `chats/${finalChatId}/messages`;
             const collectionRef = collection(firestore, collectionPath);
-            addDocumentNonBlocking(collectionRef, {
+            await addDoc(collectionRef, {
                 text: '',
                 attachments: [newAttachment],
                 senderId: user.uid,
@@ -1104,7 +1101,7 @@ export default function ChatPage() {
     
     for (const msg of messagesToStar) {
       const messageRef = doc(firestore, collectionPath, msg.id);
-      updateDocumentNonBlocking(messageRef, { isStarred: !isUnstarring });
+      await updateDoc(messageRef, { isStarred: !isUnstarring });
     }
     
     toast({ title: `${messagesToStar.length} message${messagesToStar.length > 1 ? 's' : ''} ${isUnstarring ? 'unstarred' : 'starred'}` });
@@ -1134,10 +1131,10 @@ export default function ChatPage() {
         const messageRef = doc(firestore, collectionPath, msgId);
         if (forEveryone) {
             // Hard delete
-            deleteDoc(messageRef);
+            await deleteDoc(messageRef);
         } else {
             // Soft delete
-            updateDoc(messageRef, { deletedFor: arrayUnion(user.uid) });
+            await updateDoc(messageRef, { deletedFor: arrayUnion(user.uid) });
         }
     }
     
@@ -1316,7 +1313,7 @@ export default function ChatPage() {
     }
   };
 
-  const handleInput = (event: React.FormEvent<HTMLDivElement>) => {
+  const handleInput = async (event: React.FormEvent<HTMLDivElement>) => {
     const currentText = event.currentTarget.textContent || '';
     setNewMessage(currentText);
 
@@ -1325,7 +1322,7 @@ export default function ChatPage() {
         
         // Immediately update if status changes
         if (chat?.typing?.[user.uid] !== isTyping) {
-            updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: isTyping });
+            await updateDoc(chatDocRef, { [`typing.${user.uid}`]: isTyping });
         }
 
         // Clear previous timeout
@@ -1335,17 +1332,17 @@ export default function ChatPage() {
 
         // Set a new timeout to set typing to false
         if (isTyping) {
-            typingTimeoutRef.current = setTimeout(() => {
-                updateDocumentNonBlocking(chatDocRef, { [`typing.${user.uid}`]: false });
+            typingTimeoutRef.current = setTimeout(async () => {
+                await updateDoc(chatDocRef, { [`typing.${user.uid}`]: false });
             }, 3000); // 3 seconds
         }
     }
   };
 
-  const handleLiveTranslationToggle = (checked: boolean) => {
+  const handleLiveTranslationToggle = async (checked: boolean) => {
     setIsMenuOpen(false);
     if (!contactDocRef) return;
-    updateDocumentNonBlocking(contactDocRef, { liveTranslationEnabled: checked });
+    await updateDoc(contactDocRef, { liveTranslationEnabled: checked });
     toast({ title: `Live Translation ${checked ? 'enabled' : 'disabled'}.` });
     if(checked) {
         setIsLiveTranslateInfoOpen(true);
@@ -1727,9 +1724,7 @@ export default function ChatPage() {
                                                 <Switch
                                                     id="live-translation-switch"
                                                     checked={!!contact?.liveTranslationEnabled}
-                                                    onCheckedChange={(checked) => {
-                                                        handleLiveTranslationToggle(checked);
-                                                    }}
+                                                    onCheckedChange={handleLiveTranslationToggle}
                                                 />
                                             </DropdownMenuItem>
                                         )}
