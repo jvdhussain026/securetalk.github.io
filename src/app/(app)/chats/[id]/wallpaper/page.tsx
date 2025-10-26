@@ -11,8 +11,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ChatWallpapers } from '@/lib/placeholder-images';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { useFirebase, useDoc, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useFirebase, useDoc, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
 import { ScrollArea } from '@/components/ui/scroll-area';
 
@@ -135,7 +135,7 @@ export default function PerChatWallpaperPage() {
                 finalUrlToSave = await getDownloadURL(snapshot.ref);
             }
 
-            await updateDocumentNonBlocking(chatDocRef, { wallpaper: finalUrlToSave });
+            await updateDoc(chatDocRef, { wallpaper: finalUrlToSave });
             
             setActiveWallpaper(selectedWallpaper);
             toast({ title: 'Chat Wallpaper Saved!', description: 'Your new wallpaper has been applied to this chat.' });
